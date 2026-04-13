@@ -25,25 +25,25 @@ export default function Footer() {
                 {config.name}
               </span>
             </div>
-            <p className="text-xs leading-relaxed max-w-[180px]" style={{ color: "#374151" }}>
+            <p className="text-xs leading-relaxed max-w-[180px]" style={{ color: "#64748b" }}>
               {config.texts.footer.tagline}
             </p>
             {/* Status indicator */}
             <div className="flex items-center gap-1.5 mt-1">
               <span className="w-1.5 h-1.5 rounded-full bg-[#10b981] inline-block" />
-              <span className="text-[0.68rem]" style={{ color: "#374151" }}>Všetky systémy fungujú</span>
+              <span className="text-[0.68rem]" style={{ color: "#64748b" }}>Všetky systémy fungujú</span>
             </div>
           </div>
 
           {/* Nav col */}
           <div className="flex flex-col gap-3.5">
-            <p className="text-[0.62rem] font-semibold uppercase tracking-[0.16em]" style={{ color: "#4b5563" }}>
+            <p className="text-[0.62rem] font-semibold uppercase tracking-[0.16em]" style={{ color: "#94a3b8" }}>
               Navigácia
             </p>
             {config.links.nav.slice(0, 3).map((link) => (
               <Link key={link.href} href={link.href}
                 className="text-xs transition-colors duration-200 hover:text-white"
-                style={{ color: "#374151" }}>
+                style={{ color: "#64748b" }}>
                 {link.label}
               </Link>
             ))}
@@ -51,13 +51,13 @@ export default function Footer() {
 
           {/* Account col */}
           <div className="flex flex-col gap-3.5">
-            <p className="text-[0.62rem] font-semibold uppercase tracking-[0.16em]" style={{ color: "#4b5563" }}>
+            <p className="text-[0.62rem] font-semibold uppercase tracking-[0.16em]" style={{ color: "#94a3b8" }}>
               Účet
             </p>
             {config.links.nav.slice(3).map((link) => (
               <Link key={link.href} href={link.href}
                 className="text-xs transition-colors duration-200 hover:text-white"
-                style={{ color: "#374151" }}>
+                style={{ color: "#64748b" }}>
                 {link.label}
               </Link>
             ))}
@@ -76,13 +76,13 @@ export default function Footer() {
             {config.links.legal.map((link) => (
               <Link key={link.href} href={link.href}
                 className="text-xs transition-colors duration-200 hover:text-white"
-                style={{ color: "#374151" }}>
+                style={{ color: "#64748b" }}>
                 {link.label}
               </Link>
             ))}
             <a href={`mailto:${config.links.contact.email}`}
-              className="text-xs transition-colors duration-200"
-              style={{ color: "#374151" }}>
+              className="text-xs transition-colors duration-200 hover:text-white"
+              style={{ color: "#64748b" }}>
               {config.links.contact.email}
             </a>
           </div>
@@ -93,11 +93,11 @@ export default function Footer() {
 
         {/* Bottom bar */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-          <p className="text-[0.68rem]" style={{ color: "#374151" }}>
+          <p className="text-[0.68rem]" style={{ color: "#64748b" }}>
             {config.texts.footer.copyright}
           </p>
           <div className="flex items-center gap-5">
-            <span className="text-[0.68rem]" style={{ color: "#1f2937" }}>
+            <span className="text-[0.68rem]" style={{ color: "#64748b" }}>
               🇸🇰 Made in Slovakia
             </span>
             {config.links.social.map((s) => (
@@ -105,7 +105,7 @@ export default function Footer() {
                 target="_blank" rel="noopener noreferrer"
                 aria-label={s.label}
                 className="text-[0.68rem] transition-colors duration-200 hover:text-[#a78bfa]"
-                style={{ color: "#374151" }}
+                style={{ color: "#64748b" }}
               >
                 {s.label}
               </a>

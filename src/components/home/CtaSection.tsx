@@ -54,7 +54,7 @@ export default function CtaSection() {
               </span>
             </h2>
 
-            <p className="mb-10 max-w-lg mx-auto" style={{ fontSize: "1rem", color: "#6b7280", lineHeight: 1.8 }}>
+            <p className="mb-10 max-w-lg mx-auto" style={{ fontSize: "1rem", color: "#94a3b8", lineHeight: 1.8 }}>
               Unifyo AI spravuje tvoj čas, komunikáciu aj biznis.
               Začni s bezplatným plánom — bez kreditnej karty.
             </p>
@@ -84,7 +84,7 @@ export default function CtaSection() {
               </Link>
             </div>
 
-            <p className="mt-8 text-xs" style={{ color: "#374151" }}>
+            <p className="mt-8 text-xs" style={{ color: "#64748b" }}>
               Plány od 8,99 €/mes · GDPR súlad · Zrušenie kedykoľvek
             </p>
           </div>

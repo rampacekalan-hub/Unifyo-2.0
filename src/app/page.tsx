@@ -15,10 +15,14 @@ export default function Home() {
       <Navbar />
       <main className="flex-1" style={{ position: "relative", zIndex: 1 }}>
         <HeroSection />
+        <div className="section-sep" />
         <MarqueeSection />
+        <div className="section-sep" />
         <BentoGrid />
         <StatsSection />
+        <div className="section-sep" />
         <PricingSection />
+        <div className="section-sep" />
         <CtaSection />
       </main>
       <Footer />

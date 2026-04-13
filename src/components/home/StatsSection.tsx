@@ -68,7 +68,7 @@ export default function StatsSection() {
                   prefix={stat.prefix}
                 />
               </span>
-              <span className="text-[0.7rem] font-medium tracking-[0.14em] uppercase" style={{ color: "#4b5563" }}>
+              <span className="text-[0.7rem] font-medium tracking-[0.14em] uppercase" style={{ color: "#94a3b8" }}>
                 {stat.label}
               </span>
             </motion.div>

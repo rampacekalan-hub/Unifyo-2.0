@@ -68,7 +68,7 @@ export default function BentoGrid() {
           className="text-center mb-16"
         >
           <span className="inline-block text-xs font-semibold tracking-[0.18em] uppercase mb-4"
-            style={{ color: "#6b7280" }}>
+            style={{ color: "#94a3b8" }}>
             Čo Unifyo zvláda
           </span>
           <h2 className="font-black tracking-[-0.03em] leading-[1.08]"
@@ -83,7 +83,7 @@ export default function BentoGrid() {
               Nekonečné možnosti.
             </span>
           </h2>
-          <p className="mt-4 text-sm max-w-md mx-auto" style={{ color: "#6b7280" }}>
+          <p className="mt-4 text-sm max-w-md mx-auto" style={{ color: "#94a3b8" }}>
             AI, ktorá pracuje za teba — po slovensky, v súlade s GDPR.
           </p>
         </motion.div>
@@ -117,7 +117,7 @@ export default function BentoGrid() {
                   <h3 className="font-semibold text-[0.93rem] mb-1.5 tracking-tight" style={{ color: "#eef2ff" }}>
                     {f.title}
                   </h3>
-                  <p className="text-sm leading-relaxed" style={{ color: "#6b7280" }}>
+                  <p className="text-sm leading-relaxed" style={{ color: "#94a3b8" }}>
                     {f.desc}
                   </p>
                 </div>
