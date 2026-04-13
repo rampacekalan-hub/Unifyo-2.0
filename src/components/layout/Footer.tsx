@@ -70,7 +70,7 @@ export default function Footer() {
 
           {/* Legal col */}
           <div className="flex flex-col gap-3.5">
-            <p className="text-[0.62rem] font-semibold uppercase tracking-[0.16em]" style={{ color: "#4b5563" }}>
+            <p className="text-[0.62rem] font-semibold uppercase tracking-[0.16em]" style={{ color: "#94a3b8" }}>
               Právne & Kontakt
             </p>
             {config.links.legal.map((link) => (

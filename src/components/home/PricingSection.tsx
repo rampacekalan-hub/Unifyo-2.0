@@ -48,7 +48,7 @@ export default function PricingSection() {
           {/* Toggle */}
           <div className="flex items-center gap-3 mt-1">
             <span className="text-sm transition-colors duration-200"
-              style={{ color: !yearly ? "#eef2ff" : "#4b5563" }}>
+              style={{ color: !yearly ? "#eef2ff" : "#64748b" }}>
               Mesačne
             </span>
             <button
@@ -73,7 +73,7 @@ export default function PricingSection() {
               />
             </button>
             <span className="text-sm transition-colors duration-200"
-              style={{ color: yearly ? "#eef2ff" : "#4b5563" }}>
+              style={{ color: yearly ? "#eef2ff" : "#64748b" }}>
               Ročne
             </span>
             <AnimatePresence>

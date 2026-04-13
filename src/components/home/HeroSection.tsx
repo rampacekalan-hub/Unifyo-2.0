@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
-import { ArrowRight, Calendar, Mail, BarChart3, Phone, Sparkles, Users, ShieldCheck } from "lucide-react";
+import { ArrowRight, Calendar, Mail, BarChart3, Phone, Sparkles } from "lucide-react";
 
 const SCENES = [
   {
@@ -199,7 +199,7 @@ export default function HeroSection() {
         <motion.div
           initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.26 }}
-          style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "12px", marginBottom: "36px" }}
+          style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "12px", marginBottom: "0" }}
         >
           <Link href="/register" style={{
             display: "inline-flex", alignItems: "center", gap: "10px",
@@ -230,23 +230,6 @@ export default function HeroSection() {
           </Link>
         </motion.div>
 
-        {/* Social proof */}
-        <motion.div
-          initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-          transition={{ delay: 0.38 }}
-          style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", alignItems: "center", gap: "20px" }}
-        >
-          {[
-            { icon: <Users style={{ width: "14px", height: "14px" }} />, text: "1 200+ používateľov" },
-            { icon: <span style={{ color: "#f59e0b", fontSize: "0.85rem", letterSpacing: "2px" }}>★★★★★</span>, text: "4.9 / 5" },
-            { icon: <ShieldCheck style={{ width: "14px", height: "14px" }} />, text: "GDPR · AES-256" },
-          ].map((item, i) => (
-            <div key={i} style={{ display: "flex", alignItems: "center", gap: "7px", color: "#4b5563", fontSize: "0.82rem" }}>
-              {item.icon}
-              <span>{item.text}</span>
-            </div>
-          ))}
-        </motion.div>
       </motion.div>
 
       {/* ── Chat Demo ── */}
