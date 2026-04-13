@@ -252,6 +252,7 @@ const siteConfig: SiteConfig = {
       { label: "Obchodné podmienky", href: "/podmienky" },
       { label: "Ochrana súkromia", href: "/sukromie" },
       { label: "Cookies", href: "/cookies" },
+      { label: "Kontakt", href: "/kontakt" },
     ],
     contact: {
       email: "hello@unifyo.online",
