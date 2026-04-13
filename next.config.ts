@@ -17,14 +17,15 @@ const securityHeaders = [
       "script-src 'self' 'unsafe-eval' 'unsafe-inline'",
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob:",
-      "font-src 'self'",
-      "connect-src 'self'",
+      "font-src 'self' https://fonts.gstatic.com",
+      "connect-src 'self' ws: wss:",
       "frame-ancestors 'none'",
     ].join("; "),
   },
 ];
 
 const nextConfig: NextConfig = {
+  allowedDevOrigins: ["127.0.0.1", "localhost"],
   async headers() {
     return [
       {

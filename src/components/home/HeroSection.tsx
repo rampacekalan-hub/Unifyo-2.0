@@ -10,17 +10,17 @@ const config = getSiteConfig();
 const { hero } = config.texts;
 
 const fadeUp = {
-  hidden: { opacity: 0, y: 32 },
+  hidden: { opacity: 0, y: 40 },
   visible: (i: number) => ({
     opacity: 1,
     y: 0,
-    transition: { delay: i * 0.1, duration: 0.7, ease: "easeOut" as const },
+    transition: { delay: i * 0.12, duration: 0.8, ease: "easeOut" as const },
   }),
 };
 
 const stats = [
   { label: "Aktívnych tímov", value: "2 400+" },
-  { label: "Projektov spravovaných", value: "18 000+" },
+  { label: "Ušetrených hodín", value: "100+" },
   { label: "Dostupnosť", value: "99.9%" },
 ];
 
@@ -28,28 +28,22 @@ export default function HeroSection() {
   return (
     <section className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden pt-24 pb-16">
 
-      {/* ── Layered mesh gradients ── */}
-      <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
-        <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[900px] h-[600px] rounded-full bg-[#6366f1]/[0.07] blur-[140px]" />
-        <div className="absolute top-1/3 -right-40 w-[500px] h-[500px] rounded-full bg-[#8b5cf6]/[0.06] blur-[120px]" />
-        <div className="absolute bottom-0 left-10 w-[400px] h-[300px] rounded-full bg-[#6366f1]/[0.05] blur-[100px]" />
-        {/* Fine dot grid */}
+      {/* Dot grid */}
+      <div className="pointer-events-none absolute inset-0 -z-10">
         <div
-          className="absolute inset-0 opacity-[0.018]"
+          className="absolute inset-0 opacity-[0.022]"
           style={{
-            backgroundImage: `radial-gradient(circle, #a5b4fc 1px, transparent 1px)`,
-            backgroundSize: "32px 32px",
+            backgroundImage: `radial-gradient(circle, #818cf8 1px, transparent 1px)`,
+            backgroundSize: "28px 28px",
           }}
         />
-        {/* Top radial fade */}
-        <div className="absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-[#080b12] to-transparent" />
-        {/* Bottom radial fade */}
-        <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#080b12] to-transparent" />
+        <div className="absolute inset-x-0 top-0 h-48 bg-gradient-to-b from-[#080b12] to-transparent" />
+        <div className="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-[#080b12] to-transparent" />
       </div>
 
-      <div className="w-full max-w-5xl mx-auto px-6 flex flex-col items-center text-center gap-7">
+      <div className="w-full max-w-5xl mx-auto px-6 flex flex-col items-center text-center gap-8">
 
-        {/* Pill badge */}
+        {/* Badge */}
         <motion.div custom={0} variants={fadeUp} initial="hidden" animate="visible">
           <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-medium tracking-wide bg-white/[0.04] text-[#a5b4fc] border border-white/[0.07] backdrop-blur-sm select-none">
             <span className="relative flex h-1.5 w-1.5">
@@ -60,24 +54,28 @@ export default function HeroSection() {
           </span>
         </motion.div>
 
-        {/* Main headline */}
+        {/* Headline — BEAST MODE */}
         <motion.h1
           custom={1}
           variants={fadeUp}
           initial="hidden"
           animate="visible"
-          className="text-[2.75rem] sm:text-6xl md:text-[5.5rem] font-bold tracking-[-0.04em] leading-[1.04] max-w-4xl"
+          className="text-[3rem] sm:text-[4.5rem] md:text-[6.5rem] font-black tracking-[-0.05em] leading-[0.95] max-w-4xl"
         >
-          <span className="text-white">Váš tím.&nbsp;</span>
-          <br className="hidden sm:block" />
+          <span className="block text-white">Automatizuj.</span>
           <span
-            className="bg-gradient-to-br from-[#c7d2fe] via-[#818cf8] to-[#6366f1] bg-clip-text text-transparent"
-            style={{ WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}
+            className="block"
+            style={{
+              background: "linear-gradient(135deg, #ffffff 0%, #c7d2fe 30%, #818cf8 60%, #6366f1 100%)",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+              backgroundClip: "text",
+              filter: "drop-shadow(0 0 40px rgba(99,102,241,0.45))",
+            }}
           >
-            Jeden systém.
+            Dominuj.
           </span>
-          <br />
-          <span className="text-white/80">Nekonečné možnosti.</span>
+          <span className="block text-white/70">Unifyo.</span>
         </motion.h1>
 
         {/* Subheadline */}
@@ -86,7 +84,7 @@ export default function HeroSection() {
           variants={fadeUp}
           initial="hidden"
           animate="visible"
-          className="text-[1.05rem] md:text-xl text-[#64748b] max-w-[580px] leading-[1.75] font-light"
+          className="text-base md:text-xl text-[#64748b] max-w-[560px] leading-[1.8] font-light"
         >
           {hero.subheadline}
         </motion.p>
@@ -97,23 +95,27 @@ export default function HeroSection() {
           variants={fadeUp}
           initial="hidden"
           animate="visible"
-          className="flex flex-col sm:flex-row items-center gap-3 mt-1"
+          className="flex flex-col sm:flex-row items-center gap-3"
         >
           <Link href="/register">
-            <Button
-              size="lg"
-              className="group relative h-12 px-8 text-[0.9rem] font-semibold text-white border-0 bg-[#6366f1] hover:bg-[#5254cc] shadow-[0_0_0_1px_rgba(99,102,241,0.5),0_8px_40px_rgba(99,102,241,0.3)] hover:shadow-[0_0_0_1px_rgba(99,102,241,0.8),0_8px_50px_rgba(99,102,241,0.45)] transition-all duration-300 rounded-xl overflow-hidden"
-            >
-              <span className="relative z-10 flex items-center gap-2">
-                {hero.cta}
-                <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform duration-200" />
-              </span>
-            </Button>
+            {/* Pulsing border gradient button */}
+            <div className="relative group">
+              <div className="absolute -inset-[1.5px] rounded-xl bg-gradient-to-r from-[#6366f1] via-[#8b5cf6] to-[#6366f1] opacity-70 group-hover:opacity-100 blur-[2px] group-hover:blur-[4px] transition-all duration-500 animate-pulse" />
+              <Button
+                size="lg"
+                className="relative h-12 px-8 text-[0.9rem] font-semibold text-white border-0 bg-[#080b12] group-hover:bg-[#0d1020] rounded-xl transition-all duration-300 group-hover:shadow-[0_0_30px_rgba(139,92,246,0.5)]"
+              >
+                <span className="flex items-center gap-2">
+                  {hero.cta}
+                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-200" />
+                </span>
+              </Button>
+            </div>
           </Link>
           <Button
             size="lg"
             variant="ghost"
-            className="h-12 px-8 text-[0.9rem] font-medium text-[#94a3b8] hover:text-white bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.07] hover:border-white/[0.14] rounded-xl transition-all duration-300"
+            className="h-12 px-8 text-[0.9rem] font-medium text-[#64748b] hover:text-white bg-transparent hover:bg-white/[0.04] border border-white/[0.06] hover:border-white/[0.12] rounded-xl transition-all duration-300"
           >
             <Play className="mr-2 w-3.5 h-3.5" />
             {hero.ctaSecondary}
@@ -126,7 +128,7 @@ export default function HeroSection() {
           variants={fadeUp}
           initial="hidden"
           animate="visible"
-          className="w-full max-w-sm h-px bg-gradient-to-r from-transparent via-white/[0.06] to-transparent mt-4"
+          className="w-full max-w-xs h-px bg-gradient-to-r from-transparent via-white/[0.07] to-transparent"
         />
 
         {/* Stats */}
@@ -135,15 +137,12 @@ export default function HeroSection() {
           variants={fadeUp}
           initial="hidden"
           animate="visible"
-          className="flex flex-wrap justify-center gap-10"
+          className="flex flex-wrap justify-center gap-12"
         >
-          {stats.map((stat, i) => (
+          {stats.map((stat) => (
             <div key={stat.label} className="flex flex-col items-center gap-1">
-              {i > 0 && (
-                <div className="hidden sm:block absolute left-0 top-1/2 -translate-y-1/2 h-6 w-px bg-white/[0.06]" />
-              )}
               <span className="text-2xl font-bold tracking-tight text-white">{stat.value}</span>
-              <span className="text-xs text-[#475569] font-medium tracking-wide uppercase">{stat.label}</span>
+              <span className="text-[0.7rem] text-[#334155] font-medium tracking-widest uppercase">{stat.label}</span>
             </div>
           ))}
         </motion.div>
