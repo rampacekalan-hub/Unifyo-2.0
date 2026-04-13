@@ -6,16 +6,14 @@ import PricingSection from "@/components/home/PricingSection";
 import MarqueeSection from "@/components/home/MarqueeSection";
 import StatsSection from "@/components/home/StatsSection";
 import CtaSection from "@/components/home/CtaSection";
-import MeshBackground from "@/components/ui/MeshBackground";
 import NeuralBackground from "@/components/ui/NeuralBackground";
 
 export default function Home() {
   return (
     <>
-      <MeshBackground />
       <NeuralBackground />
       <Navbar />
-      <main className="flex-1">
+      <main className="flex-1" style={{ position: "relative", zIndex: 1 }}>
         <HeroSection />
         <MarqueeSection />
         <BentoGrid />
