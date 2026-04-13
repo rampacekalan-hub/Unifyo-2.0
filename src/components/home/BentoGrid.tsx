@@ -2,55 +2,55 @@
 
 import { motion } from "framer-motion";
 import Tilt from "react-parallax-tilt";
-import { Zap, Shield, BarChart3, Users, Clock, Globe } from "lucide-react";
+import { Zap, Shield, BarChart3, Brain, MessageSquare, Globe } from "lucide-react";
 
 const features = [
   {
-    icon: Zap,
-    title: "Bleskovo rýchle",
-    desc: "Žiadne čakanie. Unifyo reaguje okamžite — každý klik, každá akcia.",
-    color: "#6366f1",
-    glow: "rgba(99,102,241,0.25)",
-    size: "col-span-1 md:col-span-2",
+    icon: Brain,
+    title: "AI Brain",
+    desc: "Lokálna AI ktorá sa učí z každej interakcie. Rozumie slovenčine a češtine, pamätá si kontext.",
+    color: "#7c3aed",
+    glow: "rgba(124,58,237,0.2)",
+    span: "col-span-1",
   },
   {
-    icon: Shield,
-    title: "Vaše dáta, váš server",
-    desc: "100% kontrola. Žiadne cloudy tretích strán.",
-    color: "#8b5cf6",
-    glow: "rgba(139,92,246,0.2)",
+    icon: Zap,
+    title: "Inteligentný kalendár",
+    desc: "Integrácia s Google a Outlook. AI automaticky navrhuje časy stretnutí bez konfliktov.",
+    color: "#2563eb",
+    glow: "rgba(37,99,235,0.2)",
+    size: "col-span-1",
+  },
+  {
+    icon: MessageSquare,
+    title: "Email manažment",
+    desc: "AI triedi emaily, navrhuje odpovede a posiela follow-upy za teba. Gmail integrácia.",
+    color: "#06b6d4",
+    glow: "rgba(6,182,212,0.2)",
+    size: "col-span-1",
+  },
+  {
+    icon: Globe,
+    title: "Hovory & SMS",
+    desc: "Prepisy hovorov, AI zhrnutia, odosielanie SMS. Lokálne spracovanie — žiadne úniky dát.",
+    color: "#10b981",
+    glow: "rgba(16,185,129,0.2)",
     size: "col-span-1",
   },
   {
     icon: BarChart3,
-    title: "Analytika v reálnom čase",
-    desc: "Vidíte čo sa deje — teraz.",
-    color: "#a78bfa",
-    glow: "rgba(167,139,250,0.2)",
+    title: "CRM & Kontakty",
+    desc: "Správa kontaktov, pipeline a obchodných príležitostí. AI navrhuje ďalší krok.",
+    color: "#f59e0b",
+    glow: "rgba(245,158,11,0.2)",
     size: "col-span-1",
   },
   {
-    icon: Users,
-    title: "Tímová spolupráca",
-    desc: "Celý tím na jednom mieste. Komentáre, úlohy, notifikácie.",
-    color: "#6366f1",
-    glow: "rgba(99,102,241,0.2)",
-    size: "col-span-1",
-  },
-  {
-    icon: Clock,
-    title: "Automatizácia procesov",
-    desc: "Opakujúce sa úlohy preberáme za vás. Vy sa sústreďte na to čo má hodnotu.",
-    color: "#7c3aed",
-    glow: "rgba(124,58,237,0.25)",
-    size: "col-span-1 md:col-span-2",
-  },
-  {
-    icon: Globe,
-    title: "Dostupné odkiaľkoľvek",
-    desc: "Web, mobil, tablet. Unifyo beží všade.",
-    color: "#8b5cf6",
-    glow: "rgba(139,92,246,0.2)",
+    icon: Shield,
+    title: "GDPR & Bezpečnosť",
+    desc: "End-to-end šifrovanie, súlad s GDPR, slovenské a európske právne požiadavky.",
+    color: "#ec4899",
+    glow: "rgba(236,72,153,0.2)",
     size: "col-span-1",
   },
 ];
@@ -67,20 +67,20 @@ export default function BentoGrid() {
           transition={{ duration: 0.6 }}
           className="text-center mb-14"
         >
-          <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-medium bg-[#7c3aed]/[0.07] text-[#7c3aed] border border-[#7c3aed]/[0.15] mb-5">
+          <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-medium bg-[#7c3aed]/10 text-[#a78bfa] border border-[#7c3aed]/20 mb-5">
             Prečo Unifyo
           </span>
-          <h2 className="text-3xl md:text-5xl font-black tracking-[-0.04em] text-[#0a0a0a] leading-tight">
-            Jeden nástroj.<br />
+          <h2 className="text-3xl md:text-5xl font-black tracking-[-0.04em] text-white leading-tight">
+            Všetko čo tvoj biznis<br />
             <span
               style={{
-                background: "linear-gradient(135deg, #7c3aed 0%, #8b5cf6 100%)",
+                background: "linear-gradient(135deg, #a78bfa 0%, #60a5fa 50%, #34d399 100%)",
                 WebkitBackgroundClip: "text",
                 WebkitTextFillColor: "transparent",
                 backgroundClip: "text",
               }}
             >
-              Nekonečné výhody.
+              potrebuje.
             </span>
           </h2>
         </motion.div>
@@ -108,9 +108,9 @@ export default function BentoGrid() {
                 style={{ height: "100%" }}
               >
                 <div
-                  className="h-full min-h-[160px] rounded-2xl p-6 border border-black/[0.07] bg-white flex flex-col gap-4 cursor-default transition-all duration-300 hover:border-[#7c3aed]/[0.2] hover:shadow-[0_4px_24px_rgba(124,58,237,0.08)]"
+                  className="h-full min-h-[160px] rounded-2xl p-6 border border-[rgba(124,58,237,0.15)] bg-white/[0.03] backdrop-blur-sm flex flex-col gap-4 cursor-default transition-all duration-300 hover:border-[rgba(124,58,237,0.35)] hover:bg-white/[0.05]"
                   style={{
-                    boxShadow: `0 1px 3px rgba(0,0,0,0.04)`,
+                    boxShadow: `inset 0 1px 0 rgba(255,255,255,0.05)`,
                   }}
                 >
                   {/* Icon */}
@@ -125,8 +125,8 @@ export default function BentoGrid() {
                     <f.icon className="w-5 h-5" style={{ color: f.color }} />
                   </div>
                   <div>
-                    <h3 className="text-[#0a0a0a] font-semibold text-[0.95rem] mb-1.5 tracking-tight">{f.title}</h3>
-                    <p className="text-[#71717a] text-sm leading-relaxed">{f.desc}</p>
+                    <h3 className="text-white font-semibold text-[0.95rem] mb-1.5 tracking-tight">{f.title}</h3>
+                    <p className="text-gray-400 text-sm leading-relaxed">{f.desc}</p>
                   </div>
                 </div>
               </Tilt>

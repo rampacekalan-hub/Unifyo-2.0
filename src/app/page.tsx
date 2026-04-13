@@ -5,6 +5,7 @@ import BentoGrid from "@/components/home/BentoGrid";
 import PricingSection from "@/components/home/PricingSection";
 import MarqueeSection from "@/components/home/MarqueeSection";
 import StatsSection from "@/components/home/StatsSection";
+import CtaSection from "@/components/home/CtaSection";
 import MeshBackground from "@/components/ui/MeshBackground";
 
 export default function Home() {
@@ -18,6 +19,7 @@ export default function Home() {
         <BentoGrid />
         <StatsSection />
         <PricingSection />
+        <CtaSection />
       </main>
       <Footer />
     </>

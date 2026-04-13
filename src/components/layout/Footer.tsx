@@ -6,7 +6,7 @@ const config = getSiteConfig();
 
 export default function Footer() {
   return (
-    <footer className="relative border-t border-black/[0.07] bg-[#fafafa]">
+    <footer className="relative border-t border-white/5">
 
       <div className="max-w-7xl mx-auto px-6 pt-16 pb-10">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-10 mb-14">
@@ -14,26 +14,26 @@ export default function Footer() {
           {/* Brand col */}
           <div className="col-span-2 md:col-span-1 flex flex-col gap-5">
             <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#7c3aed] to-[#8b5cf6] flex items-center justify-center shadow-[0_0_10px_rgba(124,58,237,0.25)]">
-                <Zap className="w-3.5 h-3.5 text-white" />
+              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#7c3aed] to-[#2563eb] flex items-center justify-center">
+                <span className="text-white text-xs font-black">U</span>
               </div>
-              <span className="font-semibold text-[0.95rem] text-[#0a0a0a] tracking-tight">{config.name}</span>
+              <span className="font-semibold text-[0.95rem] text-white tracking-tight">{config.name}<span className="text-[#a78bfa]">.</span></span>
             </div>
-            <p className="text-[0.8rem] text-[#71717a] leading-relaxed max-w-[200px]">
+            <p className="text-[0.8rem] text-gray-500 leading-relaxed max-w-[200px]">
               {config.texts.footer.tagline}
             </p>
           </div>
 
           {/* Navigácia */}
           <div className="flex flex-col gap-4">
-            <p className="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-[#a1a1aa]">
+            <p className="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-gray-600">
               Navigácia
             </p>
             {config.links.nav.slice(0, 2).map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
-                className="text-[0.8rem] text-[#52525b] hover:text-[#0a0a0a] transition-colors duration-200"
+                className="text-[0.8rem] text-gray-400 hover:text-white transition-colors duration-200"
               >
                 {link.label}
               </Link>
@@ -42,14 +42,14 @@ export default function Footer() {
 
           {/* Produkt */}
           <div className="flex flex-col gap-4">
-            <p className="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-[#a1a1aa]">
+            <p className="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-gray-600">
               Účet
             </p>
             {config.links.nav.slice(2).map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
-                className="text-[0.8rem] text-[#52525b] hover:text-[#0a0a0a] transition-colors duration-200"
+                className="text-[0.8rem] text-gray-400 hover:text-white transition-colors duration-200"
               >
                 {link.label}
               </Link>
@@ -58,21 +58,21 @@ export default function Footer() {
 
           {/* Právne */}
           <div className="flex flex-col gap-4">
-            <p className="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-[#a1a1aa]">
+            <p className="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-gray-600">
               Právne
             </p>
             {config.links.legal.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
-                className="text-[0.8rem] text-[#52525b] hover:text-[#0a0a0a] transition-colors duration-200"
+                className="text-[0.8rem] text-gray-400 hover:text-white transition-colors duration-200"
               >
                 {link.label}
               </Link>
             ))}
             <a
               href={`mailto:${config.links.contact.email}`}
-              className="text-[0.8rem] text-[#52525b] hover:text-[#0a0a0a] transition-colors duration-200"
+              className="text-[0.8rem] text-gray-400 hover:text-white transition-colors duration-200"
             >
               {config.links.contact.email}
             </a>
@@ -80,8 +80,8 @@ export default function Footer() {
         </div>
 
         {/* Bottom bar */}
-        <div className="border-t border-black/[0.06] pt-6 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <p className="text-[0.72rem] text-[#a1a1aa]">{config.texts.footer.copyright}</p>
+        <div className="border-t border-white/5 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <p className="text-[0.72rem] text-gray-600">{config.texts.footer.copyright}</p>
           <div className="flex items-center gap-5">
             {config.links.social.map((s) => (
               <a
@@ -90,7 +90,7 @@ export default function Footer() {
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label={s.label}
-                className="text-[0.72rem] text-[#a1a1aa] hover:text-[#7c3aed] transition-colors duration-200"
+                className="text-[0.72rem] text-gray-600 hover:text-[#a78bfa] transition-colors duration-200"
               >
                 {s.label}
               </a>

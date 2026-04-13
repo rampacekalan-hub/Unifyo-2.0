@@ -28,10 +28,10 @@ export default function PricingSection() {
           transition={{ duration: 0.6 }}
           className="text-center mb-12 flex flex-col items-center gap-5"
         >
-          <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-medium bg-[#7c3aed]/[0.07] text-[#7c3aed] border border-[#7c3aed]/[0.15]">
+          <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-medium bg-[#7c3aed]/10 text-[#a78bfa] border border-[#7c3aed]/20">
             Cenník
           </span>
-          <h2 className="text-3xl md:text-5xl font-black tracking-[-0.04em] text-[#0a0a0a]">
+          <h2 className="text-3xl md:text-5xl font-black tracking-[-0.04em] text-white">
             Transparentné ceny,{" "}
             <span style={{
               background: "linear-gradient(135deg, #7c3aed, #8b5cf6)",
@@ -45,12 +45,12 @@ export default function PricingSection() {
 
           {/* Monthly / Yearly toggle */}
           <div className="flex items-center gap-3 mt-2">
-            <span className={`text-sm transition-colors duration-200 ${!yearly ? "text-[#0a0a0a]" : "text-[#a1a1aa]"}`}>
+            <span className={`text-sm transition-colors duration-200 ${!yearly ? "text-white" : "text-gray-600"}`}>
               Mesačne
             </span>
             <button
               onClick={() => setYearly((v) => !v)}
-              className="relative w-12 h-6 rounded-full bg-black/[0.06] border border-black/[0.1] transition-all duration-300 focus:outline-none"
+              className="relative w-12 h-6 rounded-full bg-white/[0.08] border border-white/10 transition-all duration-300 focus:outline-none"
               aria-label="Toggle billing period"
             >
               <motion.div
@@ -60,7 +60,7 @@ export default function PricingSection() {
                 style={{ left: yearly ? "26px" : "2px" }}
               />
             </button>
-            <span className={`text-sm transition-colors duration-200 ${yearly ? "text-[#0a0a0a]" : "text-[#a1a1aa]"}`}>
+            <span className={`text-sm transition-colors duration-200 ${yearly ? "text-white" : "text-gray-600"}`}>
               Ročne
             </span>
             <AnimatePresence>
@@ -107,8 +107,8 @@ export default function PricingSection() {
 
                 <div className={`relative flex flex-col h-full rounded-2xl p-6 border transition-all duration-300 ${
                   plan.highlighted
-                    ? "bg-white border-transparent shadow-[0_8px_40px_rgba(124,58,237,0.12)]"
-                    : "bg-white border-black/[0.07] hover:border-[#7c3aed]/[0.2] hover:shadow-[0_4px_20px_rgba(124,58,237,0.06)]"
+                    ? "bg-gradient-to-b from-[#7c3aed]/20 to-[#4c1d95]/5 border-[#7c3aed]/40 shadow-[0_0_40px_rgba(124,58,237,0.2)]"
+                    : "bg-white/[0.03] backdrop-blur-sm border-white/[0.08] hover:border-[#7c3aed]/30"
                 }`}>
                   {/* Badge */}
                   {plan.badge && (
@@ -136,11 +136,11 @@ export default function PricingSection() {
                         transition={{ duration: 0.2 }}
                         className="flex items-end gap-1"
                       >
-                        <span className="text-4xl font-black tracking-tight text-[#0a0a0a]">
+                        <span className="text-4xl font-black tracking-tight text-white">
                           {displayPrice === 0 ? "Zadarmo" : `${plan.currency}${displayPrice}`}
                         </span>
                         {displayPrice > 0 && (
-                          <span className="text-[#a1a1aa] text-sm mb-1.5">
+                          <span className="text-gray-500 text-sm mb-1.5">
                             /{yearly ? "mes. (ročne)" : plan.interval}
                           </span>
                         )}
@@ -164,17 +164,17 @@ export default function PricingSection() {
                           <Tooltip>
                             <TooltipTrigger>
                               <span className={`text-sm cursor-help underline decoration-dotted underline-offset-2 ${
-                                feature.included ? "text-[#18181b]" : "text-[#d4d4d8]"
+                                feature.included ? "text-gray-300" : "text-gray-700"
                               }`}>
                                 {feature.text}
                               </span>
                             </TooltipTrigger>
-                            <TooltipContent className="bg-white border-black/[0.1] text-[#18181b] text-xs max-w-[200px] leading-relaxed shadow-lg">
+                            <TooltipContent className="bg-[#0d1117] border-[rgba(124,58,237,0.2)] text-gray-300 text-xs max-w-[200px] leading-relaxed">
                               {feature.tooltip}
                             </TooltipContent>
                           </Tooltip>
                         ) : (
-                          <span className={`text-sm ${feature.included ? "text-[#18181b]" : "text-[#d4d4d8]"}`}>
+                          <span className={`text-sm ${feature.included ? "text-gray-300" : "text-gray-700"}`}>
                             {feature.text}
                           </span>
                         )}
@@ -186,8 +186,8 @@ export default function PricingSection() {
                   <Link href={plan.id === "enterprise" ? `mailto:${config.links.contact.email}` : "/register"}>
                     <Button className={`w-full h-11 font-semibold transition-all duration-300 rounded-xl ${
                       plan.highlighted
-                        ? "bg-[#7c3aed] hover:bg-[#6d28d9] text-white border-0 shadow-[0_2px_12px_rgba(124,58,237,0.3)] hover:shadow-[0_4px_24px_rgba(124,58,237,0.45)]"
-                        : "bg-[#f4f4f5] text-[#52525b] border-0 hover:bg-[#eeeeef] hover:text-[#0a0a0a]"
+                        ? "bg-[#7c3aed] hover:bg-[#6d28d9] text-white border-0 shadow-[0_0_20px_rgba(124,58,237,0.3)] hover:shadow-[0_0_30px_rgba(124,58,237,0.5)]"
+                        : "bg-white/[0.04] text-white border border-white/10 hover:bg-white/10"
                     }`}>
                       {plan.cta}
                     </Button>

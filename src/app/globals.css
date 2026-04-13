@@ -49,44 +49,45 @@
 }
 
 :root {
-  --background: #ffffff;
-  --foreground: #0a0a0a;
-  --card: #f9f9f9;
-  --card-foreground: #0a0a0a;
-  --popover: #ffffff;
-  --popover-foreground: #0a0a0a;
+  --background: #030712;
+  --foreground: #f1f5f9;
+  --card: #0d1117;
+  --card-foreground: #f1f5f9;
+  --popover: #0d1117;
+  --popover-foreground: #f1f5f9;
   --primary: #7c3aed;
   --primary-foreground: #ffffff;
-  --secondary: #f4f4f5;
-  --secondary-foreground: #18181b;
-  --muted: #f4f4f5;
-  --muted-foreground: #71717a;
+  --secondary: #0d1117;
+  --secondary-foreground: #f1f5f9;
+  --muted: #0d1117;
+  --muted-foreground: #94a3b8;
   --accent: #7c3aed;
   --accent-foreground: #ffffff;
   --destructive: oklch(0.704 0.191 22.216);
-  --border: rgba(0,0,0,0.08);
-  --input: rgba(0,0,0,0.05);
+  --border: rgba(124,58,237,0.2);
+  --input: rgba(124,58,237,0.1);
   --ring: #7c3aed;
-  --chart-1: #6366f1;
-  --chart-2: #8b5cf6;
-  --chart-3: #a78bfa;
-  --chart-4: #c4b5fd;
-  --chart-5: #ddd6fe;
+  --chart-1: #7c3aed;
+  --chart-2: #2563eb;
+  --chart-3: #06b6d4;
+  --chart-4: #a78bfa;
+  --chart-5: #60a5fa;
   --radius: 0.75rem;
-  --sidebar: #f9f9f9;
-  --sidebar-foreground: #0a0a0a;
+  --sidebar: #0d1117;
+  --sidebar-foreground: #f1f5f9;
   --sidebar-primary: #7c3aed;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #f4f4f5;
-  --sidebar-accent-foreground: #18181b;
-  --sidebar-border: rgba(0,0,0,0.08);
+  --sidebar-accent: #161b27;
+  --sidebar-accent-foreground: #f1f5f9;
+  --sidebar-border: rgba(124,58,237,0.2);
   --sidebar-ring: #7c3aed;
   /* Unifyo brand tokens */
-  --u-glow-primary: rgba(124, 58, 237, 0.2);
-  --u-glow-accent: rgba(124, 58, 237, 0.15);
-  --u-surface: #f9f9f9;
-  --u-surface-high: #f4f4f5;
-  --u-surface-higher: #eeeeef;
+  --u-purple: #7c3aed;
+  --u-blue: #2563eb;
+  --u-cyan: #06b6d4;
+  --u-glow-primary: rgba(124, 58, 237, 0.3);
+  --u-glow-accent: rgba(37, 99, 235, 0.2);
+  --u-surface: #0d1117;
   --u-border-glow: rgba(124,58,237,0.3);
 }
 
@@ -137,9 +138,12 @@
     font-feature-settings: "rlig" 1, "calt" 1, "ss01" 1;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    background-image:
+      radial-gradient(ellipse 80% 60% at 50% -20%, rgba(124,58,237,0.2) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 40% at 80% 80%, rgba(37,99,235,0.12) 0%, transparent 50%);
   }
   ::selection {
-    background-color: rgba(124, 58, 237, 0.15);
-    color: #7c3aed;
+    background-color: rgba(124, 58, 237, 0.35);
+    color: #fff;
   }
 }
