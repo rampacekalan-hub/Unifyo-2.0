@@ -336,113 +336,135 @@ export default function HeroSection() {
             </div>
           </div>
 
-          {/* Messages — FIXED HEIGHT, no layout shift */}
+          {/* Messages — FIXED HEIGHT container, animations only inside */}
           <div style={{
-            padding: "20px 20px 16px",
-            height: "220px",          // fixed — never grows/shrinks
+            position: "relative",
+            height: "230px",
+            overflow: "hidden",
+            padding: "16px 20px",
             display: "flex",
             flexDirection: "column",
-            justifyContent: "space-between",
-            gap: "12px",
-            overflow: "hidden",
+            justifyContent: "flex-end",
+            gap: "10px",
           }}>
 
-            {/* User bubble — always visible, fades in on scene change */}
+            {/* User bubble */}
             <motion.div
               key={`u-${sceneIdx}`}
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-              transition={{ duration: 0.3 }}
+              initial={{ opacity: 0, y: 14 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
               style={{ display: "flex", justifyContent: "flex-end", alignItems: "flex-end", gap: "10px" }}
             >
               <div style={{
-                background: `rgba(${scene.accent === "#8b5cf6" ? "109,40,217" : scene.accent === "#06b6d4" ? "6,120,180" : scene.accent === "#10b981" ? "16,120,80" : "180,120,10"},0.22)`,
-                border: `1px solid ${scene.accent}45`,
+                background: `rgba(${
+                  scene.accent === "#8b5cf6" ? "109,40,217" :
+                  scene.accent === "#06b6d4" ? "6,130,190" :
+                  scene.accent === "#10b981" ? "16,130,90" : "160,110,10"
+                },0.25)`,
+                border: `1px solid ${scene.accent}50`,
                 borderRadius: "18px 18px 4px 18px",
                 padding: "11px 16px",
-                maxWidth: "70%",
-                fontSize: "0.88rem", color: "#f1f5f9", lineHeight: 1.6,
+                maxWidth: "72%",
+                fontSize: "0.875rem",
+                color: "#f1f5f9",
+                lineHeight: 1.6,
               }}>
                 {userText}
                 {phase === "user-typing" && (
                   <span style={{
                     display: "inline-block", width: "2px", height: "0.9em",
                     background: scene.accent, marginLeft: "3px", verticalAlign: "middle",
-                    animation: "blink 0.9s step-end infinite",
+                    animation: "blink 0.85s step-end infinite",
                   }} />
                 )}
               </div>
               <div style={{
                 width: "30px", height: "30px", borderRadius: "50%", flexShrink: 0,
-                background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)",
+                background: "rgba(255,255,255,0.06)",
+                border: "1px solid rgba(255,255,255,0.1)",
                 display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: "0.58rem", color: "#9ca3af", fontWeight: 700, letterSpacing: "0.02em",
+                fontSize: "0.55rem", color: "#9ca3af", fontWeight: 700,
               }}>TY</div>
             </motion.div>
 
-            {/* AI response area — fixed slot, thinking or reply */}
+            {/* AI row — always same vertical slot */}
             <div style={{ display: "flex", alignItems: "flex-start", gap: "10px" }}>
-              {/* AI avatar */}
+              {/* Avatar — always visible */}
               <div style={{
-                width: "30px", height: "30px", borderRadius: "50%", flexShrink: 0,
+                width: "30px", height: "30px", borderRadius: "50%", flexShrink: 0, marginTop: "2px",
                 background: "linear-gradient(135deg, #7c3aed, #06b6d4)",
-                boxShadow: `0 0 16px ${scene.accent}44`,
+                boxShadow: `0 0 18px ${scene.accent}55`,
                 display: "flex", alignItems: "center", justifyContent: "center",
               }}>
-                <span style={{ color: "#fff", fontSize: "8px", fontWeight: 900, letterSpacing: "0.02em" }}>AI</span>
+                <span style={{ color: "#fff", fontSize: "8px", fontWeight: 900 }}>AI</span>
               </div>
 
-              {/* Thinking dots */}
-              <AnimatePresence mode="wait">
-                {phase === "ai-thinking" ? (
-                  <motion.div key="thinking"
-                    initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                    transition={{ duration: 0.15 }}
-                    style={{
-                      background: "rgba(20,12,40,0.9)",
-                      border: "1px solid rgba(139,92,246,0.2)",
-                      borderRadius: "4px 18px 18px 18px",
-                      padding: "14px 18px",
-                      display: "flex", gap: "6px", alignItems: "center",
-                    }}
-                  >
-                    {[0,1,2].map(i => (
-                      <span key={i} style={{
-                        width: "7px", height: "7px", borderRadius: "50%",
-                        background: scene.accent, display: "block",
-                        animation: `bounce-dot 1.1s ease-in-out ${i * 0.18}s infinite`,
-                      }} />
-                    ))}
-                  </motion.div>
-                ) : (phase === "ai-reply" || phase === "done") && aiText ? (
-                  <motion.div key={`ai-${sceneIdx}`}
-                    initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                    transition={{ duration: 0.25 }}
-                    style={{
-                      background: "rgba(20,12,40,0.9)",
-                      border: `1px solid ${scene.accent}30`,
-                      borderRadius: "4px 18px 18px 18px",
-                      padding: "12px 16px",
-                      maxWidth: "75%",
-                    }}
-                  >
-                    {scene.ai.split("\n").map((line, i) => (
-                      <motion.p key={`${sceneIdx}-${i}`}
-                        initial={{ opacity: 0 }} animate={{ opacity: aiLine > i ? 1 : 0 }}
-                        transition={{ duration: 0.2 }}
-                        style={{
-                          fontSize: "0.88rem", lineHeight: 1.65,
-                          color: i === 0 ? "#f1f5f9" : "#8b9ab0",
-                          marginTop: i > 0 ? "4px" : 0,
-                        }}
-                      >{line}</motion.p>
-                    ))}
-                  </motion.div>
-                ) : (
-                  <motion.div key="empty"
-                    style={{ width: "100%", height: "46px" }}
-                  />
-                )}
-              </AnimatePresence>
+              {/* Bubble slot — fixed min-height so container stays stable */}
+              <div style={{ flex: 1, minHeight: "52px", position: "relative" }}>
+                <AnimatePresence mode="wait">
+
+                  {/* Thinking */}
+                  {phase === "ai-thinking" && (
+                    <motion.div key="dots"
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -6 }}
+                      transition={{ duration: 0.2 }}
+                      style={{
+                        display: "inline-flex", alignItems: "center", gap: "6px",
+                        background: "rgba(20,12,40,0.92)",
+                        border: `1px solid ${scene.accent}30`,
+                        borderRadius: "4px 18px 18px 18px",
+                        padding: "14px 18px",
+                      }}
+                    >
+                      {[0,1,2].map(i => (
+                        <span key={i} style={{
+                          width: "7px", height: "7px", borderRadius: "50%",
+                          background: scene.accent, display: "block",
+                          animation: `bounce-dot 1.1s ease-in-out ${i * 0.18}s infinite`,
+                        }} />
+                      ))}
+                    </motion.div>
+                  )}
+
+                  {/* Reply */}
+                  {(phase === "ai-reply" || phase === "done") && aiText && (
+                    <motion.div key={`reply-${sceneIdx}`}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+                      style={{
+                        background: "rgba(18,10,36,0.95)",
+                        border: `1px solid ${scene.accent}35`,
+                        borderRadius: "4px 18px 18px 18px",
+                        padding: "12px 16px",
+                        maxWidth: "82%",
+                      }}
+                    >
+                      {scene.ai.split("\n").map((line, i) => (
+                        <motion.p
+                          key={`${sceneIdx}-l${i}`}
+                          initial={{ opacity: 0, x: -6 }}
+                          animate={{ opacity: aiLine > i ? 1 : 0, x: aiLine > i ? 0 : -6 }}
+                          transition={{ duration: 0.25, delay: 0.05 }}
+                          style={{
+                            fontSize: "0.875rem",
+                            lineHeight: 1.65,
+                            color: i === 0 ? "#f1f5f9" : "#7d8fa8",
+                            marginTop: i > 0 ? "5px" : 0,
+                            margin: i > 0 ? "5px 0 0" : "0",
+                          }}
+                        >
+                          {line}
+                        </motion.p>
+                      ))}
+                    </motion.div>
+                  )}
+
+                </AnimatePresence>
+              </div>
             </div>
           </div>
 
