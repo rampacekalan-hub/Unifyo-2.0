@@ -429,12 +429,12 @@ export default function HeroSection() {
                     </motion.div>
                   )}
 
-                  {/* Reply */}
-                  {(phase === "ai-reply" || phase === "done") && aiText && (
+                  {/* Reply — only render revealed lines, each mounts fresh */}
+                  {(phase === "ai-reply" || phase === "done") && aiLine > 0 && (
                     <motion.div key={`reply-${sceneIdx}`}
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+                      transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
                       style={{
                         background: "rgba(18,10,36,0.95)",
                         border: `1px solid ${scene.accent}35`,
@@ -443,23 +443,24 @@ export default function HeroSection() {
                         maxWidth: "82%",
                       }}
                     >
-                      {scene.ai.split("\n").map((line, i) => (
-                        <motion.p
-                          key={`${sceneIdx}-l${i}`}
-                          initial={{ opacity: 0, x: -6 }}
-                          animate={{ opacity: aiLine > i ? 1 : 0, x: aiLine > i ? 0 : -6 }}
-                          transition={{ duration: 0.25, delay: 0.05 }}
-                          style={{
-                            fontSize: "0.875rem",
-                            lineHeight: 1.65,
-                            color: i === 0 ? "#f1f5f9" : "#7d8fa8",
-                            marginTop: i > 0 ? "5px" : 0,
-                            margin: i > 0 ? "5px 0 0" : "0",
-                          }}
-                        >
-                          {line}
-                        </motion.p>
-                      ))}
+                      <AnimatePresence initial={false}>
+                        {scene.ai.split("\n").slice(0, aiLine).map((line, i) => (
+                          <motion.p
+                            key={`${sceneIdx}-l${i}`}
+                            initial={{ opacity: 0, y: 6, x: -4 }}
+                            animate={{ opacity: 1, y: 0, x: 0 }}
+                            transition={{ duration: 0.22, ease: "easeOut" }}
+                            style={{
+                              fontSize: "0.875rem",
+                              lineHeight: 1.65,
+                              color: i === 0 ? "#f1f5f9" : "#7d8fa8",
+                              margin: i > 0 ? "5px 0 0" : "0",
+                            }}
+                          >
+                            {line}
+                          </motion.p>
+                        ))}
+                      </AnimatePresence>
                     </motion.div>
                   )}
 
