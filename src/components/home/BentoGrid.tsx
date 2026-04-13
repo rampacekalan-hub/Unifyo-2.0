@@ -74,7 +74,7 @@ export default function BentoGrid() {
             Jeden nástroj.<br />
             <span
               style={{
-                background: "linear-gradient(135deg, #c7d2fe, #818cf8, #6366f1)",
+                background: "linear-gradient(180deg, #ffffff 0%, #a78bfa 100%)",
                 WebkitBackgroundClip: "text",
                 WebkitTextFillColor: "transparent",
                 backgroundClip: "text",
@@ -108,9 +108,9 @@ export default function BentoGrid() {
                 style={{ height: "100%" }}
               >
                 <div
-                  className="h-full min-h-[160px] rounded-2xl p-6 border border-white/[0.07] bg-white/[0.025] backdrop-blur-sm flex flex-col gap-4 cursor-default transition-all duration-500"
+                  className="h-full min-h-[160px] rounded-2xl p-6 border border-white/[0.05] bg-[#080808] flex flex-col gap-4 cursor-default transition-all duration-500 hover:border-white/[0.1] hover:bg-[#0d0d0d]"
                   style={{
-                    boxShadow: `inset 0 1px 0 rgba(255,255,255,0.04), 0 0 0 1px rgba(255,255,255,0.03)`,
+                    boxShadow: `inset 0 1px 0 rgba(255,255,255,0.03)`,
                   }}
                 >
                   {/* Icon */}

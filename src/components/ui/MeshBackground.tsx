@@ -12,8 +12,8 @@ export default function MeshBackground() {
     if (!ctx) return;
 
     let animId: number;
-    let mouse = { x: 0.5, y: 0.5 };
-    let target = { x: 0.5, y: 0.5 };
+    let mouse = { x: 0.5, y: 0.0 };
+    let target = { x: 0.5, y: 0.0 };
 
     const resize = () => {
       canvas.width = window.innerWidth;
@@ -28,36 +28,61 @@ export default function MeshBackground() {
     };
     window.addEventListener("mousemove", onMouseMove);
 
-    const orbs = [
-      { x: 0.2, y: 0.2, r: 0.55, color: "99,102,241", speed: 0.00018 },
-      { x: 0.8, y: 0.3, r: 0.40, color: "139,92,246", speed: 0.00024 },
-      { x: 0.5, y: 0.85, r: 0.45, color: "79,70,229", speed: 0.00020 },
-      { x: 0.1, y: 0.7, r: 0.35, color: "124,58,237", speed: 0.00028 },
-    ];
-
     let t = 0;
     const draw = () => {
-      t++;
-      mouse.x += (target.x - mouse.x) * 0.04;
-      mouse.y += (target.y - mouse.y) * 0.04;
+      t += 0.004;
+      mouse.x += (target.x - mouse.x) * 0.05;
+      mouse.y += (target.y - mouse.y) * 0.05;
 
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      orbs.forEach((orb, i) => {
-        const ox = (orb.x + Math.sin(t * orb.speed * 1000 + i) * 0.18 + (mouse.x - 0.5) * 0.12) * canvas.width;
-        const oy = (orb.y + Math.cos(t * orb.speed * 800 + i * 2) * 0.14 + (mouse.y - 0.5) * 0.1) * canvas.height;
-        const radius = orb.r * Math.min(canvas.width, canvas.height);
+      // ── Beam of light from top ──
+      const beamX = canvas.width * (0.5 + (mouse.x - 0.5) * 0.15);
+      const beamWidth = canvas.width * 0.28;
 
-        const grad = ctx.createRadialGradient(ox, oy, 0, ox, oy, radius);
-        grad.addColorStop(0, `rgba(${orb.color},0.13)`);
-        grad.addColorStop(0.5, `rgba(${orb.color},0.06)`);
-        grad.addColorStop(1, `rgba(${orb.color},0)`);
+      const beam = ctx.createRadialGradient(
+        beamX, -80, 0,
+        beamX, canvas.height * 0.55, canvas.width * 0.6
+      );
+      beam.addColorStop(0, "rgba(139,92,246,0.18)");
+      beam.addColorStop(0.3, "rgba(139,92,246,0.07)");
+      beam.addColorStop(0.6, "rgba(109,40,217,0.03)");
+      beam.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.fillStyle = beam;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        ctx.beginPath();
-        ctx.fillStyle = grad;
-        ctx.arc(ox, oy, radius, 0, Math.PI * 2);
-        ctx.fill();
-      });
+      // ── Sharp top beam cone ──
+      const coneGrad = ctx.createLinearGradient(beamX, 0, beamX, canvas.height * 0.7);
+      coneGrad.addColorStop(0, "rgba(167,139,250,0.12)");
+      coneGrad.addColorStop(0.4, "rgba(139,92,246,0.04)");
+      coneGrad.addColorStop(1, "rgba(0,0,0,0)");
+
+      ctx.beginPath();
+      ctx.moveTo(beamX, -10);
+      ctx.lineTo(beamX - beamWidth / 2, canvas.height * 0.7);
+      ctx.lineTo(beamX + beamWidth / 2, canvas.height * 0.7);
+      ctx.closePath();
+      ctx.fillStyle = coneGrad;
+      ctx.fill();
+
+      // ── Subtle bottom glow ──
+      const bottomGlow = ctx.createRadialGradient(
+        canvas.width * 0.5, canvas.height, 0,
+        canvas.width * 0.5, canvas.height, canvas.width * 0.5
+      );
+      bottomGlow.addColorStop(0, `rgba(109,40,217,${0.04 + Math.sin(t) * 0.01})`);
+      bottomGlow.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.fillStyle = bottomGlow;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // ── Mouse-reactive side orb ──
+      const orbX = canvas.width * (mouse.x * 0.6 + 0.2);
+      const orbY = canvas.height * (mouse.y * 0.5 + 0.1);
+      const orbGrad = ctx.createRadialGradient(orbX, orbY, 0, orbX, orbY, canvas.width * 0.25);
+      orbGrad.addColorStop(0, "rgba(139,92,246,0.06)");
+      orbGrad.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.fillStyle = orbGrad;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       animId = requestAnimationFrame(draw);
     };
@@ -74,7 +99,6 @@ export default function MeshBackground() {
     <canvas
       ref={canvasRef}
       className="pointer-events-none fixed inset-0 -z-20"
-      style={{ opacity: 1 }}
     />
   );
 }
