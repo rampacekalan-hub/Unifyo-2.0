@@ -6,7 +6,7 @@ import { ArrowRight, Sparkles } from "lucide-react";
 
 export default function CtaSection() {
   return (
-    <section className="py-28 px-6">
+    <section className="py-28 px-6 section-bg">
       <div className="max-w-4xl mx-auto">
         <motion.div
           initial={{ opacity: 0, y: 28 }}
@@ -72,15 +72,15 @@ export default function CtaSection() {
                 <ArrowRight className="w-4 h-4" />
               </Link>
               <Link
-                href="/contact"
+                href="/login"
                 className="inline-flex items-center justify-center px-8 py-3.5 rounded-xl font-medium text-sm transition-all duration-200"
                 style={{
-                  background: "rgba(255,255,255,0.04)",
-                  border: "1px solid rgba(255,255,255,0.09)",
-                  color: "#9ca3af",
+                  background: "rgba(255,255,255,0.05)",
+                  border: "1px solid rgba(139,92,246,0.2)",
+                  color: "#c4b5fd",
                 }}
               >
-                Porozprávať sa s nami
+                Už mám účet →
               </Link>
             </div>
 

@@ -150,7 +150,7 @@ export default function HeroSection() {
             letterSpacing: "0.02em",
           }}>
             <Sparkles style={{ width: "13px", height: "13px" }} />
-            AI platforma · SK &amp; ČR · GPT-4o
+            Nová éra práce — Unifyo AI je tu
           </span>
         </motion.div>
 
@@ -191,8 +191,8 @@ export default function HeroSection() {
             margin: "0 auto 40px",
           }}
         >
-          Unifyo ovláda slovenčinu a riadi tvoj kalendár, emaily,
-          CRM pipeline aj hovory. Jeden asistent namiesto piatich nástrojov.
+          Jeden AI asistent po slovensky — kalendár, emaily, CRM aj hovory.
+          Ušetri hodiny denne. Začni zadarmo.
         </motion.p>
 
         {/* CTA buttons */}

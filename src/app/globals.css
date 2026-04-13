@@ -160,6 +160,12 @@
   }
 }
 
+/* Subtle backdrop for content sections */
+.section-bg {
+  background: rgba(5,7,15,0.65);
+  backdrop-filter: blur(0px);
+}
+
 /* Section visual separator — subtle gradient line between sections */
 .section-sep {
   width: 100%;

@@ -15,7 +15,7 @@ export default function PricingSection() {
   if (!config.features.showPricing) return null;
 
   return (
-    <section id="pricing" className="py-28 px-6 relative">
+    <section id="pricing" className="py-28 px-6 relative section-bg">
       <div className="max-w-5xl mx-auto">
 
         {/* Header */}

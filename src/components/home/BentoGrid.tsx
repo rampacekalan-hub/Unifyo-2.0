@@ -11,6 +11,7 @@ const features = [
     accent: "#8b5cf6",
     bg: "rgba(139,92,246,0.07)",
     border: "rgba(139,92,246,0.15)",
+    cta: "Skús AI asistenta",
   },
   {
     icon: Calendar,
@@ -19,6 +20,7 @@ const features = [
     accent: "#06b6d4",
     bg: "rgba(6,182,212,0.07)",
     border: "rgba(6,182,212,0.15)",
+    cta: "Prepojiť kalendár",
   },
   {
     icon: Mail,
@@ -27,6 +29,7 @@ const features = [
     accent: "#67e8f9",
     bg: "rgba(103,232,249,0.06)",
     border: "rgba(103,232,249,0.12)",
+    cta: "Pripojiť Gmail",
   },
   {
     icon: Phone,
@@ -35,6 +38,7 @@ const features = [
     accent: "#10b981",
     bg: "rgba(16,185,129,0.07)",
     border: "rgba(16,185,129,0.15)",
+    cta: "Zisti viac",
   },
   {
     icon: BarChart3,
@@ -43,6 +47,7 @@ const features = [
     accent: "#a78bfa",
     bg: "rgba(167,139,250,0.07)",
     border: "rgba(167,139,250,0.15)",
+    cta: "Spravovať pipeline",
   },
   {
     icon: Shield,
@@ -51,12 +56,13 @@ const features = [
     accent: "#34d399",
     bg: "rgba(52,211,153,0.06)",
     border: "rgba(52,211,153,0.12)",
+    cta: "Bezpečnosť & GDPR",
   },
 ];
 
 export default function BentoGrid() {
   return (
-    <section id="features" className="py-28 px-6 relative">
+    <section id="features" className="py-28 px-6 relative section-bg">
       <div className="max-w-6xl mx-auto">
 
         {/* Section label */}
@@ -106,6 +112,18 @@ export default function BentoGrid() {
                   backdropFilter: "blur(12px)",
                   WebkitBackdropFilter: "blur(12px)",
                 }}
+                onMouseEnter={e => {
+                  (e.currentTarget as HTMLDivElement).style.background = f.bg.replace("0.07", "0.13").replace("0.06", "0.12");
+                  (e.currentTarget as HTMLDivElement).style.border = `1px solid ${f.accent}50`;
+                  (e.currentTarget as HTMLDivElement).style.boxShadow = `0 0 32px ${f.accent}18, 0 8px 32px rgba(0,0,0,0.3)`;
+                  (e.currentTarget as HTMLDivElement).style.transform = "translateY(-2px)";
+                }}
+                onMouseLeave={e => {
+                  (e.currentTarget as HTMLDivElement).style.background = f.bg;
+                  (e.currentTarget as HTMLDivElement).style.border = `1px solid ${f.border}`;
+                  (e.currentTarget as HTMLDivElement).style.boxShadow = "none";
+                  (e.currentTarget as HTMLDivElement).style.transform = "translateY(0)";
+                }}
               >
                 {/* Icon badge */}
                 <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
@@ -122,10 +140,10 @@ export default function BentoGrid() {
                   </p>
                 </div>
 
-                {/* Bottom accent line */}
-                <div className="mt-auto pt-3 border-t" style={{ borderColor: `${f.accent}18` }}>
+                {/* Bottom cta */}
+                <div className="mt-auto pt-3 border-t" style={{ borderColor: `${f.accent}22` }}>
                   <span className="text-xs font-medium" style={{ color: f.accent }}>
-                    AI-powered →
+                    {f.cta} →
                   </span>
                 </div>
               </div>
