@@ -201,7 +201,7 @@ export default function NeuralBackground() {
     <canvas
       ref={canvasRef}
       className="pointer-events-none fixed inset-0 -z-10"
-      style={{ opacity: 0.7 }}
+      style={{ opacity: 0.45 }}
       aria-hidden="true"
     />
   );
