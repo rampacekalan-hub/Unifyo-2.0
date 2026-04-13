@@ -106,7 +106,7 @@ export default function HeroSection() {
   const SceneIcon = scene.icon;
 
   return (
-    <section className="relative min-h-screen flex items-center overflow-hidden pt-20 pb-16">
+    <section className="relative w-full flex items-center overflow-hidden" style={{ minHeight: "calc(100vh - 0px)", paddingTop: "96px", paddingBottom: "80px" }}>
 
       {/* Subtle dot grid */}
       <div className="absolute inset-0 pointer-events-none"
@@ -118,10 +118,10 @@ export default function HeroSection() {
         }}
       />
 
-      <div className="relative z-10 w-full max-w-6xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+      <div className="hero-grid relative z-10 w-full max-w-6xl mx-auto px-6">
 
         {/* ── LEFT: Text content ── */}
-        <div className="flex flex-col items-start">
+        <div className="flex flex-col items-start" style={{ minWidth: 0 }}>
 
           {/* Badge */}
           <motion.div
@@ -141,7 +141,7 @@ export default function HeroSection() {
             initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.18 }}
             className="font-black tracking-[-0.03em] leading-[1.06] mb-5"
-            style={{ fontSize: "clamp(2.4rem, 4.5vw, 4rem)" }}
+            style={{ fontSize: "clamp(2rem, 3.5vw, 3.4rem)" }}
           >
             <span style={{ color: "#eef2ff" }}>Tvoj AI asistent</span>
             <br />
@@ -157,8 +157,8 @@ export default function HeroSection() {
           <motion.p
             initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.26 }}
-            className="mb-8 leading-relaxed max-w-sm"
-            style={{ fontSize: "1rem", color: "#6b7280" }}
+            className="mb-7 leading-relaxed max-w-sm"
+            style={{ fontSize: "0.93rem", color: "#6b7280" }}
           >
             Unifyo riadi tvoj kalendár, emaily, pipeline aj hovory.
             Hovoríš po slovensky — AI rozumie dokonale.
@@ -168,7 +168,7 @@ export default function HeroSection() {
           <motion.ul
             initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.34 }}
-            className="flex flex-col gap-2 mb-9"
+            className="flex flex-col gap-2 mb-7"
           >
             {[
               { label: "Automatický kalendár & meeting scheduling", color: "#a78bfa" },
@@ -220,9 +220,9 @@ export default function HeroSection() {
 
         {/* ── RIGHT: Live AI Chat Demo ── */}
         <motion.div
-          initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }}
+          initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.7, delay: 0.3 }}
-          className="w-full"
+          className="min-w-0 w-full"
         >
           <div className="rounded-2xl overflow-hidden"
             style={{
@@ -234,8 +234,8 @@ export default function HeroSection() {
             }}
           >
             {/* Title bar */}
-            <div className="flex items-center gap-3 px-4 py-3.5"
-              style={{ borderBottom: "1px solid rgba(139,92,246,0.1)", background: "rgba(12,15,26,0.6)" }}>
+            <div className="flex items-center gap-3 px-4 py-3"
+              style={{ background: "rgba(12,15,26,0.6)" }}>
               <div className="flex gap-1.5">
                 <span className="w-2.5 h-2.5 rounded-full" style={{ background: "#ff5f57" }} />
                 <span className="w-2.5 h-2.5 rounded-full" style={{ background: "#febc2e" }} />
@@ -248,29 +248,30 @@ export default function HeroSection() {
                 </div>
                 <span className="text-xs font-semibold" style={{ color: "#9ca3af" }}>Unifyo AI</span>
               </div>
-              {/* Scene tabs */}
-              <div className="ml-auto flex gap-1.5">
-                {SCENES.map((s, i) => (
-                  <button key={i} onClick={() => { setSceneIdx(i); }}
-                    className="flex items-center gap-1 px-2 py-0.5 rounded-md text-[0.62rem] font-medium transition-all duration-200"
-                    style={{
-                      background: i === sceneIdx ? `${s.accent}20` : "transparent",
-                      border: `1px solid ${i === sceneIdx ? s.accent + "40" : "transparent"}`,
-                      color: i === sceneIdx ? s.tagColor : "#374151",
-                    }}>
-                    <s.icon className="w-2.5 h-2.5" />
-                    {s.tag}
-                  </button>
-                ))}
-              </div>
-              <span className="flex items-center gap-1 text-[0.65rem] ml-2" style={{ color: "#10b981" }}>
-                <span className="w-1.5 h-1.5 rounded-full bg-[#10b981]" />
+              <span className="ml-auto flex items-center gap-1 text-[0.65rem]" style={{ color: "#10b981" }}>
+                <span className="w-1.5 h-1.5 rounded-full" style={{ background: "#10b981" }} />
                 Online
               </span>
             </div>
+            {/* Scene tabs row */}
+            <div className="flex gap-1.5 px-4 py-2"
+              style={{ borderBottom: "1px solid rgba(139,92,246,0.1)", background: "rgba(8,10,18,0.5)" }}>
+              {SCENES.map((s, i) => (
+                <button key={i} onClick={() => setSceneIdx(i)}
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[0.65rem] font-medium transition-all duration-200"
+                  style={{
+                    background: i === sceneIdx ? `${s.accent}18` : "transparent",
+                    border: `1px solid ${i === sceneIdx ? s.accent + "35" : "rgba(255,255,255,0.04)"}`,
+                    color: i === sceneIdx ? s.tagColor : "#4b5563",
+                  }}>
+                  <s.icon className="w-3 h-3" style={{ color: i === sceneIdx ? s.accent : "#4b5563" }} />
+                  {s.tag}
+                </button>
+              ))}
+            </div>
 
             {/* Messages */}
-            <div className="p-5 space-y-4 min-h-[220px]">
+            <div className="p-5 space-y-4" style={{ minHeight: "260px" }}>
 
               {/* User message */}
               <AnimatePresence mode="wait">
@@ -284,7 +285,7 @@ export default function HeroSection() {
                       background: "rgba(124,58,237,0.18)",
                       border: "1px solid rgba(139,92,246,0.22)",
                     }}>
-                    <p className="text-sm leading-relaxed" style={{ color: "#e2e8f0" }}>
+                    <p className="text-sm leading-relaxed" style={{ color: "#d1d5db", wordBreak: "break-word" }}>
                       {userText}
                       {phase === "user-typing" && (
                         <span className="inline-block w-0.5 h-4 ml-0.5 align-middle animate-pulse"
@@ -347,7 +348,7 @@ export default function HeroSection() {
                           initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }}
                           transition={{ duration: 0.25, delay: i * 0.05 }}
                           className="text-sm leading-relaxed"
-                          style={{ color: i === 0 ? "#e2e8f0" : "#9ca3af", marginTop: i > 0 ? "4px" : 0 }}>
+                          style={{ color: i === 0 ? "#e2e8f0" : "#a1a1aa", marginTop: i > 0 ? "5px" : 0 }}>
                           {line}
                         </motion.p>
                       ))}
