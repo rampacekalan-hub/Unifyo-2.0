@@ -1,96 +1,111 @@
 import Link from "next/link";
-import { Zap } from "lucide-react";
 import { getSiteConfig } from "@/config/site-settings";
 
 const config = getSiteConfig();
 
 export default function Footer() {
   return (
-    <footer className="relative border-t border-white/5">
+    <footer className="relative" style={{ borderTop: "1px solid rgba(139,92,246,0.1)" }}>
+      {/* Top fade line */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1/3 h-px"
+        style={{ background: "linear-gradient(90deg, transparent, rgba(139,92,246,0.25), transparent)" }}
+      />
 
-      <div className="max-w-7xl mx-auto px-6 pt-16 pb-10">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-10 mb-14">
+      <div className="max-w-6xl mx-auto px-6 pt-14 pb-10">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-10 mb-12">
 
-          {/* Brand col */}
-          <div className="col-span-2 md:col-span-1 flex flex-col gap-5">
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#7c3aed] to-[#2563eb] flex items-center justify-center">
-                <span className="text-white text-xs font-black">U</span>
+          {/* Brand */}
+          <div className="col-span-2 md:col-span-1 flex flex-col gap-4">
+            <div className="flex items-center gap-2.5">
+              <div className="w-7 h-7 rounded-xl flex items-center justify-center"
+                style={{ background: "linear-gradient(135deg, #7c3aed, #06b6d4)", boxShadow: "0 0 12px rgba(124,58,237,0.25)" }}>
+                <span className="text-white text-[10px] font-black">U</span>
               </div>
-              <span className="font-semibold text-[0.95rem] text-white tracking-tight">{config.name}<span className="text-[#a78bfa]">.</span></span>
+              <span className="font-bold text-sm tracking-tight" style={{ color: "#eef2ff" }}>
+                {config.name}
+              </span>
             </div>
-            <p className="text-[0.8rem] text-gray-500 leading-relaxed max-w-[200px]">
+            <p className="text-xs leading-relaxed max-w-[180px]" style={{ color: "#374151" }}>
               {config.texts.footer.tagline}
             </p>
+            {/* Status indicator */}
+            <div className="flex items-center gap-1.5 mt-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#10b981] inline-block" />
+              <span className="text-[0.68rem]" style={{ color: "#374151" }}>Všetky systémy fungujú</span>
+            </div>
           </div>
 
-          {/* Navigácia */}
-          <div className="flex flex-col gap-4">
-            <p className="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-gray-600">
+          {/* Nav col */}
+          <div className="flex flex-col gap-3.5">
+            <p className="text-[0.62rem] font-semibold uppercase tracking-[0.16em]" style={{ color: "#4b5563" }}>
               Navigácia
             </p>
-            {config.links.nav.slice(0, 2).map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className="text-[0.8rem] text-gray-400 hover:text-white transition-colors duration-200"
-              >
+            {config.links.nav.slice(0, 3).map((link) => (
+              <Link key={link.href} href={link.href}
+                className="text-xs transition-colors duration-200 hover:text-white"
+                style={{ color: "#374151" }}>
                 {link.label}
               </Link>
             ))}
           </div>
 
-          {/* Produkt */}
-          <div className="flex flex-col gap-4">
-            <p className="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-gray-600">
+          {/* Account col */}
+          <div className="flex flex-col gap-3.5">
+            <p className="text-[0.62rem] font-semibold uppercase tracking-[0.16em]" style={{ color: "#4b5563" }}>
               Účet
             </p>
-            {config.links.nav.slice(2).map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className="text-[0.8rem] text-gray-400 hover:text-white transition-colors duration-200"
-              >
+            {config.links.nav.slice(3).map((link) => (
+              <Link key={link.href} href={link.href}
+                className="text-xs transition-colors duration-200 hover:text-white"
+                style={{ color: "#374151" }}>
                 {link.label}
               </Link>
             ))}
+            <Link href="/register"
+              className="text-xs transition-colors duration-200"
+              style={{ color: "#8b5cf6" }}>
+              Začať zadarmo →
+            </Link>
           </div>
 
-          {/* Právne */}
-          <div className="flex flex-col gap-4">
-            <p className="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-gray-600">
-              Právne
+          {/* Legal col */}
+          <div className="flex flex-col gap-3.5">
+            <p className="text-[0.62rem] font-semibold uppercase tracking-[0.16em]" style={{ color: "#4b5563" }}>
+              Právne & Kontakt
             </p>
             {config.links.legal.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className="text-[0.8rem] text-gray-400 hover:text-white transition-colors duration-200"
-              >
+              <Link key={link.href} href={link.href}
+                className="text-xs transition-colors duration-200 hover:text-white"
+                style={{ color: "#374151" }}>
                 {link.label}
               </Link>
             ))}
-            <a
-              href={`mailto:${config.links.contact.email}`}
-              className="text-[0.8rem] text-gray-400 hover:text-white transition-colors duration-200"
-            >
+            <a href={`mailto:${config.links.contact.email}`}
+              className="text-xs transition-colors duration-200"
+              style={{ color: "#374151" }}>
               {config.links.contact.email}
             </a>
           </div>
         </div>
 
+        {/* Divider */}
+        <div className="w-full h-px mb-6" style={{ background: "rgba(139,92,246,0.08)" }} />
+
         {/* Bottom bar */}
-        <div className="border-t border-white/5 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <p className="text-[0.72rem] text-gray-600">{config.texts.footer.copyright}</p>
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+          <p className="text-[0.68rem]" style={{ color: "#374151" }}>
+            {config.texts.footer.copyright}
+          </p>
           <div className="flex items-center gap-5">
+            <span className="text-[0.68rem]" style={{ color: "#1f2937" }}>
+              🇸🇰 Made in Slovakia
+            </span>
             {config.links.social.map((s) => (
-              <a
-                key={s.platform}
-                href={s.href}
-                target="_blank"
-                rel="noopener noreferrer"
+              <a key={s.platform} href={s.href}
+                target="_blank" rel="noopener noreferrer"
                 aria-label={s.label}
-                className="text-[0.72rem] text-gray-600 hover:text-[#a78bfa] transition-colors duration-200"
+                className="text-[0.68rem] transition-colors duration-200 hover:text-[#a78bfa]"
+                style={{ color: "#374151" }}
               >
                 {s.label}
               </a>
