@@ -1,0 +1,47 @@
+import { NextRequest, NextResponse } from "next/server";
+import bcrypt from "bcryptjs";
+import { prisma } from "@/lib/prisma";
+import { loginSchema } from "@/lib/validations";
+import { createSession } from "@/lib/auth";
+
+export async function POST(req: NextRequest) {
+  try {
+    const body = await req.json();
+    const parsed = loginSchema.safeParse(body);
+
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: parsed.error.issues[0].message },
+        { status: 400 }
+      );
+    }
+
+    const { email, password } = parsed.data;
+
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) {
+      return NextResponse.json(
+        { error: "Nesprávny e-mail alebo heslo" },
+        { status: 401 }
+      );
+    }
+
+    const passwordMatch = await bcrypt.compare(password, user.password);
+    if (!passwordMatch) {
+      return NextResponse.json(
+        { error: "Nesprávny e-mail alebo heslo" },
+        { status: 401 }
+      );
+    }
+
+    await createSession({ userId: user.id, email: user.email });
+
+    return NextResponse.json({ success: true }, { status: 200 });
+  } catch (error) {
+    console.error("[LOGIN]", error);
+    return NextResponse.json(
+      { error: "Nastala chyba servera. Skúste to znova neskôr." },
+      { status: 500 }
+    );
+  }
+}
