@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
-import { ArrowRight, Sparkles, Calendar, Mail, BarChart3, Phone, Users, Zap } from "lucide-react";
+import { ArrowRight, Calendar, Mail, BarChart3, Phone, Sparkles, Users, ShieldCheck } from "lucide-react";
 
 const SCENES = [
   {
@@ -105,278 +105,377 @@ export default function HeroSection() {
   const SceneIcon = scene.icon;
 
   return (
-    <section className="relative w-full" style={{ paddingTop: "110px", paddingBottom: "100px" }}>
+    <section style={{
+      position: "relative",
+      width: "100%",
+      minHeight: "100vh",
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      justifyContent: "center",
+      paddingTop: "96px",
+      paddingBottom: "80px",
+      overflow: "hidden",
+    }}>
 
-      {/* ── CENTERED TOP: Badge + Headline + Sub + CTAs ── */}
-      <div className="relative z-10 max-w-4xl mx-auto px-6 text-center">
-
+      {/* ── Top: Badge + Headline + Sub + CTAs ── */}
+      <motion.div
+        initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6 }}
+        style={{
+          position: "relative",
+          zIndex: 10,
+          width: "100%",
+          maxWidth: "800px",
+          margin: "0 auto",
+          padding: "0 24px",
+          textAlign: "center",
+        }}
+      >
         {/* Badge */}
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="mb-8">
-          <span className="inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-semibold"
-            style={{ background: "rgba(139,92,246,0.12)", border: "1px solid rgba(139,92,246,0.3)", color: "#c4b5fd" }}>
-            <Sparkles className="w-3.5 h-3.5" />
-            AI platforma pre SK &amp; ČR trh · GPT-4o powered
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.4, delay: 0.05 }}
+          style={{ marginBottom: "28px" }}
+        >
+          <span style={{
+            display: "inline-flex", alignItems: "center", gap: "8px",
+            background: "rgba(139,92,246,0.1)",
+            border: "1px solid rgba(139,92,246,0.28)",
+            color: "#c4b5fd",
+            borderRadius: "999px",
+            padding: "8px 18px",
+            fontSize: "0.82rem",
+            fontWeight: 600,
+            letterSpacing: "0.02em",
+          }}>
+            <Sparkles style={{ width: "13px", height: "13px" }} />
+            AI platforma · SK &amp; ČR · GPT-4o
           </span>
         </motion.div>
 
         {/* Headline */}
         <motion.h1
           initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.65, delay: 0.08 }}
-          className="font-black tracking-[-0.04em] leading-[1.05] mb-7"
-          style={{ fontSize: "clamp(3rem, 6vw, 5.5rem)", color: "#eef2ff" }}
+          transition={{ duration: 0.65, delay: 0.1 }}
+          style={{
+            fontSize: "clamp(2.8rem, 7vw, 5.2rem)",
+            fontWeight: 900,
+            letterSpacing: "-0.04em",
+            lineHeight: 1.06,
+            color: "#eef2ff",
+            marginBottom: "24px",
+          }}
         >
-          Zabudni na chaos.<br />
+          Zabudni na chaos.
+          <br />
           <span style={{
-            background: "linear-gradient(90deg, #a78bfa 0%, #67e8f9 50%, #6ee7b7 100%)",
-            WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text",
+            background: "linear-gradient(90deg, #a78bfa 0%, #38bdf8 55%, #6ee7b7 100%)",
+            WebkitBackgroundClip: "text",
+            WebkitTextFillColor: "transparent",
+            backgroundClip: "text",
           }}>
             AI robí prácu za teba.
           </span>
         </motion.h1>
 
-        {/* Sub */}
+        {/* Subheadline */}
         <motion.p
           initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.16 }}
-          className="mx-auto mb-10 leading-relaxed"
-          style={{ fontSize: "clamp(1.05rem, 2vw, 1.25rem)", color: "#9ca3af", maxWidth: "52ch" }}
+          transition={{ duration: 0.55, delay: 0.18 }}
+          style={{
+            fontSize: "clamp(1rem, 2.2vw, 1.18rem)",
+            color: "#8b9ab0",
+            lineHeight: 1.7,
+            maxWidth: "48ch",
+            margin: "0 auto 40px",
+          }}
         >
-          Unifyo rozumie slovenčine a riadi tvoj kalendár, emaily, CRM pipeline aj hovory.
-          Jeden AI asistent namiesto piatich nástrojov.
+          Unifyo ovláda slovenčinu a riadi tvoj kalendár, emaily,
+          CRM pipeline aj hovory. Jeden asistent namiesto piatich nástrojov.
         </motion.p>
 
-        {/* CTAs */}
+        {/* CTA buttons */}
         <motion.div
-          initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.24 }}
-          className="flex flex-wrap justify-center gap-4 mb-8"
+          initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.26 }}
+          style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "12px", marginBottom: "36px" }}
         >
-          <Link href="/register"
-            className="inline-flex items-center gap-2.5 rounded-2xl font-bold text-white transition-all duration-200 hover:scale-[1.02] active:scale-[0.97]"
-            style={{
-              background: "linear-gradient(135deg, #7c3aed, #4f46e5)",
-              boxShadow: "0 0 0 1px rgba(139,92,246,0.4), 0 8px 32px rgba(124,58,237,0.4)",
-              padding: "0.9rem 2.2rem",
-              fontSize: "1.05rem",
-            }}>
+          <Link href="/register" style={{
+            display: "inline-flex", alignItems: "center", gap: "10px",
+            background: "linear-gradient(135deg, #7c3aed, #4f46e5)",
+            boxShadow: "0 0 0 1px rgba(139,92,246,0.35), 0 8px 28px rgba(124,58,237,0.35)",
+            color: "#fff",
+            borderRadius: "14px",
+            padding: "14px 28px",
+            fontSize: "1rem",
+            fontWeight: 700,
+            textDecoration: "none",
+          }}>
             Začať zadarmo — žiadna karta
-            <ArrowRight className="w-5 h-5" />
+            <ArrowRight style={{ width: "18px", height: "18px" }} />
           </Link>
-          <Link href="/#pricing"
-            className="inline-flex items-center gap-2 rounded-2xl font-semibold transition-all duration-200 hover:scale-[1.02]"
-            style={{
-              background: "rgba(255,255,255,0.05)",
-              border: "1px solid rgba(255,255,255,0.12)",
-              color: "#e2e8f0",
-              padding: "0.9rem 2rem",
-              fontSize: "1.05rem",
-            }}>
+          <Link href="/#pricing" style={{
+            display: "inline-flex", alignItems: "center",
+            background: "rgba(255,255,255,0.04)",
+            border: "1px solid rgba(255,255,255,0.1)",
+            color: "#d1d5db",
+            borderRadius: "14px",
+            padding: "14px 24px",
+            fontSize: "1rem",
+            fontWeight: 600,
+            textDecoration: "none",
+          }}>
             Pozrieť ceny
           </Link>
         </motion.div>
 
-        {/* Social proof strip */}
+        {/* Social proof */}
         <motion.div
           initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-          transition={{ delay: 0.4 }}
-          className="flex flex-wrap justify-center items-center gap-6"
+          transition={{ delay: 0.38 }}
+          style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", alignItems: "center", gap: "20px" }}
         >
-          <div className="flex items-center gap-2">
-            <Users className="w-4 h-4" style={{ color: "#6b7280" }} />
-            <span className="text-sm" style={{ color: "#6b7280" }}>1 200+ aktívnych používateľov</span>
-          </div>
-          <span style={{ color: "#1f2937" }}>·</span>
-          <div className="flex items-center gap-1.5">
-            {[1,2,3,4,5].map(s => <span key={s} style={{ color: "#f59e0b", fontSize: "0.9rem" }}>★</span>)}
-            <span className="text-sm ml-1" style={{ color: "#6b7280" }}>4.9 / 5</span>
-          </div>
-          <span style={{ color: "#1f2937" }}>·</span>
-          <div className="flex items-center gap-2">
-            <Zap className="w-4 h-4" style={{ color: "#6b7280" }} />
-            <span className="text-sm" style={{ color: "#6b7280" }}>GDPR · AES-256 · SK &amp; ČR</span>
-          </div>
+          {[
+            { icon: <Users style={{ width: "14px", height: "14px" }} />, text: "1 200+ používateľov" },
+            { icon: <span style={{ color: "#f59e0b", fontSize: "0.85rem", letterSpacing: "2px" }}>★★★★★</span>, text: "4.9 / 5" },
+            { icon: <ShieldCheck style={{ width: "14px", height: "14px" }} />, text: "GDPR · AES-256" },
+          ].map((item, i) => (
+            <div key={i} style={{ display: "flex", alignItems: "center", gap: "7px", color: "#4b5563", fontSize: "0.82rem" }}>
+              {item.icon}
+              <span>{item.text}</span>
+            </div>
+          ))}
         </motion.div>
-      </div>
+      </motion.div>
 
-      {/* ── CHAT DEMO: Full-width below ── */}
+      {/* ── Chat Demo ── */}
       <motion.div
-        initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.7, delay: 0.45, ease: [0.21, 0.47, 0.32, 0.98] }}
-        className="relative z-10 max-w-4xl mx-auto px-6 mt-16"
+        initial={{ opacity: 0, y: 48 }} animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.75, delay: 0.42, ease: [0.16, 1, 0.3, 1] }}
+        style={{
+          position: "relative",
+          zIndex: 10,
+          width: "100%",
+          maxWidth: "760px",
+          margin: "56px auto 0",
+          padding: "0 24px",
+        }}
       >
-        {/* Glow behind chat */}
-        <div className="absolute inset-x-0 -top-10 h-40 pointer-events-none"
-          style={{ background: "radial-gradient(ellipse 60% 100% at 50% 0%, rgba(124,58,237,0.15), transparent)" }} />
+        {/* Purple glow behind card */}
+        <div style={{
+          position: "absolute", inset: "-20px", borderRadius: "32px",
+          background: "radial-gradient(ellipse 70% 60% at 50% 30%, rgba(124,58,237,0.12), transparent)",
+          pointerEvents: "none",
+        }} />
 
-        <div className="rounded-2xl overflow-hidden relative"
-          style={{
-            background: "rgba(8,10,20,0.95)",
-            backdropFilter: "blur(32px)",
-            WebkitBackdropFilter: "blur(32px)",
-            border: "1px solid rgba(139,92,246,0.2)",
-            boxShadow: "0 0 0 1px rgba(139,92,246,0.08), 0 32px 80px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.04)",
-          }}
-        >
-          {/* Top accent line */}
-          <div className="absolute top-0 left-0 right-0 h-px"
-            style={{ background: "linear-gradient(90deg, transparent 5%, rgba(139,92,246,0.5) 40%, rgba(6,182,212,0.4) 60%, transparent 95%)" }} />
+        {/* Chat card */}
+        <div style={{
+          position: "relative",
+          background: "rgba(7,9,18,0.96)",
+          backdropFilter: "blur(40px)",
+          WebkitBackdropFilter: "blur(40px)",
+          border: "1px solid rgba(139,92,246,0.18)",
+          borderRadius: "20px",
+          overflow: "hidden",
+          boxShadow: "0 0 0 1px rgba(139,92,246,0.06), 0 40px 100px rgba(0,0,0,0.7)",
+        }}>
+          {/* Top gradient line */}
+          <div style={{
+            position: "absolute", top: 0, left: 0, right: 0, height: "1px",
+            background: "linear-gradient(90deg, transparent 0%, rgba(139,92,246,0.6) 35%, rgba(56,189,248,0.5) 65%, transparent 100%)",
+          }} />
 
-          {/* Title bar */}
-          <div className="flex items-center gap-3 px-5 py-3.5"
-            style={{ borderBottom: "1px solid rgba(139,92,246,0.1)", background: "rgba(12,15,26,0.8)" }}>
-            <div className="flex gap-1.5">
-              <span className="w-3 h-3 rounded-full" style={{ background: "#ff5f57" }} />
-              <span className="w-3 h-3 rounded-full" style={{ background: "#febc2e" }} />
-              <span className="w-3 h-3 rounded-full" style={{ background: "#28c840" }} />
-            </div>
-            <div className="flex items-center gap-2 ml-2">
-              <div className="w-6 h-6 rounded-lg flex items-center justify-center"
-                style={{ background: "linear-gradient(135deg, #7c3aed, #06b6d4)" }}>
-                <span className="text-white font-black" style={{ fontSize: "10px" }}>U</span>
-              </div>
-              <span className="font-semibold" style={{ fontSize: "0.95rem", color: "#e2e8f0" }}>Unifyo AI</span>
-              <span className="text-xs px-2 py-0.5 rounded-full ml-1"
-                style={{ background: "rgba(16,185,129,0.12)", border: "1px solid rgba(16,185,129,0.2)", color: "#34d399" }}>
-                Online
-              </span>
-            </div>
-            {/* Scene tabs */}
-            <div className="ml-auto flex gap-2">
-              {SCENES.map((s, i) => (
-                <button key={i} onClick={() => setSceneIdx(i)}
-                  className="flex items-center gap-1.5 rounded-lg font-medium transition-all duration-200"
-                  style={{
-                    padding: "0.35rem 0.75rem",
-                    fontSize: "0.8rem",
-                    background: i === sceneIdx ? `rgba(${s.accent === "#8b5cf6" ? "139,92,246" : s.accent === "#06b6d4" ? "6,182,212" : s.accent === "#10b981" ? "16,185,129" : "245,158,11"},0.15)` : "transparent",
-                    border: `1px solid ${i === sceneIdx ? s.accent + "50" : "transparent"}`,
-                    color: i === sceneIdx ? s.tagColor : "#4b5563",
-                  }}>
-                  <s.icon className="w-3.5 h-3.5" />
-                  {s.tag}
-                </button>
+          {/* Titlebar */}
+          <div style={{
+            display: "flex", alignItems: "center", gap: "10px",
+            padding: "12px 20px",
+            background: "rgba(10,12,22,0.9)",
+            borderBottom: "1px solid rgba(139,92,246,0.08)",
+          }}>
+            {/* Traffic lights */}
+            <div style={{ display: "flex", gap: "5px" }}>
+              {["#ff5f57","#febc2e","#28c840"].map(c => (
+                <span key={c} style={{ width: "10px", height: "10px", borderRadius: "50%", background: c, display: "block" }} />
               ))}
             </div>
-          </div>
-
-          {/* Messages area — 2 columns: left AI, right User */}
-          <div className="p-6" style={{ minHeight: "200px" }}>
-            <div className="flex flex-col gap-4">
-
-              {/* User message */}
-              <AnimatePresence mode="wait">
-                <motion.div key={`user-${sceneIdx}`}
-                  initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0 }} transition={{ duration: 0.25 }}
-                  className="flex justify-end items-start gap-3"
-                >
-                  <div className="rounded-2xl rounded-tr-sm px-5 py-3.5"
-                    style={{
-                      background: "rgba(109,40,217,0.25)",
-                      border: "1px solid rgba(139,92,246,0.3)",
-                      maxWidth: "60%",
-                    }}>
-                    <p style={{ fontSize: "0.975rem", color: "#f1f5f9", lineHeight: 1.6 }}>
-                      {userText}
-                      {phase === "user-typing" && (
-                        <span className="inline-block w-0.5 h-[1.1em] ml-0.5 align-middle"
-                          style={{ background: "#a78bfa", animation: "blink 1s step-end infinite" }} />
-                      )}
-                    </p>
-                  </div>
-                  <div className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0"
-                    style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.1)", fontSize: "0.7rem", color: "#9ca3af", fontWeight: 700 }}>
-                    Ty
-                  </div>
-                </motion.div>
-              </AnimatePresence>
-
-              {/* AI thinking */}
-              <AnimatePresence>
-                {phase === "ai-thinking" && (
-                  <motion.div key="thinking"
-                    initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}
-                    transition={{ duration: 0.2 }} className="flex items-start gap-3"
-                  >
-                    <div className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0"
-                      style={{ background: "linear-gradient(135deg, #7c3aed, #06b6d4)" }}>
-                      <span className="font-black text-white" style={{ fontSize: "10px" }}>AI</span>
-                    </div>
-                    <div className="flex items-center gap-2 px-5 py-3.5 rounded-2xl rounded-tl-sm"
-                      style={{ background: "rgba(30,20,60,0.7)", border: "1px solid rgba(139,92,246,0.2)" }}>
-                      {[0,1,2].map(i => (
-                        <span key={i} className="w-2 h-2 rounded-full"
-                          style={{ background: "#8b5cf6", animation: `bounce-dot 1.2s ease-in-out ${i*0.2}s infinite` }} />
-                      ))}
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
-              {/* AI reply */}
-              <AnimatePresence>
-                {(phase === "ai-reply" || phase === "done") && aiText && (
-                  <motion.div key={`ai-${sceneIdx}`}
-                    initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.3 }} className="flex items-start gap-3"
-                  >
-                    <div className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0"
-                      style={{ background: "linear-gradient(135deg, #7c3aed, #06b6d4)", boxShadow: "0 0 16px rgba(124,58,237,0.3)" }}>
-                      <span className="font-black text-white" style={{ fontSize: "10px" }}>AI</span>
-                    </div>
-                    <div className="rounded-2xl rounded-tl-sm px-5 py-3.5"
-                      style={{
-                        background: "rgba(30,20,60,0.8)",
-                        border: "1px solid rgba(139,92,246,0.2)",
-                        maxWidth: "70%",
-                      }}>
-                      {aiText.split("\n").map((line, i) => (
-                        <motion.p key={i}
-                          initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }}
-                          transition={{ duration: 0.2, delay: i * 0.06 }}
-                          style={{
-                            fontSize: "0.975rem",
-                            lineHeight: 1.65,
-                            color: i === 0 ? "#f1f5f9" : "#b0b8cc",
-                            marginTop: i > 0 ? "6px" : 0,
-                          }}>
-                          {line}
-                        </motion.p>
-                      ))}
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+            {/* Logo + name */}
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginLeft: "6px" }}>
+              <div style={{
+                width: "22px", height: "22px", borderRadius: "8px",
+                background: "linear-gradient(135deg, #7c3aed, #06b6d4)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}>
+                <span style={{ color: "#fff", fontSize: "9px", fontWeight: 900 }}>U</span>
+              </div>
+              <span style={{ color: "#e2e8f0", fontSize: "0.88rem", fontWeight: 600 }}>Unifyo AI</span>
+              <span style={{
+                background: "rgba(16,185,129,0.12)", border: "1px solid rgba(16,185,129,0.22)",
+                color: "#34d399", fontSize: "0.68rem", padding: "2px 8px", borderRadius: "999px", fontWeight: 600,
+              }}>Online</span>
+            </div>
+            {/* Scene tabs */}
+            <div style={{ marginLeft: "auto", display: "flex", gap: "4px" }}>
+              {SCENES.map((s, i) => {
+                const TabIcon = s.icon;
+                return (
+                  <button key={i} onClick={() => setSceneIdx(i)} style={{
+                    display: "flex", alignItems: "center", gap: "5px",
+                    padding: "4px 10px", borderRadius: "8px",
+                    fontSize: "0.75rem", fontWeight: 500,
+                    background: i === sceneIdx ? "rgba(139,92,246,0.14)" : "transparent",
+                    border: `1px solid ${i === sceneIdx ? "rgba(139,92,246,0.3)" : "transparent"}`,
+                    color: i === sceneIdx ? s.tagColor : "#374151",
+                    cursor: "pointer", transition: "all 0.15s",
+                  }}>
+                    <TabIcon style={{ width: "12px", height: "12px" }} />
+                    {s.tag}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
-          {/* Input bar */}
-          <div className="px-6 pb-5">
-            <div className="flex items-center gap-3 rounded-xl px-5 py-3"
-              style={{ background: "rgba(12,15,26,0.9)", border: "1px solid rgba(139,92,246,0.12)" }}>
-              <SceneIcon className="w-4 h-4 flex-shrink-0" style={{ color: scene.accent }} />
-              <span style={{ flex: 1, fontSize: "0.9rem", color: "#4b5563" }}>
+          {/* Messages */}
+          <div style={{ padding: "20px 20px 12px", minHeight: "160px", display: "flex", flexDirection: "column", gap: "14px" }}>
+
+            {/* User bubble */}
+            <AnimatePresence mode="wait">
+              <motion.div key={`u-${sceneIdx}`}
+                initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0 }} transition={{ duration: 0.22 }}
+                style={{ display: "flex", justifyContent: "flex-end", alignItems: "flex-start", gap: "10px" }}
+              >
+                <div style={{
+                  background: "rgba(109,40,217,0.22)",
+                  border: "1px solid rgba(139,92,246,0.28)",
+                  borderRadius: "16px 16px 4px 16px",
+                  padding: "12px 16px",
+                  maxWidth: "66%",
+                  fontSize: "0.9rem", color: "#f1f5f9", lineHeight: 1.6,
+                }}>
+                  {userText}
+                  {phase === "user-typing" && (
+                    <span style={{
+                      display: "inline-block", width: "2px", height: "1em",
+                      background: "#a78bfa", marginLeft: "3px", verticalAlign: "middle",
+                      animation: "blink 1s step-end infinite",
+                    }} />
+                  )}
+                </div>
+                <div style={{
+                  width: "32px", height: "32px", borderRadius: "50%", flexShrink: 0,
+                  background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.09)",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: "0.62rem", color: "#6b7280", fontWeight: 700,
+                }}>Ty</div>
+              </motion.div>
+            </AnimatePresence>
+
+            {/* AI thinking */}
+            <AnimatePresence>
+              {phase === "ai-thinking" && (
+                <motion.div key="think"
+                  initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}
+                  transition={{ duration: 0.18 }}
+                  style={{ display: "flex", alignItems: "flex-start", gap: "10px" }}
+                >
+                  <div style={{
+                    width: "32px", height: "32px", borderRadius: "50%", flexShrink: 0,
+                    background: "linear-gradient(135deg, #7c3aed, #06b6d4)",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                  }}>
+                    <span style={{ color: "#fff", fontSize: "9px", fontWeight: 900 }}>AI</span>
+                  </div>
+                  <div style={{
+                    background: "rgba(25,15,50,0.8)", border: "1px solid rgba(139,92,246,0.18)",
+                    borderRadius: "4px 16px 16px 16px",
+                    padding: "12px 16px", display: "flex", gap: "5px", alignItems: "center",
+                  }}>
+                    {[0,1,2].map(i => (
+                      <span key={i} style={{
+                        width: "7px", height: "7px", borderRadius: "50%", background: "#8b5cf6",
+                        display: "block",
+                        animation: `bounce-dot 1.1s ease-in-out ${i * 0.18}s infinite`,
+                      }} />
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* AI reply */}
+            <AnimatePresence>
+              {(phase === "ai-reply" || phase === "done") && aiText && (
+                <motion.div key={`a-${sceneIdx}`}
+                  initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.28 }}
+                  style={{ display: "flex", alignItems: "flex-start", gap: "10px" }}
+                >
+                  <div style={{
+                    width: "32px", height: "32px", borderRadius: "50%", flexShrink: 0,
+                    background: "linear-gradient(135deg, #7c3aed, #06b6d4)",
+                    boxShadow: "0 0 14px rgba(124,58,237,0.25)",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                  }}>
+                    <span style={{ color: "#fff", fontSize: "9px", fontWeight: 900 }}>AI</span>
+                  </div>
+                  <div style={{
+                    background: "rgba(25,15,50,0.85)",
+                    border: "1px solid rgba(139,92,246,0.2)",
+                    borderRadius: "4px 16px 16px 16px",
+                    padding: "12px 16px",
+                    maxWidth: "72%",
+                  }}>
+                    {aiText.split("\n").map((line, i) => (
+                      <motion.p key={i}
+                        initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.18, delay: i * 0.07 }}
+                        style={{
+                          fontSize: "0.9rem", lineHeight: 1.65,
+                          color: i === 0 ? "#f1f5f9" : "#9baab8",
+                          marginTop: i > 0 ? "5px" : 0,
+                        }}
+                      >{line}</motion.p>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* Input */}
+          <div style={{ padding: "0 20px 18px" }}>
+            <div style={{
+              display: "flex", alignItems: "center", gap: "10px",
+              background: "rgba(8,10,20,0.95)", border: "1px solid rgba(139,92,246,0.1)",
+              borderRadius: "12px", padding: "10px 14px",
+            }}>
+              <SceneIcon style={{ width: "15px", height: "15px", color: scene.accent, flexShrink: 0 }} />
+              <span style={{ flex: 1, fontSize: "0.85rem", color: "#374151" }}>
                 Opýtaj sa Unifyo AI čokoľvek po slovensky...
               </span>
-              <div className="flex items-center justify-center w-8 h-8 rounded-xl"
-                style={{ background: "linear-gradient(135deg, #7c3aed, #4f46e5)" }}>
-                <ArrowRight className="w-4 h-4 text-white" />
+              <div style={{
+                width: "30px", height: "30px", borderRadius: "9px",
+                background: "linear-gradient(135deg, #7c3aed, #4f46e5)",
+                display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+              }}>
+                <ArrowRight style={{ width: "14px", height: "14px", color: "#fff" }} />
               </div>
             </div>
           </div>
         </div>
 
         {/* Progress dots */}
-        <div className="flex justify-center gap-2 mt-5">
+        <div style={{ display: "flex", justifyContent: "center", gap: "8px", marginTop: "18px" }}>
           {SCENES.map((s, i) => (
-            <button key={i} onClick={() => setSceneIdx(i)}
-              className="rounded-full transition-all duration-300"
-              style={{
-                width: i === sceneIdx ? "24px" : "6px",
-                height: "6px",
-                background: i === sceneIdx ? scene.accent : "rgba(139,92,246,0.18)",
-              }} />
+            <button key={i} onClick={() => setSceneIdx(i)} style={{
+              width: i === sceneIdx ? "22px" : "6px",
+              height: "6px", borderRadius: "999px",
+              background: i === sceneIdx ? scene.accent : "rgba(139,92,246,0.15)",
+              border: "none", cursor: "pointer",
+              transition: "all 0.25s ease",
+            }} />
           ))}
         </div>
       </motion.div>
