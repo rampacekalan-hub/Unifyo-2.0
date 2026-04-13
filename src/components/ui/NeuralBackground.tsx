@@ -17,38 +17,64 @@ interface Signal {
   type: "violet" | "cyan" | "green";
 }
 
-// Realistic brain silhouette: two lobes, denser in center, scattered axons
-function brainPoint(i: number, total: number, W: number, H: number): [number, number] {
-  const cx = W * 0.5;
-  const cy = H * 0.38; // slightly above center — brain sits upper half
-  const section = i / total;
+// Generate a point INSIDE a brain-shaped silhouette using rejection sampling
+// Brain shape: top-view, two hemispheres separated by midline, with organic bumpy outline
+function brainOutlineRadius(angle: number, hemisphere: "left" | "right"): number {
+  // Base oval
+  const a = 1.0; // horizontal radius multiplier
+  const b = 0.78; // vertical radius multiplier
+  const baseR = (a * b) / Math.sqrt((b * Math.cos(angle)) ** 2 + (a * Math.sin(angle)) ** 2);
 
-  // Left lobe
-  if (section < 0.48) {
-    const t = (section / 0.48) * Math.PI * 2;
-    const rx = W * 0.195;
-    const ry = H * 0.21;
-    const lx = cx - W * 0.07;
-    const jitter = 0.35 + Math.random() * 0.75;
-    return [lx + Math.cos(t) * rx * jitter, cy + Math.sin(t) * ry * jitter];
-  }
-  // Right lobe
-  if (section < 0.92) {
-    const t = ((section - 0.48) / 0.44) * Math.PI * 2;
-    const rx = W * 0.175;
-    const ry = H * 0.20;
-    const rx2 = cx + W * 0.07;
-    const jitter = 0.35 + Math.random() * 0.75;
-    return [rx2 + Math.cos(t) * rx * jitter, cy + Math.sin(t) * ry * jitter];
-  }
-  // Corpus callosum — center bridge nodes
-  const t = Math.random() * Math.PI * 2;
-  return [cx + (Math.random() - 0.5) * W * 0.12, cy + (Math.random() - 0.5) * H * 0.08];
+  // Add gyrus-like bumps (lobes: frontal, parietal, temporal, occipital)
+  const bumps =
+    0.08 * Math.cos(2 * angle) +       // frontal / occipital lobes
+    0.06 * Math.cos(3 * angle) +       // parietal bump
+    0.04 * Math.sin(4 * angle) +       // temporal squiggle
+    0.03 * Math.cos(5 * angle);        // fine gyri detail
+
+  // Flatten the medial (inner) side to create the interhemispheric fissure
+  const medialFlatten = hemisphere === "left"
+    ? Math.max(0, Math.cos(angle)) * 0.35   // flatten right side of left hemisphere
+    : Math.max(0, -Math.cos(angle)) * 0.35; // flatten left side of right hemisphere
+
+  return (baseR + bumps) * (1 - medialFlatten);
 }
 
-const NODE_COUNT = 110;
-const CONNECT_DIST = 160;
-const MAX_SIGNALS = 28;
+function brainPoint(i: number, total: number, W: number, H: number): [number, number] {
+  const cx = W * 0.5;
+  const cy = H * 0.40;
+
+  // Scale brain to cover ~65% of viewport width total (both hemispheres)
+  const scale = Math.min(W * 0.30, H * 0.30);
+  const gap = W * 0.012; // interhemispheric fissure half-width
+
+  const hemisphere: "left" | "right" = i < total * 0.5 ? "left" : "right";
+  const hDir = hemisphere === "left" ? -1 : 1;
+
+  // Rejection sampling: random angle + radius, keep if inside outline
+  for (let attempt = 0; attempt < 80; attempt++) {
+    const angle = Math.random() * Math.PI * 2;
+    const maxR = brainOutlineRadius(angle, hemisphere);
+    const r = Math.sqrt(Math.random()) * maxR; // sqrt for uniform area distribution
+
+    const lx = cx + hDir * (gap + r * scale * Math.cos(angle) * (hemisphere === "left" ? -1 : 1));
+    const ly = cy + r * scale * Math.sin(angle);
+
+    // Verify point is within reasonable bounds
+    if (lx > W * 0.05 && lx < W * 0.95 && ly > H * 0.05 && ly < H * 0.85) {
+      return [lx + (Math.random() - 0.5) * 8, ly + (Math.random() - 0.5) * 8];
+    }
+  }
+
+  // Fallback
+  const fallAngle = Math.random() * Math.PI * 2;
+  return [cx + hDir * (gap + Math.random() * scale * 0.7) * Math.cos(fallAngle),
+          cy + Math.random() * scale * 0.7 * Math.sin(fallAngle)];
+}
+
+const NODE_COUNT = 140;
+const CONNECT_DIST = 120;
+const MAX_SIGNALS = 32;
 
 export default function NeuralBackground() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -145,14 +171,46 @@ export default function NeuralBackground() {
         }
       }
 
-      // Draw soft central glow (brain aura)
-      const cx = W * 0.5, cy = H * 0.38;
-      const aura = ctx.createRadialGradient(cx, cy, 0, cx, cy, W * 0.38);
-      aura.addColorStop(0, "rgba(124,58,237,0.055)");
-      aura.addColorStop(0.5, "rgba(56,189,248,0.025)");
+      // Draw brain aura glow
+      const cx = W * 0.5, cy = H * 0.40;
+      const scale = Math.min(W * 0.30, H * 0.30);
+      const gap = W * 0.012;
+      const aura = ctx.createRadialGradient(cx, cy, 0, cx, cy, scale * 1.8);
+      aura.addColorStop(0, "rgba(124,58,237,0.07)");
+      aura.addColorStop(0.5, "rgba(56,189,248,0.03)");
       aura.addColorStop(1, "rgba(0,0,0,0)");
       ctx.fillStyle = aura;
       ctx.fillRect(0, 0, W, H);
+
+      // Draw brain outline (left + right hemisphere contours)
+      const STEPS = 180;
+      for (const hemi of ["left", "right"] as const) {
+        const hDir = hemi === "left" ? -1 : 1;
+        ctx.beginPath();
+        for (let s = 0; s <= STEPS; s++) {
+          const angle = (s / STEPS) * Math.PI * 2;
+          const r = brainOutlineRadius(angle, hemi) * scale;
+          const px = cx + hDir * (gap + r * Math.cos(angle) * (hemi === "left" ? -1 : 1));
+          const py = cy + r * Math.sin(angle);
+          s === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+        ctx.strokeStyle = hemi === "left"
+          ? "rgba(139,92,246,0.28)"
+          : "rgba(56,189,248,0.22)";
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      }
+
+      // Interhemispheric fissure — vertical center line
+      ctx.beginPath();
+      ctx.moveTo(cx, cy - scale * 0.85);
+      ctx.lineTo(cx, cy + scale * 0.85);
+      ctx.strokeStyle = "rgba(139,92,246,0.1)";
+      ctx.lineWidth = 1;
+      ctx.setLineDash([4, 6]);
+      ctx.stroke();
+      ctx.setLineDash([]);
 
       // Edges
       for (const [i, j, d] of edges) {
