@@ -255,7 +255,7 @@ const siteConfig: SiteConfig = {
       { label: "Kontakt", href: "/kontakt" },
     ],
     contact: {
-      email: "hello@unifyo.online",
+      email: "info@unifyo.online",
     },
   },
 
