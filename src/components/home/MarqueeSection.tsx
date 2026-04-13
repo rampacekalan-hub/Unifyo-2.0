@@ -13,12 +13,12 @@ const logos = [
 
 export default function MarqueeSection() {
   return (
-    <section className="py-16 relative overflow-hidden border-y border-white/[0.04]">
+    <section className="py-16 relative overflow-hidden border-y border-black/[0.06] bg-[#fafafa]">
       {/* Fade edges */}
-      <div className="absolute left-0 top-0 bottom-0 w-24 bg-gradient-to-r from-[#080b12] to-transparent z-10 pointer-events-none" />
-      <div className="absolute right-0 top-0 bottom-0 w-24 bg-gradient-to-l from-[#080b12] to-transparent z-10 pointer-events-none" />
+      <div className="absolute left-0 top-0 bottom-0 w-24 bg-gradient-to-r from-[#fafafa] to-transparent z-10 pointer-events-none" />
+      <div className="absolute right-0 top-0 bottom-0 w-24 bg-gradient-to-l from-[#fafafa] to-transparent z-10 pointer-events-none" />
 
-      <p className="text-center text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-[#1e293b] mb-8">
+      <p className="text-center text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-[#d4d4d8] mb-8">
         Postavené na špičkových technológiách
       </p>
 
@@ -30,10 +30,10 @@ export default function MarqueeSection() {
           {[...logos, ...logos].map((logo, i) => (
             <div
               key={`${logo.name}-${i}`}
-              className="flex items-center gap-2.5 opacity-30 hover:opacity-90 transition-opacity duration-300 cursor-default select-none flex-shrink-0"
+              className="flex items-center gap-2.5 opacity-40 hover:opacity-100 transition-opacity duration-300 cursor-default select-none flex-shrink-0"
             >
               <span className="text-lg">{logo.icon}</span>
-              <span className="text-sm font-semibold text-[#94a3b8] tracking-tight">{logo.name}</span>
+              <span className="text-sm font-semibold text-[#52525b] tracking-tight">{logo.name}</span>
             </div>
           ))}
         </div>

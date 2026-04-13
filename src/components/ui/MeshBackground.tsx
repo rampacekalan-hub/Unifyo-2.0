@@ -36,52 +36,24 @@ export default function MeshBackground() {
 
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // ── Beam of light from top ──
-      const beamX = canvas.width * (0.5 + (mouse.x - 0.5) * 0.15);
-      const beamWidth = canvas.width * 0.28;
-
-      const beam = ctx.createRadialGradient(
-        beamX, -80, 0,
-        beamX, canvas.height * 0.55, canvas.width * 0.6
-      );
-      beam.addColorStop(0, "rgba(139,92,246,0.18)");
-      beam.addColorStop(0.3, "rgba(139,92,246,0.07)");
-      beam.addColorStop(0.6, "rgba(109,40,217,0.03)");
-      beam.addColorStop(1, "rgba(0,0,0,0)");
-      ctx.fillStyle = beam;
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      // ── Sharp top beam cone ──
-      const coneGrad = ctx.createLinearGradient(beamX, 0, beamX, canvas.height * 0.7);
-      coneGrad.addColorStop(0, "rgba(167,139,250,0.12)");
-      coneGrad.addColorStop(0.4, "rgba(139,92,246,0.04)");
-      coneGrad.addColorStop(1, "rgba(0,0,0,0)");
-
-      ctx.beginPath();
-      ctx.moveTo(beamX, -10);
-      ctx.lineTo(beamX - beamWidth / 2, canvas.height * 0.7);
-      ctx.lineTo(beamX + beamWidth / 2, canvas.height * 0.7);
-      ctx.closePath();
-      ctx.fillStyle = coneGrad;
-      ctx.fill();
-
-      // ── Subtle bottom glow ──
-      const bottomGlow = ctx.createRadialGradient(
-        canvas.width * 0.5, canvas.height, 0,
-        canvas.width * 0.5, canvas.height, canvas.width * 0.5
-      );
-      bottomGlow.addColorStop(0, `rgba(109,40,217,${0.04 + Math.sin(t) * 0.01})`);
-      bottomGlow.addColorStop(1, "rgba(0,0,0,0)");
-      ctx.fillStyle = bottomGlow;
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      // ── Mouse-reactive side orb ──
-      const orbX = canvas.width * (mouse.x * 0.6 + 0.2);
-      const orbY = canvas.height * (mouse.y * 0.5 + 0.1);
-      const orbGrad = ctx.createRadialGradient(orbX, orbY, 0, orbX, orbY, canvas.width * 0.25);
-      orbGrad.addColorStop(0, "rgba(139,92,246,0.06)");
-      orbGrad.addColorStop(1, "rgba(0,0,0,0)");
+      // ── Light mode: subtle violet orb follows mouse ──
+      const orbX = canvas.width * (0.3 + mouse.x * 0.4);
+      const orbY = canvas.height * (0.1 + mouse.y * 0.3);
+      const orbGrad = ctx.createRadialGradient(orbX, orbY, 0, orbX, orbY, canvas.width * 0.4);
+      orbGrad.addColorStop(0, `rgba(124,58,237,${0.05 + Math.sin(t) * 0.01})`);
+      orbGrad.addColorStop(0.5, "rgba(139,92,246,0.02)");
+      orbGrad.addColorStop(1, "rgba(255,255,255,0)");
       ctx.fillStyle = orbGrad;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // ── Second static orb top-right ──
+      const orb2Grad = ctx.createRadialGradient(
+        canvas.width * 0.85, canvas.height * 0.15, 0,
+        canvas.width * 0.85, canvas.height * 0.15, canvas.width * 0.3
+      );
+      orb2Grad.addColorStop(0, "rgba(139,92,246,0.04)");
+      orb2Grad.addColorStop(1, "rgba(255,255,255,0)");
+      ctx.fillStyle = orb2Grad;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       animId = requestAnimationFrame(draw);

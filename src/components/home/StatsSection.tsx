@@ -45,9 +45,9 @@ export default function StatsSection() {
 
   return (
     <section ref={ref} className="py-24 px-6 relative">
-      {/* Glow */}
+      {/* Subtle violet glow */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none -z-10">
-        <div className="w-[600px] h-[200px] bg-[#6366f1]/[0.04] blur-[100px] rounded-full" />
+        <div className="w-[600px] h-[200px] bg-[#7c3aed]/[0.04] blur-[100px] rounded-full" />
       </div>
 
       <div className="max-w-5xl mx-auto">
@@ -58,7 +58,7 @@ export default function StatsSection() {
           transition={{ duration: 0.6 }}
           className="text-center mb-16"
         >
-          <h2 className="text-2xl md:text-4xl font-black tracking-tight text-white">
+          <h2 className="text-2xl md:text-4xl font-black tracking-tight text-[#0a0a0a]">
             Čísla, ktoré hovoria za všetko
           </h2>
         </motion.div>
@@ -71,9 +71,9 @@ export default function StatsSection() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: i * 0.1 }}
-              className="flex flex-col items-center text-center gap-2 p-6 rounded-2xl border border-white/[0.05] bg-white/[0.02]"
+              className="flex flex-col items-center text-center gap-2 p-6 rounded-2xl border border-black/[0.07] bg-white shadow-[0_1px_4px_rgba(0,0,0,0.04)]"
             >
-              <span className="text-4xl md:text-5xl font-black tracking-tight text-white tabular-nums">
+              <span className="text-4xl md:text-5xl font-black tracking-tight text-[#0a0a0a] tabular-nums">
                 <CountUp
                   target={stat.value}
                   suffix={stat.suffix}
@@ -81,7 +81,7 @@ export default function StatsSection() {
                   active={inView}
                 />
               </span>
-              <span className="text-[0.72rem] text-[#334155] font-medium tracking-wider uppercase">{stat.label}</span>
+              <span className="text-[0.72rem] text-[#a1a1aa] font-medium tracking-wider uppercase">{stat.label}</span>
             </motion.div>
           ))}
         </div>

@@ -67,14 +67,14 @@ export default function BentoGrid() {
           transition={{ duration: 0.6 }}
           className="text-center mb-14"
         >
-          <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-medium bg-white/[0.04] text-[#a5b4fc] border border-white/[0.07] mb-5">
+          <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-medium bg-[#7c3aed]/[0.07] text-[#7c3aed] border border-[#7c3aed]/[0.15] mb-5">
             Prečo Unifyo
           </span>
-          <h2 className="text-3xl md:text-5xl font-black tracking-[-0.04em] text-white leading-tight">
+          <h2 className="text-3xl md:text-5xl font-black tracking-[-0.04em] text-[#0a0a0a] leading-tight">
             Jeden nástroj.<br />
             <span
               style={{
-                background: "linear-gradient(180deg, #ffffff 0%, #a78bfa 100%)",
+                background: "linear-gradient(135deg, #7c3aed 0%, #8b5cf6 100%)",
                 WebkitBackgroundClip: "text",
                 WebkitTextFillColor: "transparent",
                 backgroundClip: "text",
@@ -108,9 +108,9 @@ export default function BentoGrid() {
                 style={{ height: "100%" }}
               >
                 <div
-                  className="h-full min-h-[160px] rounded-2xl p-6 border border-white/[0.05] bg-[#080808] flex flex-col gap-4 cursor-default transition-all duration-500 hover:border-white/[0.1] hover:bg-[#0d0d0d]"
+                  className="h-full min-h-[160px] rounded-2xl p-6 border border-black/[0.07] bg-white flex flex-col gap-4 cursor-default transition-all duration-300 hover:border-[#7c3aed]/[0.2] hover:shadow-[0_4px_24px_rgba(124,58,237,0.08)]"
                   style={{
-                    boxShadow: `inset 0 1px 0 rgba(255,255,255,0.03)`,
+                    boxShadow: `0 1px 3px rgba(0,0,0,0.04)`,
                   }}
                 >
                   {/* Icon */}
@@ -125,8 +125,8 @@ export default function BentoGrid() {
                     <f.icon className="w-5 h-5" style={{ color: f.color }} />
                   </div>
                   <div>
-                    <h3 className="text-white font-semibold text-[0.95rem] mb-1.5 tracking-tight">{f.title}</h3>
-                    <p className="text-[#475569] text-sm leading-relaxed">{f.desc}</p>
+                    <h3 className="text-[#0a0a0a] font-semibold text-[0.95rem] mb-1.5 tracking-tight">{f.title}</h3>
+                    <p className="text-[#71717a] text-sm leading-relaxed">{f.desc}</p>
                   </div>
                 </div>
               </Tilt>
