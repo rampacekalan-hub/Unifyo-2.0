@@ -17,9 +17,9 @@ interface Pulse {
 }
 
 const COLS = ["139,92,246", "139,92,246", "139,92,246", "56,189,248", "52,211,153"];
-const N = 80;
-const LINK_DIST = 180;
-const MAX_PULSES = 20;
+const N = 120;
+const LINK_DIST = 200;
+const MAX_PULSES = 28;
 
 export default function NeuralBackground() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -48,7 +48,7 @@ export default function NeuralBackground() {
         y: Math.random() * H,
         vx: (Math.random() - 0.5) * 0.35,
         vy: (Math.random() - 0.5) * 0.35,
-        r: 1.5 + Math.random() * 2,
+        r: 2 + Math.random() * 2.5,
         pulse: Math.random() * Math.PI * 2,
         pulseSpeed: 0.012 + Math.random() * 0.01,
         col: COLS[Math.floor(Math.random() * COLS.length)],
@@ -100,7 +100,7 @@ export default function NeuralBackground() {
 
       // Draw links
       for (const [i, j, d] of links) {
-        const a = (1 - d / LINK_DIST) * 0.18;
+        const a = (1 - d / LINK_DIST) * 0.28;
         const pi = particles[i], pj = particles[j];
         const g = ctx.createLinearGradient(pi.x, pi.y, pj.x, pj.y);
         g.addColorStop(0,   `rgba(${pi.col},0)`);
@@ -173,7 +173,7 @@ export default function NeuralBackground() {
         height: "100%",
         zIndex: 0,
         pointerEvents: "none",
-        opacity: 0.7,
+        opacity: 0.9,
       }}
     />
   );

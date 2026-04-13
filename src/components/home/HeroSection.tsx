@@ -336,112 +336,114 @@ export default function HeroSection() {
             </div>
           </div>
 
-          {/* Messages */}
-          <div style={{ padding: "20px 20px 12px", minHeight: "160px", display: "flex", flexDirection: "column", gap: "14px" }}>
+          {/* Messages — FIXED HEIGHT, no layout shift */}
+          <div style={{
+            padding: "20px 20px 16px",
+            height: "220px",          // fixed — never grows/shrinks
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "space-between",
+            gap: "12px",
+            overflow: "hidden",
+          }}>
 
-            {/* User bubble */}
-            <AnimatePresence mode="wait">
-              <motion.div key={`u-${sceneIdx}`}
-                initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0 }} transition={{ duration: 0.22 }}
-                style={{ display: "flex", justifyContent: "flex-end", alignItems: "flex-start", gap: "10px" }}
-              >
-                <div style={{
-                  background: "rgba(109,40,217,0.22)",
-                  border: "1px solid rgba(139,92,246,0.28)",
-                  borderRadius: "16px 16px 4px 16px",
-                  padding: "12px 16px",
-                  maxWidth: "66%",
-                  fontSize: "0.9rem", color: "#f1f5f9", lineHeight: 1.6,
-                }}>
-                  {userText}
-                  {phase === "user-typing" && (
-                    <span style={{
-                      display: "inline-block", width: "2px", height: "1em",
-                      background: "#a78bfa", marginLeft: "3px", verticalAlign: "middle",
-                      animation: "blink 1s step-end infinite",
-                    }} />
-                  )}
-                </div>
-                <div style={{
-                  width: "32px", height: "32px", borderRadius: "50%", flexShrink: 0,
-                  background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.09)",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: "0.62rem", color: "#6b7280", fontWeight: 700,
-                }}>Ty</div>
-              </motion.div>
-            </AnimatePresence>
+            {/* User bubble — always visible, fades in on scene change */}
+            <motion.div
+              key={`u-${sceneIdx}`}
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+              transition={{ duration: 0.3 }}
+              style={{ display: "flex", justifyContent: "flex-end", alignItems: "flex-end", gap: "10px" }}
+            >
+              <div style={{
+                background: `rgba(${scene.accent === "#8b5cf6" ? "109,40,217" : scene.accent === "#06b6d4" ? "6,120,180" : scene.accent === "#10b981" ? "16,120,80" : "180,120,10"},0.22)`,
+                border: `1px solid ${scene.accent}45`,
+                borderRadius: "18px 18px 4px 18px",
+                padding: "11px 16px",
+                maxWidth: "70%",
+                fontSize: "0.88rem", color: "#f1f5f9", lineHeight: 1.6,
+              }}>
+                {userText}
+                {phase === "user-typing" && (
+                  <span style={{
+                    display: "inline-block", width: "2px", height: "0.9em",
+                    background: scene.accent, marginLeft: "3px", verticalAlign: "middle",
+                    animation: "blink 0.9s step-end infinite",
+                  }} />
+                )}
+              </div>
+              <div style={{
+                width: "30px", height: "30px", borderRadius: "50%", flexShrink: 0,
+                background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: "0.58rem", color: "#9ca3af", fontWeight: 700, letterSpacing: "0.02em",
+              }}>TY</div>
+            </motion.div>
 
-            {/* AI thinking */}
-            <AnimatePresence>
-              {phase === "ai-thinking" && (
-                <motion.div key="think"
-                  initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}
-                  transition={{ duration: 0.18 }}
-                  style={{ display: "flex", alignItems: "flex-start", gap: "10px" }}
-                >
-                  <div style={{
-                    width: "32px", height: "32px", borderRadius: "50%", flexShrink: 0,
-                    background: "linear-gradient(135deg, #7c3aed, #06b6d4)",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                  }}>
-                    <span style={{ color: "#fff", fontSize: "9px", fontWeight: 900 }}>AI</span>
-                  </div>
-                  <div style={{
-                    background: "rgba(25,15,50,0.8)", border: "1px solid rgba(139,92,246,0.18)",
-                    borderRadius: "4px 16px 16px 16px",
-                    padding: "12px 16px", display: "flex", gap: "5px", alignItems: "center",
-                  }}>
+            {/* AI response area — fixed slot, thinking or reply */}
+            <div style={{ display: "flex", alignItems: "flex-start", gap: "10px" }}>
+              {/* AI avatar */}
+              <div style={{
+                width: "30px", height: "30px", borderRadius: "50%", flexShrink: 0,
+                background: "linear-gradient(135deg, #7c3aed, #06b6d4)",
+                boxShadow: `0 0 16px ${scene.accent}44`,
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}>
+                <span style={{ color: "#fff", fontSize: "8px", fontWeight: 900, letterSpacing: "0.02em" }}>AI</span>
+              </div>
+
+              {/* Thinking dots */}
+              <AnimatePresence mode="wait">
+                {phase === "ai-thinking" ? (
+                  <motion.div key="thinking"
+                    initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                    transition={{ duration: 0.15 }}
+                    style={{
+                      background: "rgba(20,12,40,0.9)",
+                      border: "1px solid rgba(139,92,246,0.2)",
+                      borderRadius: "4px 18px 18px 18px",
+                      padding: "14px 18px",
+                      display: "flex", gap: "6px", alignItems: "center",
+                    }}
+                  >
                     {[0,1,2].map(i => (
                       <span key={i} style={{
-                        width: "7px", height: "7px", borderRadius: "50%", background: "#8b5cf6",
-                        display: "block",
+                        width: "7px", height: "7px", borderRadius: "50%",
+                        background: scene.accent, display: "block",
                         animation: `bounce-dot 1.1s ease-in-out ${i * 0.18}s infinite`,
                       }} />
                     ))}
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            {/* AI reply */}
-            <AnimatePresence>
-              {(phase === "ai-reply" || phase === "done") && aiText && (
-                <motion.div key={`a-${sceneIdx}`}
-                  initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.28 }}
-                  style={{ display: "flex", alignItems: "flex-start", gap: "10px" }}
-                >
-                  <div style={{
-                    width: "32px", height: "32px", borderRadius: "50%", flexShrink: 0,
-                    background: "linear-gradient(135deg, #7c3aed, #06b6d4)",
-                    boxShadow: "0 0 14px rgba(124,58,237,0.25)",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                  }}>
-                    <span style={{ color: "#fff", fontSize: "9px", fontWeight: 900 }}>AI</span>
-                  </div>
-                  <div style={{
-                    background: "rgba(25,15,50,0.85)",
-                    border: "1px solid rgba(139,92,246,0.2)",
-                    borderRadius: "4px 16px 16px 16px",
-                    padding: "12px 16px",
-                    maxWidth: "72%",
-                  }}>
-                    {aiText.split("\n").map((line, i) => (
-                      <motion.p key={i}
-                        initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.18, delay: i * 0.07 }}
+                  </motion.div>
+                ) : (phase === "ai-reply" || phase === "done") && aiText ? (
+                  <motion.div key={`ai-${sceneIdx}`}
+                    initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                    transition={{ duration: 0.25 }}
+                    style={{
+                      background: "rgba(20,12,40,0.9)",
+                      border: `1px solid ${scene.accent}30`,
+                      borderRadius: "4px 18px 18px 18px",
+                      padding: "12px 16px",
+                      maxWidth: "75%",
+                    }}
+                  >
+                    {scene.ai.split("\n").map((line, i) => (
+                      <motion.p key={`${sceneIdx}-${i}`}
+                        initial={{ opacity: 0 }} animate={{ opacity: aiLine > i ? 1 : 0 }}
+                        transition={{ duration: 0.2 }}
                         style={{
-                          fontSize: "0.9rem", lineHeight: 1.65,
-                          color: i === 0 ? "#f1f5f9" : "#9baab8",
-                          marginTop: i > 0 ? "5px" : 0,
+                          fontSize: "0.88rem", lineHeight: 1.65,
+                          color: i === 0 ? "#f1f5f9" : "#8b9ab0",
+                          marginTop: i > 0 ? "4px" : 0,
                         }}
                       >{line}</motion.p>
                     ))}
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+                  </motion.div>
+                ) : (
+                  <motion.div key="empty"
+                    style={{ width: "100%", height: "46px" }}
+                  />
+                )}
+              </AnimatePresence>
+            </div>
           </div>
 
           {/* Input */}
