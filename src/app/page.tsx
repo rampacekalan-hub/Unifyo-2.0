@@ -4,7 +4,6 @@ import HeroSection from "@/components/home/HeroSection";
 import BentoGrid from "@/components/home/BentoGrid";
 import PricingSection from "@/components/home/PricingSection";
 import MarqueeSection from "@/components/home/MarqueeSection";
-import StatsSection from "@/components/home/StatsSection";
 import CtaSection from "@/components/home/CtaSection";
 import NeuralBackground from "@/components/ui/NeuralBackground";
 
@@ -19,7 +18,6 @@ export default function Home() {
         <MarqueeSection />
         <div className="section-sep" />
         <BentoGrid />
-        <StatsSection />
         <div className="section-sep" />
         <PricingSection />
         <div className="section-sep" />
