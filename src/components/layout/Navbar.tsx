@@ -3,8 +3,7 @@
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, Zap } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Menu, X } from "lucide-react";
 import { getSiteConfig } from "@/config/site-settings";
 
 const config = getSiteConfig();
@@ -21,20 +20,26 @@ export default function Navbar() {
 
   return (
     <header
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        scrolled
-          ? "bg-[#030712]/90 backdrop-blur-xl border-b border-white/5 shadow-lg"
-          : "bg-transparent"
-      }`}
+      className="fixed top-0 left-0 right-0 z-50 transition-all duration-500"
+      style={scrolled ? {
+        background: "rgba(5,7,15,0.85)",
+        backdropFilter: "blur(20px)",
+        WebkitBackdropFilter: "blur(20px)",
+        borderBottom: "1px solid rgba(139,92,246,0.1)",
+      } : {}}
     >
       <nav className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
         {/* Logo */}
-        <Link href="/" className="flex items-center gap-2 group">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#7c3aed] to-[#2563eb] flex items-center justify-center shadow-[0_0_16px_rgba(124,58,237,0.3)] group-hover:shadow-[0_0_24px_rgba(124,58,237,0.5)] transition-shadow duration-300">
-            <span className="text-white text-sm font-black">U</span>
+        <Link href="/" className="flex items-center gap-2.5 group">
+          <div className="w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-200"
+            style={{
+              background: "linear-gradient(135deg, #7c3aed, #06b6d4)",
+              boxShadow: "0 0 16px rgba(124,58,237,0.3)",
+            }}>
+            <span className="text-white text-[11px] font-black tracking-tight">U</span>
           </div>
-          <span className="font-bold text-lg tracking-tight text-white">
-            {config.name}<span className="text-[#a78bfa]">.</span>
+          <span className="font-bold text-[1.05rem] tracking-tight" style={{ color: "#eef2ff" }}>
+            {config.name}
           </span>
         </Link>
 
@@ -44,7 +49,10 @@ export default function Navbar() {
             <Link
               key={link.href}
               href={link.href}
-              className="px-4 py-2 text-sm text-gray-400 hover:text-white rounded-lg hover:bg-white/5 transition-all duration-200"
+              className="px-4 py-2 text-sm rounded-lg transition-all duration-200"
+              style={{ color: "#6b7280" }}
+              onMouseEnter={e => (e.currentTarget.style.color = "#eef2ff")}
+              onMouseLeave={e => (e.currentTarget.style.color = "#6b7280")}
             >
               {link.label}
             </Link>
@@ -53,11 +61,18 @@ export default function Navbar() {
 
         {/* Desktop CTA */}
         <div className="hidden md:flex items-center gap-3">
-          <Link href="/login" className="text-sm text-gray-300 hover:text-white px-4 py-2 rounded-lg hover:bg-white/5 transition-all">
+          <Link href="/login" className="text-sm px-4 py-2 rounded-lg transition-all duration-200" style={{ color: "#6b7280" }}
+            onMouseEnter={e => (e.currentTarget.style.color = "#eef2ff")}
+            onMouseLeave={e => (e.currentTarget.style.color = "#6b7280")}>
             Prihlásiť sa
           </Link>
-          <Link href="/register" className="text-sm text-white px-4 py-2 rounded-lg bg-[#7c3aed] hover:bg-[#6d28d9] transition-all shadow-[0_0_20px_rgba(124,58,237,0.3)] hover:shadow-[0_0_30px_rgba(124,58,237,0.5)] font-medium">
-            Začať teraz →
+          <Link href="/register"
+            className="text-sm text-white px-5 py-2 rounded-xl font-semibold transition-all duration-200 active:scale-[0.97]"
+            style={{
+              background: "linear-gradient(135deg, #7c3aed, #5b21b6)",
+              boxShadow: "0 0 0 1px rgba(139,92,246,0.3), 0 2px 16px rgba(124,58,237,0.25)",
+            }}>
+            Začať zadarmo
           </Link>
         </div>
 
@@ -79,7 +94,13 @@ export default function Navbar() {
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.2 }}
-            className="md:hidden bg-[#030712]/95 backdrop-blur-xl border-b border-white/5 overflow-hidden"
+            className="md:hidden overflow-hidden"
+            style={{
+              background: "rgba(5,7,15,0.95)",
+              backdropFilter: "blur(20px)",
+              WebkitBackdropFilter: "blur(20px)",
+              borderBottom: "1px solid rgba(139,92,246,0.1)",
+            }}
           >
             <div className="px-6 py-4 flex flex-col gap-2">
               {config.links.nav.map((link) => (

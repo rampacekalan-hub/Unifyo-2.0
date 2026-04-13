@@ -4,13 +4,13 @@ import { useEffect, useRef, useState } from "react";
 import { motion, useInView } from "framer-motion";
 
 const stats = [
-  { label: "Priemerná odozva AI", value: 500, suffix: "ms", decimals: 0 },
-  { label: "SLA dostupnosť", value: 99.9, suffix: "%", decimals: 1 },
-  { label: "Krajiny podpory", value: 2, suffix: "", decimals: 0 },
-  { label: "Značiek GDPR súlad", value: 100, suffix: "%", decimals: 0 },
+  { label: "Odozva AI", value: 490, suffix: "ms", decimals: 0, prefix: "<" },
+  { label: "SLA dostupnosť", value: 99.9, suffix: "%", decimals: 1, prefix: "" },
+  { label: "Jazyky", value: 2, suffix: "", decimals: 0, prefix: "" },
+  { label: "GDPR súlad", value: 100, suffix: "%", decimals: 0, prefix: "" },
 ];
 
-function CountUp({ target, suffix, decimals = 0, active }: { target: number; suffix: string; decimals?: number; active: boolean }) {
+function CountUp({ target, suffix, decimals = 0, active, prefix = "" }: { target: number; suffix: string; decimals?: number; active: boolean; prefix?: string }) {
   const [count, setCount] = useState(0);
 
   useEffect(() => {
@@ -33,8 +33,7 @@ function CountUp({ target, suffix, decimals = 0, active }: { target: number; suf
 
   return (
     <span>
-      {decimals > 0 ? count.toFixed(decimals) : Math.floor(count).toLocaleString("sk")}
-      {suffix}
+      {prefix}{decimals > 0 ? count.toFixed(decimals) : Math.floor(count).toLocaleString("sk")}{suffix}
     </span>
   );
 }
@@ -44,47 +43,40 @@ export default function StatsSection() {
   const inView = useInView(ref, { once: true, margin: "-100px" });
 
   return (
-    <section ref={ref} className="py-24 px-6 relative">
-      {/* Subtle violet glow */}
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none -z-10">
-        <div className="w-[600px] h-[200px] bg-[#7c3aed]/[0.04] blur-[100px] rounded-full" />
-      </div>
-
+    <section ref={ref} className="py-20 px-6 relative">
       <div className="max-w-5xl mx-auto">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-          className="text-center mb-16"
-        >
-          <h2 className="text-2xl md:text-4xl font-black tracking-tight text-white">
-            Čísla, ktoré hovoria za všetko
-          </h2>
-        </motion.div>
+        {/* Top divider */}
+        <div className="w-full h-px mb-16" style={{ background: "linear-gradient(90deg, transparent, rgba(139,92,246,0.2), transparent)" }} />
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
           {stats.map((stat, i) => (
             <motion.div
               key={stat.label}
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 16 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: i * 0.1 }}
-              className="flex flex-col items-center text-center gap-2 p-6 rounded-2xl border border-white/[0.06] bg-white/[0.03] backdrop-blur-sm"
+              transition={{ duration: 0.45, delay: i * 0.08 }}
+              className="flex flex-col items-center text-center gap-2"
             >
-              <span className="text-4xl md:text-5xl font-black tracking-tight text-white tabular-nums">
+              <span className="font-black tabular-nums tracking-tight"
+                style={{ fontSize: "clamp(2rem, 4vw, 3rem)", color: "#eef2ff" }}>
                 <CountUp
                   target={stat.value}
                   suffix={stat.suffix}
                   decimals={stat.decimals}
                   active={inView}
+                  prefix={stat.prefix}
                 />
               </span>
-              <span className="text-[0.72rem] text-gray-500 font-medium tracking-wider uppercase">{stat.label}</span>
+              <span className="text-[0.7rem] font-medium tracking-[0.14em] uppercase" style={{ color: "#4b5563" }}>
+                {stat.label}
+              </span>
             </motion.div>
           ))}
         </div>
+
+        {/* Bottom divider */}
+        <div className="w-full h-px mt-16" style={{ background: "linear-gradient(90deg, transparent, rgba(139,92,246,0.2), transparent)" }} />
       </div>
     </section>
   );

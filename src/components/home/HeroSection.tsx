@@ -3,21 +3,29 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Sparkles } from "lucide-react";
 
 const TYPING_PHRASES = [
   "Naplánuj mi stretnutie na zajtra o 10:00",
   "Napíš follow-up email klientovi Novák",
   "Aký je stav môjho pipeline tento mesiac?",
   "Pridaj kontakt: Jana Kováčová, jana@firma.sk",
-  "Zhrň mi dnešné hovory",
+  "Zhrň mi dnešné hovory a akcie",
+];
+
+const AI_FEATURES = [
+  "Kalendár & Stretnutia",
+  "Email manažment",
+  "CRM & Pipeline",
+  "Hovory & Prepisy",
+  "Custom AI agenti",
 ];
 
 const fadeUp = {
-  hidden: { opacity: 0, y: 32 },
+  hidden: { opacity: 0, y: 24 },
   visible: (i: number) => ({
     opacity: 1, y: 0,
-    transition: { delay: i * 0.12, duration: 0.7, ease: "easeOut" as const },
+    transition: { delay: i * 0.1, duration: 0.65, ease: [0.21, 0.47, 0.32, 0.98] as [number, number, number, number] },
   }),
 };
 
@@ -30,15 +38,15 @@ export default function HeroSection() {
     const phrase = TYPING_PHRASES[phraseIndex];
     if (typing) {
       if (displayed.length < phrase.length) {
-        const t = setTimeout(() => setDisplayed(phrase.slice(0, displayed.length + 1)), 40);
+        const t = setTimeout(() => setDisplayed(phrase.slice(0, displayed.length + 1)), 38);
         return () => clearTimeout(t);
       } else {
-        const t = setTimeout(() => setTyping(false), 2000);
+        const t = setTimeout(() => setTyping(false), 2200);
         return () => clearTimeout(t);
       }
     } else {
       if (displayed.length > 0) {
-        const t = setTimeout(() => setDisplayed(displayed.slice(0, -1)), 20);
+        const t = setTimeout(() => setDisplayed(displayed.slice(0, -1)), 18);
         return () => clearTimeout(t);
       } else {
         setPhraseIndex((i) => (i + 1) % TYPING_PHRASES.length);
@@ -48,122 +56,194 @@ export default function HeroSection() {
   }, [displayed, typing, phraseIndex]);
 
   return (
-    <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-16 pb-16">
-      {/* Grid background */}
-      <div className="absolute inset-0 bg-[linear-gradient(rgba(124,58,237,0.04)_1px,transparent_1px),linear-gradient(90deg,rgba(124,58,237,0.04)_1px,transparent_1px)] bg-[size:72px_72px] [mask-image:radial-gradient(ellipse_80%_80%_at_50%_50%,black_20%,transparent_100%)] pointer-events-none" />
+    <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20 pb-20">
 
-      {/* Glow orbs */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-[#7c3aed]/10 rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-1/4 right-1/4 w-[300px] h-[300px] bg-[#2563eb]/10 rounded-full blur-[80px] pointer-events-none" />
+      {/* Background: subtle grid */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          backgroundImage: `
+            linear-gradient(rgba(139,92,246,0.04) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(139,92,246,0.04) 1px, transparent 1px)
+          `,
+          backgroundSize: "64px 64px",
+          maskImage: "radial-gradient(ellipse 90% 80% at 50% 50%, black 30%, transparent 100%)",
+          WebkitMaskImage: "radial-gradient(ellipse 90% 80% at 50% 50%, black 30%, transparent 100%)",
+        }}
+      />
 
-      <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 text-center">
+      {/* Ambient glow — NO animation, epilepsy-safe */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[900px] h-[500px] rounded-full pointer-events-none"
+        style={{ background: "radial-gradient(ellipse at center, rgba(124,58,237,0.13) 0%, rgba(6,182,212,0.05) 50%, transparent 70%)" }}
+      />
+      <div className="absolute bottom-0 right-0 w-[600px] h-[400px] rounded-full pointer-events-none"
+        style={{ background: "radial-gradient(ellipse at bottom right, rgba(6,182,212,0.07) 0%, transparent 60%)" }}
+      />
+
+      <div className="relative z-10 w-full max-w-5xl mx-auto px-4 sm:px-6 flex flex-col items-center text-center">
 
         {/* Badge */}
-        <motion.div custom={0} variants={fadeUp} initial="hidden" animate="visible" className="mb-8">
-          <span className="inline-flex items-center gap-2 bg-[#7c3aed]/10 border border-[#7c3aed]/20 rounded-full px-4 py-1.5 text-xs text-[#a78bfa] font-medium">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#a78bfa] opacity-75" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-[#7c3aed]" />
-            </span>
-            Nová AI platforma pre SK &amp; ČR trh
+        <motion.div custom={0} variants={fadeUp} initial="hidden" animate="visible" className="mb-7">
+          <span className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-semibold tracking-wide"
+            style={{
+              background: "rgba(139,92,246,0.1)",
+              border: "1px solid rgba(139,92,246,0.25)",
+              color: "#c4b5fd",
+            }}>
+            <Sparkles className="w-3 h-3" />
+            AI platforma pre SK &amp; ČR trh
           </span>
         </motion.div>
 
-        {/* Headline */}
+        {/* Main headline */}
         <motion.h1
           custom={1} variants={fadeUp} initial="hidden" animate="visible"
-          className="text-5xl sm:text-6xl lg:text-7xl font-black tracking-tight mb-6 leading-[1.05] text-white"
+          className="font-black tracking-[-0.03em] leading-[1.06] mb-6"
+          style={{ fontSize: "clamp(2.6rem, 6vw, 5rem)" }}
         >
-          Tvoj biznis na{" "}
+          <span style={{ color: "#eef2ff" }}>Tvoj AI asistent</span>
+          <br />
           <span style={{
-            background: "linear-gradient(135deg, #a78bfa 0%, #60a5fa 50%, #34d399 100%)",
+            background: "linear-gradient(90deg, #a78bfa 0%, #67e8f9 55%, #6ee7b7 100%)",
             WebkitBackgroundClip: "text",
             WebkitTextFillColor: "transparent",
             backgroundClip: "text",
           }}>
-            autopilote
+            pre prácu aj život
           </span>
-          <br />s AI asistentom
         </motion.h1>
 
-        {/* Subheadline */}
+        {/* Sub */}
         <motion.p
           custom={2} variants={fadeUp} initial="hidden" animate="visible"
-          className="text-lg sm:text-xl text-gray-400 max-w-2xl mx-auto mb-10 leading-relaxed"
+          className="max-w-xl mx-auto mb-4 leading-relaxed"
+          style={{ fontSize: "1.05rem", color: "#9ca3af" }}
         >
-          Unifyo spravuje tvoj kalendár, emaily, kontakty a obchodné príležitosti —
-          všetko v jednom mieste, po slovensky.
+          Unifyo rozumie tebe, tvojmu kalendáru, emailom aj kontaktom.
+          Jeden nástroj. Nekonečné možnosti.
         </motion.p>
+
+        {/* Feature pills */}
+        <motion.div
+          custom={3} variants={fadeUp} initial="hidden" animate="visible"
+          className="flex flex-wrap justify-center gap-2 mb-10"
+        >
+          {AI_FEATURES.map((f) => (
+            <span key={f} className="text-xs px-3 py-1 rounded-full"
+              style={{
+                background: "rgba(17,24,39,0.8)",
+                border: "1px solid rgba(139,92,246,0.15)",
+                color: "#6b7280",
+              }}>
+              {f}
+            </span>
+          ))}
+        </motion.div>
 
         {/* CTAs */}
         <motion.div
-          custom={3} variants={fadeUp} initial="hidden" animate="visible"
-          className="flex flex-col sm:flex-row gap-4 justify-center mb-16"
+          custom={4} variants={fadeUp} initial="hidden" animate="visible"
+          className="flex flex-col sm:flex-row gap-3 mb-14"
         >
           <Link
             href="/register"
-            className="inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-xl bg-[#7c3aed] hover:bg-[#6d28d9] text-white font-semibold text-sm transition-all active:scale-95 shadow-[0_0_30px_rgba(124,58,237,0.35)] hover:shadow-[0_0_50px_rgba(124,58,237,0.5)]"
+            className="inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-xl font-semibold text-sm text-white transition-all duration-200 active:scale-[0.97]"
+            style={{
+              background: "linear-gradient(135deg, #7c3aed, #5b21b6)",
+              boxShadow: "0 0 0 1px rgba(139,92,246,0.3), 0 4px 24px rgba(124,58,237,0.3)",
+            }}
           >
-            Začať teraz
+            Začať zadarmo
             <ArrowRight className="w-4 h-4" />
           </Link>
           <Link
             href="/#features"
-            className="inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-xl bg-white/[0.04] backdrop-blur-sm hover:bg-white/[0.08] text-white font-medium text-sm border border-white/10 transition-all active:scale-95"
+            className="inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-xl font-medium text-sm transition-all duration-200 active:scale-[0.97]"
+            style={{
+              background: "rgba(255,255,255,0.04)",
+              border: "1px solid rgba(255,255,255,0.09)",
+              color: "#d1d5db",
+            }}
           >
             Pozrieť ukážku
           </Link>
         </motion.div>
 
-        {/* AI Chat Demo Widget */}
+        {/* AI Chat Demo */}
         <motion.div
-          custom={4} variants={fadeUp} initial="hidden" animate="visible"
-          className="max-w-2xl mx-auto"
+          custom={5} variants={fadeUp} initial="hidden" animate="visible"
+          className="w-full max-w-2xl"
         >
-          <div
-            className="rounded-2xl p-4"
+          <div className="rounded-2xl overflow-hidden"
             style={{
-              background: "rgba(13,17,23,0.8)",
-              backdropFilter: "blur(20px)",
-              WebkitBackdropFilter: "blur(20px)",
-              border: "1px solid rgba(124,58,237,0.15)",
-              boxShadow: "0 0 40px rgba(124,58,237,0.08)",
+              background: "rgba(12,15,26,0.9)",
+              backdropFilter: "blur(24px)",
+              WebkitBackdropFilter: "blur(24px)",
+              border: "1px solid rgba(139,92,246,0.14)",
+              boxShadow: "0 0 0 1px rgba(139,92,246,0.06), 0 8px 48px rgba(0,0,0,0.4)",
             }}
           >
-            <div className="flex items-center gap-2 mb-3 px-1">
-              <div className="w-6 h-6 rounded-md bg-gradient-to-br from-[#7c3aed] to-[#2563eb] flex items-center justify-center">
-                <span className="text-white text-xs font-black">U</span>
+            {/* Window chrome */}
+            <div className="flex items-center gap-2 px-4 py-3 border-b"
+              style={{ borderColor: "rgba(139,92,246,0.1)" }}>
+              <div className="flex gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-[#ff5f57]" />
+                <span className="w-2.5 h-2.5 rounded-full bg-[#febc2e]" />
+                <span className="w-2.5 h-2.5 rounded-full bg-[#28c840]" />
               </div>
-              <span className="text-xs text-gray-400 font-medium">Unifyo AI</span>
-              <span className="ml-auto text-xs text-green-400 flex items-center gap-1">
-                <span className="w-1.5 h-1.5 bg-green-400 rounded-full inline-block" />
+              <div className="flex items-center gap-1.5 ml-2">
+                <div className="w-4 h-4 rounded bg-gradient-to-br from-[#7c3aed] to-[#06b6d4] flex items-center justify-center">
+                  <span className="text-white text-[8px] font-black">U</span>
+                </div>
+                <span className="text-xs font-medium" style={{ color: "#6b7280" }}>Unifyo AI</span>
+              </div>
+              <span className="ml-auto flex items-center gap-1 text-xs" style={{ color: "#10b981" }}>
+                <span className="w-1.5 h-1.5 rounded-full bg-[#10b981] inline-block" />
                 Online
               </span>
             </div>
-            <div className="bg-[#030712] rounded-xl px-4 py-3 text-left border border-white/5">
-              <p className="text-sm text-gray-300 min-h-[1.5rem]">
-                {displayed}
-                <span className="text-[#a78bfa] animate-pulse">|</span>
-              </p>
-            </div>
-            <div className="mt-2 flex items-center gap-2">
-              <div className="flex-1 bg-[#030712] rounded-lg px-3 py-2 text-xs text-gray-600 border border-white/5">
-                Opýtaj sa čokoľvek...
+
+            {/* Chat area */}
+            <div className="p-4 space-y-3">
+              <div className="flex gap-3">
+                <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#7c3aed] to-[#06b6d4] flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <span className="text-white text-[9px] font-black">AI</span>
+                </div>
+                <div className="rounded-xl rounded-tl-none px-4 py-3 text-sm text-left flex-1"
+                  style={{ background: "rgba(139,92,246,0.1)", border: "1px solid rgba(139,92,246,0.12)", color: "#d1d5db" }}>
+                  Ahoj! Som tvoj Unifyo AI asistent. Čo pre teba dnes urobím?
+                </div>
               </div>
-              <button className="w-8 h-8 rounded-lg bg-[#7c3aed] flex items-center justify-center text-white hover:bg-[#6d28d9] transition-colors">
-                <ArrowRight className="w-4 h-4" />
-              </button>
+
+              <div className="flex gap-3 justify-end">
+                <div className="rounded-xl rounded-tr-none px-4 py-3 text-sm text-left max-w-[80%]"
+                  style={{ background: "rgba(124,58,237,0.2)", border: "1px solid rgba(139,92,246,0.2)", color: "#e2e8f0" }}>
+                  <span>{displayed}</span>
+                  <span className="text-[#a78bfa]" style={{ opacity: typing ? 1 : 0.3 }}>|</span>
+                </div>
+                <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#111827] to-[#1f2937] border border-white/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <span className="text-xs" style={{ color: "#6b7280" }}>Ty</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Input */}
+            <div className="px-4 pb-4">
+              <div className="flex items-center gap-2 rounded-xl px-3 py-2.5"
+                style={{ background: "rgba(17,24,39,0.8)", border: "1px solid rgba(139,92,246,0.1)" }}>
+                <span className="flex-1 text-xs" style={{ color: "#4b5563" }}>Napíš správu Unifyo AI...</span>
+                <button className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors duration-200"
+                  style={{ background: "rgba(124,58,237,0.8)" }}>
+                  <ArrowRight className="w-3.5 h-3.5 text-white" />
+                </button>
+              </div>
             </div>
           </div>
-        </motion.div>
 
-        {/* Social proof */}
-        <motion.p
-          custom={5} variants={fadeUp} initial="hidden" animate="visible"
-          className="mt-8 text-xs text-gray-600"
-        >
-          Platné predplatné od 8,99 €/mes · Zrušenie kedykoľvek
-        </motion.p>
+          <p className="mt-5 text-xs" style={{ color: "#374151" }}>
+            Plány od 8,99 €/mes · Zrušenie kedykoľvek · GDPR súlad
+          </p>
+        </motion.div>
       </div>
     </section>
   );

@@ -15,10 +15,10 @@ export default function MarqueeSection() {
   return (
     <section className="py-16 relative overflow-hidden border-y border-white/5">
       {/* Fade edges */}
-      <div className="absolute left-0 top-0 bottom-0 w-24 bg-gradient-to-r from-[#030712] to-transparent z-10 pointer-events-none" />
-      <div className="absolute right-0 top-0 bottom-0 w-24 bg-gradient-to-l from-[#030712] to-transparent z-10 pointer-events-none" />
+      <div className="absolute left-0 top-0 bottom-0 w-32 z-10 pointer-events-none" style={{ background: "linear-gradient(to right, #05070f, transparent)" }} />
+      <div className="absolute right-0 top-0 bottom-0 w-32 z-10 pointer-events-none" style={{ background: "linear-gradient(to left, #05070f, transparent)" }} />
 
-      <p className="text-center text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-gray-700 mb-8">
+      <p className="text-center text-[0.65rem] font-semibold uppercase tracking-[0.2em] mb-8" style={{ color: "#374151" }}>
         Postavené na špičkových technológiách
       </p>
 
@@ -30,10 +30,10 @@ export default function MarqueeSection() {
           {[...logos, ...logos].map((logo, i) => (
             <div
               key={`${logo.name}-${i}`}
-              className="flex items-center gap-2.5 opacity-30 hover:opacity-80 transition-opacity duration-300 cursor-default select-none flex-shrink-0"
+              className="flex items-center gap-2.5 cursor-default select-none flex-shrink-0" style={{ opacity: 0.28 }}
             >
               <span className="text-lg">{logo.icon}</span>
-              <span className="text-sm font-semibold text-gray-400 tracking-tight">{logo.name}</span>
+              <span className="text-sm font-semibold tracking-tight" style={{ color: "#6b7280" }}>{logo.name}</span>
             </div>
           ))}
         </div>

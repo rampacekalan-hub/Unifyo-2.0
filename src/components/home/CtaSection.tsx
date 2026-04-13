@@ -2,58 +2,91 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Sparkles } from "lucide-react";
 
 export default function CtaSection() {
   return (
-    <section className="py-24 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-3xl mx-auto text-center">
+    <section className="py-28 px-6">
+      <div className="max-w-4xl mx-auto">
         <motion.div
-          initial={{ opacity: 0, y: 24 }}
+          initial={{ opacity: 0, y: 28 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-          className="relative rounded-3xl p-12 overflow-hidden"
+          transition={{ duration: 0.6, ease: [0.21, 0.47, 0.32, 0.98] }}
+          className="relative rounded-3xl p-12 sm:p-16 text-center overflow-hidden"
+          style={{
+            background: "linear-gradient(135deg, rgba(124,58,237,0.12) 0%, rgba(12,15,26,0.9) 50%, rgba(6,182,212,0.08) 100%)",
+            border: "1px solid rgba(139,92,246,0.18)",
+            backdropFilter: "blur(24px)",
+            WebkitBackdropFilter: "blur(24px)",
+          }}
         >
-          {/* Background */}
-          <div className="absolute inset-0 bg-gradient-to-br from-[#7c3aed]/20 via-[#2563eb]/10 to-[#4c1d95]/20 rounded-3xl" />
-          <div className="absolute inset-0 bg-[linear-gradient(rgba(124,58,237,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(124,58,237,0.05)_1px,transparent_1px)] bg-[size:32px_32px] rounded-3xl" />
-          <div className="absolute inset-px rounded-3xl border border-[#7c3aed]/20" />
+          {/* Subtle grid overlay */}
+          <div className="absolute inset-0 rounded-3xl pointer-events-none"
+            style={{
+              backgroundImage: "linear-gradient(rgba(139,92,246,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(139,92,246,0.04) 1px, transparent 1px)",
+              backgroundSize: "40px 40px",
+            }}
+          />
 
-          {/* Content */}
+          {/* Glow top */}
+          <div className="absolute -top-px left-1/2 -translate-x-1/2 w-1/2 h-px"
+            style={{ background: "linear-gradient(90deg, transparent, rgba(139,92,246,0.5), transparent)" }}
+          />
+
           <div className="relative z-10">
-            <p className="text-[#a78bfa] text-sm font-semibold uppercase tracking-widest mb-4">
+            <div className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-semibold mb-6"
+              style={{ background: "rgba(139,92,246,0.1)", border: "1px solid rgba(139,92,246,0.2)", color: "#c4b5fd" }}>
+              <Sparkles className="w-3 h-3" />
               Začni ešte dnes
-            </p>
-            <h2 className="text-4xl sm:text-5xl font-black text-white mb-5 leading-tight">
-              Tvoj biznis na{" "}
+            </div>
+
+            <h2 className="font-black tracking-[-0.03em] leading-[1.06] mb-5"
+              style={{ fontSize: "clamp(2rem, 4vw, 3.5rem)", color: "#eef2ff" }}>
+              Nechaj AI pracovať{" "}
               <span style={{
-                background: "linear-gradient(135deg, #a78bfa 0%, #60a5fa 50%, #34d399 100%)",
+                background: "linear-gradient(90deg, #a78bfa, #67e8f9)",
                 WebkitBackgroundClip: "text",
                 WebkitTextFillColor: "transparent",
                 backgroundClip: "text",
               }}>
-                autopilote
+                za teba
               </span>
             </h2>
-            <p className="text-gray-400 text-lg mb-8 max-w-xl mx-auto">
-              Vyber plán, zaplať a začni ihneď. Plány od 8,99 €/mes. Zrušenie kedykoľvek.
+
+            <p className="mb-10 max-w-lg mx-auto" style={{ fontSize: "1rem", color: "#6b7280", lineHeight: 1.8 }}>
+              Unifyo AI spravuje tvoj čas, komunikáciu aj biznis.
+              Začni s bezplatným plánom — bez kreditnej karty.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <Link
                 href="/register"
-                className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-xl bg-[#7c3aed] hover:bg-[#6d28d9] text-white font-bold transition-all active:scale-95 shadow-[0_0_30px_rgba(124,58,237,0.4)] hover:shadow-[0_0_50px_rgba(124,58,237,0.6)]"
+                className="inline-flex items-center justify-center gap-2 px-8 py-3.5 rounded-xl font-semibold text-sm text-white transition-all duration-200 active:scale-[0.97]"
+                style={{
+                  background: "linear-gradient(135deg, #7c3aed, #5b21b6)",
+                  boxShadow: "0 0 0 1px rgba(139,92,246,0.3), 0 4px 32px rgba(124,58,237,0.35)",
+                }}
               >
-                Začať teraz
+                Začať zadarmo
                 <ArrowRight className="w-4 h-4" />
               </Link>
               <Link
                 href="/contact"
-                className="inline-flex items-center justify-center px-8 py-4 rounded-xl bg-white/[0.04] hover:bg-white/10 text-white font-medium border border-white/10 transition-all"
+                className="inline-flex items-center justify-center px-8 py-3.5 rounded-xl font-medium text-sm transition-all duration-200"
+                style={{
+                  background: "rgba(255,255,255,0.04)",
+                  border: "1px solid rgba(255,255,255,0.09)",
+                  color: "#9ca3af",
+                }}
               >
                 Porozprávať sa s nami
               </Link>
             </div>
+
+            <p className="mt-8 text-xs" style={{ color: "#374151" }}>
+              Plány od 8,99 €/mes · GDPR súlad · Zrušenie kedykoľvek
+            </p>
           </div>
         </motion.div>
       </div>
