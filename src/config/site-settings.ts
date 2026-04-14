@@ -51,12 +51,26 @@ export interface SEOConfig {
   canonicalUrl: string;
 }
 
+export interface ThemeEngine {
+  glowIntensity: number;
+  glowRadius: number;
+  blurStrength: number;
+  noiseOpacity: number;
+  gradientAngle: number;
+  animationSpeed: number;
+  particleDensity: number;
+  particleOpacity: number;
+  particleSpeed: number;
+}
+
 export interface BrandingConfig {
   colors: {
     primary: string;
     primaryGlow: string;
     accent: string;
     accentGlow: string;
+    violet: string;
+    violetGlow: string;
     surface: string;
     surfaceHigh: string;
     surfaceHigher: string;
@@ -64,14 +78,18 @@ export interface BrandingConfig {
     borderGlow: string;
     text: string;
     textMuted: string;
+    textDim: string;
     background: string;
     backgroundDeep: string;
+    green: string;
+    yellow: string;
   };
   fonts: {
     sans: string;
     mono: string;
   };
   borderRadius: string;
+  themeEngine: ThemeEngine;
 }
 
 export interface ValidationConfig {
@@ -100,6 +118,41 @@ export interface FeaturesConfig {
   showLogin: boolean;
   maintenanceMode: boolean;
   showCookieBanner: boolean;
+}
+
+export interface AiConfig {
+  defaultModel: string;
+  fallbackModel: string;
+  requestLimits: Record<"basic" | "pro" | "enterprise", number>;
+  features: {
+    calendarEnabled: boolean;
+    emailEnabled: boolean;
+    crmEnabled: boolean;
+    callTranscriptionEnabled: boolean;
+    customAgentsEnabled: boolean;
+  };
+  endpoints: {
+    chat: string;
+    transcribe: string;
+    summarize: string;
+  };
+}
+
+export interface ModuleConfig {
+  id: string;
+  enabled: boolean;
+  requiredPlan: "basic" | "pro" | "enterprise" | "all";
+  path?: string;
+}
+
+export interface ModulesConfig {
+  dashboard: ModuleConfig;
+  crm: ModuleConfig;
+  calendar: ModuleConfig;
+  email: ModuleConfig;
+  calls: ModuleConfig;
+  analytics: ModuleConfig;
+  automationBuilder: ModuleConfig;
 }
 
 export interface TextsConfig {
@@ -144,6 +197,8 @@ export interface SiteConfig {
   branding: BrandingConfig;
   seo: SEOConfig;
   features: FeaturesConfig;
+  ai: AiConfig;
+  modules: ModulesConfig;
   texts: TextsConfig;
   links: LinksConfig;
   pricing: PricingPlan[];
@@ -161,32 +216,81 @@ const siteConfig: SiteConfig = {
   // ─── BRANDING (Farby & Fonty — centrálna pravda) ───────────
   branding: {
     colors: {
-      primary: "#6366f1",
-      primaryGlow: "rgba(99, 102, 241, 0.35)",
-      accent: "#8b5cf6",
-      accentGlow: "rgba(139, 92, 246, 0.3)",
-      surface: "#0f1117",
-      surfaceHigh: "#161b27",
+      primary: "#7c3aed",
+      primaryGlow: "rgba(124,58,237,0.35)",
+      accent: "#06b6d4",
+      accentGlow: "rgba(6,182,212,0.25)",
+      violet: "#8b5cf6",
+      violetGlow: "rgba(139,92,246,0.3)",
+      surface: "#0c0f1a",
+      surfaceHigh: "#111827",
       surfaceHigher: "#1e2535",
-      border: "rgba(99,102,241,0.15)",
-      borderGlow: "rgba(99,102,241,0.5)",
-      text: "#f1f5f9",
+      border: "rgba(139,92,246,0.12)",
+      borderGlow: "rgba(139,92,246,0.3)",
+      text: "#eef2ff",
       textMuted: "#94a3b8",
-      background: "#080b12",
-      backgroundDeep: "#04060a",
+      textDim: "#64748b",
+      background: "#05070f",
+      backgroundDeep: "#020408",
+      green: "#10b981",
+      yellow: "#f59e0b",
     },
     fonts: {
-      sans: "var(--font-geist-sans)",
+      sans: "var(--font-inter), SF Pro Display, -apple-system, system-ui, sans-serif",
       mono: "var(--font-geist-mono)",
     },
-    borderRadius: "0.75rem",
+    borderRadius: "0.875rem",
+    themeEngine: {
+      glowIntensity: 0.25,
+      glowRadius: 32,
+      blurStrength: 16,
+      noiseOpacity: 0.025,
+      gradientAngle: 135,
+      animationSpeed: 1.0,
+      particleDensity: 80,
+      particleOpacity: 0.45,
+      particleSpeed: 0.3,
+    },
+  },
+
+  // ─── AI CONFIG (Modely, limity, prepínače) ──────────────────
+  ai: {
+    defaultModel: "gpt-4o-mini",
+    fallbackModel: "gpt-3.5-turbo",
+    requestLimits: {
+      basic: 100,
+      pro: 1000,
+      enterprise: -1,
+    },
+    features: {
+      calendarEnabled: true,
+      emailEnabled: true,
+      crmEnabled: false,
+      callTranscriptionEnabled: false,
+      customAgentsEnabled: false,
+    },
+    endpoints: {
+      chat: "/api/ai/chat",
+      transcribe: "/api/ai/transcribe",
+      summarize: "/api/ai/summarize",
+    },
+  },
+
+  // ─── MODULES (Feature flags pre budúce moduly) ──────────────
+  modules: {
+    dashboard: { id: "dashboard", enabled: true, requiredPlan: "all", path: "/dashboard" },
+    crm: { id: "crm", enabled: true, requiredPlan: "pro", path: "/dashboard/crm" },
+    calendar: { id: "calendar", enabled: true, requiredPlan: "all", path: "/dashboard/calendar" },
+    email: { id: "email", enabled: true, requiredPlan: "all", path: "/dashboard/email" },
+    calls: { id: "calls", enabled: false, requiredPlan: "pro", path: "/dashboard/calls" },
+    analytics: { id: "analytics", enabled: false, requiredPlan: "pro", path: "/dashboard/analytics" },
+    automationBuilder: { id: "automationBuilder", enabled: false, requiredPlan: "enterprise", path: "/dashboard/automation" },
   },
 
   // ─── SEO (Google meta tagy) ────────────────────────────────
   seo: {
     title: "Unifyo 2.0 — Moderná platforma pre váš tím",
-    description:
-      "Unifyo je prémiová platforma, ktorá spája váš tím do jedného intuitívneho systému. Rýchle, bezpečné a výlučne vaše.",
+    description: "Unifyo je prémiová platforma, ktorá spája váš tím do jedného intuitívneho systému. Rýchle, bezpečné a výlučne vaše.",
     keywords: [
       "unifyo",
       "tímová spolupráca",
@@ -199,7 +303,7 @@ const siteConfig: SiteConfig = {
     canonicalUrl: "https://unifyo.online",
   },
 
-  // ─── FEATURES (Globálne prepínače sekcií) ──────────────────
+  // ─── FEATURES (Globálne prepínače sekcií webu) ────────────
   features: {
     showPricing: true,
     showBlog: false,
