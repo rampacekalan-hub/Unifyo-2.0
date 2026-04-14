@@ -6,7 +6,7 @@ import Link from "next/link";
 import {
   Users, Activity, ToggleLeft, ToggleRight,
   Terminal, LogOut, ShieldAlert, Zap, TrendingUp,
-  ChevronRight, Circle, Megaphone, X, Plus, Minus, Loader2,
+  ChevronRight, Circle, Megaphone, X, Plus, Minus, Loader2, Trash2,
 } from "lucide-react";
 import NeuralBackground from "@/components/ui/NeuralBackground";
 import { getSiteConfig } from "@/config/site-settings";
@@ -95,8 +95,12 @@ export default function AdminClient({ adminEmail, users: initUsers, stats, recen
 
   // ── Broadcast ────────────────────────────────────────────────
   const [broadcastText, setBroadcastText] = useState("");
+  const [broadcastStartsAt, setBroadcastStartsAt] = useState("");
+  const [broadcastExpiresAt, setBroadcastExpiresAt] = useState("");
   const [broadcastSending, setBroadcastSending] = useState(false);
   const [broadcastSent, setBroadcastSent] = useState(false);
+  const [broadcastCancelling, setBroadcastCancelling] = useState(false);
+  const [activeBroadcast, setActiveBroadcast] = useState<{ text: string; expiresAt: string | null; startsAt: string | null } | null>(null);
 
   // ── Admin action log (live) ───────────────────────────────────
   const [adminLog, setAdminLog] = useState<AdminLogEntry[]>([]);
@@ -126,6 +130,13 @@ export default function AdminClient({ adminEmail, users: initUsers, stats, recen
     fetch("/api/admin/log")
       .then((r) => r.json())
       .then((d) => { if (d.log) setAdminLog(d.log); })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    fetch("/api/admin/broadcast")
+      .then((r) => r.json())
+      .then((d) => { if (d.broadcast) setActiveBroadcast(d.broadcast); })
       .catch(() => {});
   }, []);
 
@@ -179,16 +190,39 @@ export default function AdminClient({ adminEmail, users: initUsers, stats, recen
     if (!broadcastText.trim()) return;
     setBroadcastSending(true);
     try {
-      await fetch("/api/admin/broadcast", {
+      const res = await fetch("/api/admin/broadcast", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: broadcastText.trim() }),
+        body: JSON.stringify({
+          text: broadcastText.trim(),
+          startsAt: broadcastStartsAt ? new Date(broadcastStartsAt).toISOString() : null,
+          expiresAt: broadcastExpiresAt ? new Date(broadcastExpiresAt).toISOString() : null,
+        }),
       });
-      setBroadcastSent(true);
-      setBroadcastText("");
-      setTimeout(() => setBroadcastSent(false), 3000);
+      if (res.ok) {
+        setBroadcastSent(true);
+        setActiveBroadcast({
+          text: broadcastText.trim(),
+          startsAt: broadcastStartsAt ? new Date(broadcastStartsAt).toISOString() : null,
+          expiresAt: broadcastExpiresAt ? new Date(broadcastExpiresAt).toISOString() : null,
+        });
+        setBroadcastText("");
+        setBroadcastStartsAt("");
+        setBroadcastExpiresAt("");
+        setTimeout(() => setBroadcastSent(false), 3000);
+      }
     } finally {
       setBroadcastSending(false);
+    }
+  }
+
+  async function cancelBroadcast() {
+    setBroadcastCancelling(true);
+    try {
+      await fetch("/api/admin/broadcast", { method: "DELETE" });
+      setActiveBroadcast(null);
+    } finally {
+      setBroadcastCancelling(false);
     }
   }
 
@@ -509,26 +543,90 @@ export default function AdminClient({ adminEmail, users: initUsers, stats, recen
                 </div>
 
                 {/* ── Broadcast panel ── */}
-                <div className="mt-6 rounded-2xl p-5" style={GLASS}>
-                  <div className="flex items-center gap-2 mb-3">
-                    <Megaphone className="w-4 h-4" style={{ color: A.gold }} />
-                    <span className="text-xs font-bold tracking-widest uppercase" style={{ color: A.gold }}>Broadcast Message</span>
+                <div className="mt-6 rounded-2xl p-5 space-y-3" style={GLASS}>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Megaphone className="w-4 h-4" style={{ color: A.gold }} />
+                      <span className="text-xs font-bold tracking-widest uppercase" style={{ color: A.gold }}>Broadcast Message</span>
+                    </div>
+                    {activeBroadcast && (
+                      <button onClick={cancelBroadcast} disabled={broadcastCancelling}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all disabled:opacity-40"
+                        style={{ background: A.crimsonDim, border: `1px solid ${A.crimsonBorder}`, color: A.crimson }}>
+                        {broadcastCancelling
+                          ? <Loader2 className="w-3 h-3 animate-spin" />
+                          : <Trash2 className="w-3 h-3" />}
+                        Zrušiť aktívny oznam
+                      </button>
+                    )}
                   </div>
-                  <div className="flex gap-2">
-                    <input
-                      value={broadcastText}
-                      onChange={(e) => setBroadcastText(e.target.value)}
-                      onKeyDown={(e) => e.key === "Enter" && submitBroadcast()}
-                      placeholder="Správa pre všetkých používateľov..."
-                      className="flex-1 rounded-xl px-3 py-2 text-xs outline-none"
-                      style={{ background: "rgba(255,255,255,0.04)", border: `1px solid ${A.crimsonBorder}`, color: "#f1f5f9", caretColor: A.gold }}
-                    />
-                    <button onClick={submitBroadcast} disabled={broadcastSending || !broadcastText.trim()}
-                      className="px-4 py-2 rounded-xl text-xs font-bold transition-all disabled:opacity-40"
-                      style={{ background: broadcastSent ? "rgba(16,185,129,0.2)" : A.crimsonDim, border: `1px solid ${broadcastSent ? "#10b981" : A.crimsonBorder}`, color: broadcastSent ? "#10b981" : A.crimson }}>
-                      {broadcastSending ? <Loader2 className="w-4 h-4 animate-spin" /> : broadcastSent ? "✓ Odoslaná" : "Odoslať"}
-                    </button>
+
+                  {/* Active broadcast status */}
+                  {activeBroadcast && (
+                    <div className="rounded-xl px-3 py-2 text-xs space-y-1"
+                      style={{ background: A.goldDim, border: `1px solid ${A.goldBorder}` }}>
+                      <p style={{ color: A.gold }}>
+                        <span style={{ opacity: 0.6 }}>Aktuálne vysielanie: </span>
+                        <span className="font-bold">&ldquo;{activeBroadcast.text}&rdquo;</span>
+                      </p>
+                      {activeBroadcast.startsAt && (
+                        <p style={{ color: A.gold, opacity: 0.75 }}>
+                          Začínok: {new Date(activeBroadcast.startsAt).toLocaleString("sk-SK", { dateStyle: "short", timeStyle: "short" })}
+                        </p>
+                      )}
+                      {activeBroadcast.expiresAt && (
+                        <p style={{ color: A.gold, opacity: 0.75 }}>
+                          Aktuálne vysielanie končí o: <span className="font-bold">{new Date(activeBroadcast.expiresAt).toLocaleString("sk-SK", { dateStyle: "short", timeStyle: "short" })}</span>
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Message input */}
+                  <input
+                    value={broadcastText}
+                    onChange={(e) => setBroadcastText(e.target.value)}
+                    placeholder="Správa pre všetkých používateľov..."
+                    className="w-full rounded-xl px-3 py-2 text-xs outline-none"
+                    style={{ background: "rgba(255,255,255,0.04)", border: `1px solid ${A.crimsonBorder}`, color: "#f1f5f9", caretColor: A.gold }}
+                  />
+
+                  {/* Scheduling inputs */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-[0.6rem] mb-1 tracking-widest uppercase" style={{ color: "#44202a" }}>Začínok (voliteľné)</label>
+                      <input type="datetime-local"
+                        value={broadcastStartsAt}
+                        onChange={(e) => setBroadcastStartsAt(e.target.value)}
+                        className="w-full rounded-xl px-3 py-1.5 text-xs outline-none"
+                        style={{ background: "rgba(255,255,255,0.04)", border: `1px solid rgba(239,68,68,0.15)`, color: A.gold, colorScheme: "dark" }}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[0.6rem] mb-1 tracking-widest uppercase" style={{ color: "#44202a" }}>Koniec (expirácia)</label>
+                      <input type="datetime-local"
+                        value={broadcastExpiresAt}
+                        onChange={(e) => setBroadcastExpiresAt(e.target.value)}
+                        className="w-full rounded-xl px-3 py-1.5 text-xs outline-none"
+                        style={{ background: "rgba(255,255,255,0.04)", border: `1px solid ${A.goldBorder}`, color: A.gold, colorScheme: "dark" }}
+                      />
+                    </div>
                   </div>
+
+                  {/* Expiry preview */}
+                  {broadcastExpiresAt && (
+                    <p className="text-[0.65rem]" style={{ color: A.gold, opacity: 0.8 }}>
+                      Vysielanie končí o: <span className="font-bold">
+                        {new Date(broadcastExpiresAt).toLocaleString("sk-SK", { dateStyle: "medium", timeStyle: "short" })}
+                      </span>
+                    </p>
+                  )}
+
+                  <button onClick={submitBroadcast} disabled={broadcastSending || !broadcastText.trim()}
+                    className="w-full py-2 rounded-xl text-xs font-bold transition-all disabled:opacity-40"
+                    style={{ background: broadcastSent ? "rgba(16,185,129,0.2)" : `linear-gradient(135deg,${A.crimson},#7f1d1d)`, border: `1px solid ${broadcastSent ? "#10b981" : A.crimsonBorder}`, color: broadcastSent ? "#10b981" : "#fff", boxShadow: broadcastSent ? "none" : `0 0 12px ${A.crimsonGlow}` }}>
+                    {broadcastSending ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : broadcastSent ? "✓ Odoslané" : "Odoslať oznam"}
+                  </button>
                 </div>
               </motion.div>
             )}

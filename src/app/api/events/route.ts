@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { adminStore } from "@/lib/admin-store";
+import { adminStore, getActiveBroadcast } from "@/lib/admin-store";
 
 export const dynamic = "force-dynamic";
 
@@ -8,10 +8,10 @@ export async function GET(req: NextRequest) {
 
   const stream = new ReadableStream({
     start(controller) {
-      // Send current state immediately on connect
+      // Send current state immediately on connect — only active broadcast
       const init = `event: init\ndata: ${JSON.stringify({
         toggles: adminStore.toggles,
-        broadcast: adminStore.broadcast,
+        broadcast: getActiveBroadcast(),
       })}\n\n`;
       controller.enqueue(encoder.encode(init));
 

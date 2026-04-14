@@ -21,6 +21,21 @@ export interface BroadcastMessage {
   text: string;
   ts: string;
   adminEmail: string;
+  startsAt: string | null;   // ISO — null means immediate
+  expiresAt: string | null;  // ISO — null means no expiry
+}
+
+/**
+ * Returns the broadcast only if it is currently active
+ * (within [startsAt, expiresAt] window).
+ */
+export function getActiveBroadcast(): BroadcastMessage | null {
+  const msg = adminStore?.broadcast;
+  if (!msg) return null;
+  const now = Date.now();
+  if (msg.startsAt && now < new Date(msg.startsAt).getTime()) return null;
+  if (msg.expiresAt && now > new Date(msg.expiresAt).getTime()) return null;
+  return msg;
 }
 
 interface AdminStore {
@@ -68,4 +83,19 @@ export function publishSSE(event: string, data: unknown) {
   for (const client of adminStore.sseClients) {
     try { client(msg); } catch { adminStore.sseClients.delete(client); }
   }
+}
+
+// ── Auto-cleanup: check expired broadcasts every 60 seconds ──
+const globalWithCleanup = globalThis as unknown as { __broadcastCleanup?: boolean };
+if (!globalWithCleanup.__broadcastCleanup) {
+  globalWithCleanup.__broadcastCleanup = true;
+  setInterval(() => {
+    const msg = adminStore.broadcast;
+    if (!msg || !msg.expiresAt) return;
+    if (Date.now() > new Date(msg.expiresAt).getTime()) {
+      adminStore.broadcast = null;
+      publishSSE("broadcast_clear", {});
+      console.log(`[ADMIN_STORE] Broadcast expired and cleared: "${msg.text}"`);
+    }
+  }, 60_000);
 }
