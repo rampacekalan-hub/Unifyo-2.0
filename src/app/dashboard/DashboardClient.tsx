@@ -58,11 +58,41 @@ export default function DashboardClient({ user }: DashboardClientProps) {
   const [loading, setLoading] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
+  // ── Live toggles from admin store ────────────────────────────
+  const [liveToggles, setLiveToggles] = useState<Record<string, boolean> | null>(null);
+
+  // ── Broadcast banner ──────────────────────────────────────────
+  const [broadcast, setBroadcast] = useState<{ text: string; id: string } | null>(null);
+
+  useEffect(() => {
+    const es = new EventSource("/api/events");
+    es.addEventListener("init", (e) => {
+      const d = JSON.parse(e.data);
+      if (d.toggles) setLiveToggles(d.toggles);
+      if (d.broadcast) setBroadcast(d.broadcast);
+    });
+    es.addEventListener("toggles", (e) => {
+      const d = JSON.parse(e.data);
+      if (d.toggles) setLiveToggles(d.toggles);
+    });
+    es.addEventListener("broadcast", (e) => {
+      const d = JSON.parse(e.data);
+      setBroadcast(d);
+    });
+    es.addEventListener("broadcast_clear", () => {
+      setBroadcast(null);
+    });
+    return () => es.close();
+  }, []);
+
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const allModules = Object.values(config.modules).filter((m) => m.path);
+  const allModules = Object.values(config.modules).filter((m) => m.path).map((m) => ({
+    ...m,
+    enabled: liveToggles ? (liveToggles[m.id] ?? m.enabled) : m.enabled,
+  }));
 
   async function sendMessage() {
     const text = input.trim();
@@ -202,6 +232,23 @@ export default function DashboardClient({ user }: DashboardClientProps) {
 
       {/* ── MAIN ── */}
       <div className="flex-1 flex flex-col h-full overflow-hidden z-10">
+
+        {/* Broadcast banner */}
+        <AnimatePresence>
+          {broadcast && (
+            <motion.div
+              initial={{ opacity: 0, y: -32 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -32 }}
+              transition={{ duration: 0.3 }}
+              className="flex items-center justify-between px-5 py-2.5 text-xs font-semibold z-20 flex-shrink-0"
+              style={{ background: "rgba(239,68,68,0.15)", borderBottom: "1px solid rgba(239,68,68,0.4)", color: "#fca5a5" }}>
+              <div className="flex items-center gap-2">
+                <span style={{ color: "#ef4444", fontWeight: 900 }}>⚠ SYSTÉM:</span>
+                <span>{broadcast.text}</span>
+              </div>
+              <button onClick={() => setBroadcast(null)} style={{ color: "#ef4444", opacity: 0.6 }}>✕</button>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Topbar */}
         <header className="h-14 flex items-center justify-between px-5 flex-shrink-0"

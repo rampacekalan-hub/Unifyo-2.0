@@ -1,15 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import {
   Users, Activity, ToggleLeft, ToggleRight,
   Terminal, LogOut, ShieldAlert, Zap, TrendingUp,
-  ChevronRight, Circle,
+  ChevronRight, Circle, Megaphone, X, Plus, Minus, Loader2,
 } from "lucide-react";
 import NeuralBackground from "@/components/ui/NeuralBackground";
 import { getSiteConfig } from "@/config/site-settings";
+import type { AdminLogEntry } from "@/lib/admin-store";
 
 const config = getSiteConfig();
 
@@ -74,19 +75,122 @@ const NAV: { id: NavSection; icon: React.ElementType; label: string }[] = [
   { id: "logs",     icon: Terminal,   label: "Event Log"    },
 ];
 
-export default function AdminClient({ adminEmail, users, stats, recentRequests }: AdminClientProps) {
+export default function AdminClient({ adminEmail, users: initUsers, stats, recentRequests }: AdminClientProps) {
   const [section, setSection] = useState<NavSection>("overview");
   const [hoveredToggle, setHoveredToggle] = useState<string | null>(null);
 
-  const [toggles, setToggles] = useState(
-    Object.entries(config.modules).map(([key, mod]) => ({
-      key,
-      label: key,
-      enabled: mod.enabled,
-    }))
+  // ── Toggles (live from store via SSE) ────────────────────────
+  const [toggles, setToggles] = useState<Record<string, boolean>>(
+    Object.fromEntries(Object.entries(config.modules).map(([k, m]) => [k, m.enabled]))
   );
+  const [toggleLoading, setToggleLoading] = useState<string | null>(null);
+
+  // ── Users with mutable credits ───────────────────────────────
+  const [users, setUsers] = useState(initUsers);
+
+  // ── Credits modal ────────────────────────────────────────────
+  const [creditModal, setCreditModal] = useState<{ user: (typeof initUsers)[0] } | null>(null);
+  const [creditDelta, setCreditDelta] = useState<string>("");
+  const [creditLoading, setCreditLoading] = useState(false);
+
+  // ── Broadcast ────────────────────────────────────────────────
+  const [broadcastText, setBroadcastText] = useState("");
+  const [broadcastSending, setBroadcastSending] = useState(false);
+  const [broadcastSent, setBroadcastSent] = useState(false);
+
+  // ── Admin action log (live) ───────────────────────────────────
+  const [adminLog, setAdminLog] = useState<AdminLogEntry[]>([]);
+  const logEndRef = useRef<HTMLDivElement>(null);
+
+  // ── SSE connection ────────────────────────────────────────────
+  useEffect(() => {
+    const es = new EventSource("/api/events");
+
+    es.addEventListener("init", (e) => {
+      const d = JSON.parse(e.data);
+      if (d.toggles) setToggles(d.toggles);
+    });
+    es.addEventListener("toggles", (e) => {
+      const d = JSON.parse(e.data);
+      if (d.toggles) setToggles(d.toggles);
+    });
+    es.addEventListener("admin_log", (e) => {
+      const entry: AdminLogEntry = JSON.parse(e.data);
+      setAdminLog((prev) => [entry, ...prev].slice(0, 200));
+    });
+
+    return () => es.close();
+  }, []);
+
+  useEffect(() => {
+    fetch("/api/admin/log")
+      .then((r) => r.json())
+      .then((d) => { if (d.log) setAdminLog(d.log); })
+      .catch(() => {});
+  }, []);
 
   const planMap = Object.fromEntries(stats.planCounts.map((p) => [p.plan, p._count.plan]));
+
+  // ── Toggle handler ────────────────────────────────────────────
+  async function handleToggle(key: string, current: boolean) {
+    setToggleLoading(key);
+    try {
+      const res = await fetch("/api/admin/toggles", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ module: key, enabled: !current }),
+      });
+      const data = await res.json();
+      if (data.toggles) setToggles(data.toggles);
+    } catch {
+      // SSE will catch any server-side update
+    } finally {
+      setToggleLoading(null);
+    }
+  }
+
+  // ── Credits submit ────────────────────────────────────────────
+  async function submitCredits() {
+    if (!creditModal) return;
+    const delta = parseInt(creditDelta, 10);
+    if (isNaN(delta) || delta === 0) return;
+    setCreditLoading(true);
+    try {
+      const res = await fetch("/api/admin/credits", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: creditModal.user.id, delta }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setUsers((prev) => prev.map((u) =>
+          u.id === creditModal.user.id ? { ...u, credits: data.credits } : u
+        ));
+        setCreditModal(null);
+        setCreditDelta("");
+      }
+    } finally {
+      setCreditLoading(false);
+    }
+  }
+
+  // ── Broadcast submit ──────────────────────────────────────────
+  async function submitBroadcast() {
+    if (!broadcastText.trim()) return;
+    setBroadcastSending(true);
+    try {
+      await fetch("/api/admin/broadcast", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: broadcastText.trim() }),
+      });
+      setBroadcastSent(true);
+      setBroadcastText("");
+      setTimeout(() => setBroadcastSent(false), 3000);
+    } finally {
+      setBroadcastSending(false);
+    }
+  }
 
   return (
     <div className="flex h-screen overflow-hidden relative" style={{ background: A.bg, color: "#f1f5f9" }}>
@@ -326,9 +430,18 @@ export default function AdminClient({ adminEmail, users, stats, recentRequests }
                                 {u.plan}
                               </span>
                             </td>
-                            <td className="px-4 py-3 font-bold"
-                              style={{ color: u.credits > 20 ? A.gold : u.credits > 5 ? "#fb923c" : A.crimson }}>
-                              {u.credits}
+                            <td className="px-4 py-3">
+                              <div className="flex items-center gap-2">
+                                <span className="font-bold" style={{ color: u.credits > 20 ? A.gold : u.credits > 5 ? "#fb923c" : A.crimson }}>
+                                  {u.credits}
+                                </span>
+                                <button onClick={() => { setCreditModal({ user: u }); setCreditDelta(""); }}
+                                  className="w-5 h-5 rounded flex items-center justify-center transition-all"
+                                  style={{ background: A.goldDim, border: `1px solid ${A.goldBorder}`, color: A.gold }}
+                                  title="Upraviť kredity">
+                                  <Plus className="w-3 h-3" />
+                                </button>
+                              </div>
                             </td>
                             <td className="px-4 py-3" style={{ color: "#4b2030" }}>{u._count.aiRequests}</td>
                             <td className="px-4 py-3" style={{ color: "#44202a" }}>
@@ -357,55 +470,65 @@ export default function AdminClient({ adminEmail, users, stats, recentRequests }
                 </p>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {toggles.map((t, i) => {
-                    const isHovered = hoveredToggle === t.key;
+                  {Object.entries(toggles).map(([key, enabled], i) => {
+                    const isHovered = hoveredToggle === key;
+                    const isLoading = toggleLoading === key;
                     return (
-                      <motion.div key={t.key}
+                      <motion.div key={key}
                         initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: i * 0.06 }}
                         className="rounded-2xl p-5 flex items-center justify-between transition-all duration-300"
                         style={{
-                          background: isHovered
-                            ? "rgba(239,68,68,0.10)"
-                            : t.enabled ? "rgba(245,158,11,0.06)" : "rgba(7,0,5,0.9)",
-                          border: isHovered
-                            ? `1px solid ${A.crimson}`
-                            : t.enabled ? `1px solid ${A.goldBorder}` : `1px solid rgba(239,68,68,0.12)`,
-                          boxShadow: isHovered
-                            ? `0 0 28px ${A.crimsonGlow}, 0 0 8px ${A.crimsonGlow}`
-                            : t.enabled ? `0 0 16px ${A.goldGlow}` : "none",
+                          background: isHovered ? "rgba(239,68,68,0.10)" : enabled ? "rgba(245,158,11,0.06)" : "rgba(7,0,5,0.9)",
+                          border: isHovered ? `1px solid ${A.crimson}` : enabled ? `1px solid ${A.goldBorder}` : `1px solid rgba(239,68,68,0.12)`,
+                          boxShadow: isHovered ? `0 0 28px ${A.crimsonGlow}` : enabled ? `0 0 16px ${A.goldGlow}` : "none",
                           backdropFilter: "blur(20px)",
                         }}
-                        onMouseEnter={() => setHoveredToggle(t.key)}
+                        onMouseEnter={() => setHoveredToggle(key)}
                         onMouseLeave={() => setHoveredToggle(null)}>
                         <div>
-                          <p className="text-sm font-semibold" style={{ color: isHovered ? "#f1f5f9" : "#cbd5e1" }}>
-                            {t.label}
-                          </p>
-                          <p className="text-[0.65rem] mt-0.5 font-mono"
-                            style={{ color: t.enabled ? A.gold : "#44202a" }}>
-                            {t.enabled ? "▶ AKTÍVNY" : "■ VYPNUTÝ"}
+                          <p className="text-sm font-semibold" style={{ color: isHovered ? "#f1f5f9" : "#cbd5e1" }}>{key}</p>
+                          <p className="text-[0.65rem] mt-0.5 font-mono" style={{ color: enabled ? A.gold : "#44202a" }}>
+                            {enabled ? "▶ AKTÍVNY" : "■ VYPNUTÝ"}
                           </p>
                         </div>
-                        <button
-                          onClick={() => setToggles((prev) =>
-                            prev.map((x) => x.key === t.key ? { ...x, enabled: !x.enabled } : x)
-                          )}
-                          className="transition-all duration-300 focus:outline-none"
+                        <button onClick={() => handleToggle(key, enabled)} disabled={isLoading}
+                          className="transition-all duration-300 focus:outline-none disabled:opacity-50"
                           style={{
-                            color: isHovered ? A.crimson : t.enabled ? A.gold : "#44202a",
-                            filter: isHovered
-                              ? `drop-shadow(0 0 8px ${A.crimson}) drop-shadow(0 0 16px ${A.crimsonGlow})`
-                              : t.enabled ? `drop-shadow(0 0 6px ${A.gold})` : "none",
+                            color: isHovered ? A.crimson : enabled ? A.gold : "#44202a",
+                            filter: isHovered ? `drop-shadow(0 0 8px ${A.crimson}) drop-shadow(0 0 16px ${A.crimsonGlow})` : enabled ? `drop-shadow(0 0 6px ${A.gold})` : "none",
                           }}>
-                          {t.enabled
-                            ? <ToggleRight className="w-9 h-9" />
-                            : <ToggleLeft className="w-9 h-9" />
+                          {isLoading
+                            ? <Loader2 className="w-7 h-7 animate-spin" />
+                            : enabled ? <ToggleRight className="w-9 h-9" /> : <ToggleLeft className="w-9 h-9" />
                           }
                         </button>
                       </motion.div>
                     );
                   })}
+                </div>
+
+                {/* ── Broadcast panel ── */}
+                <div className="mt-6 rounded-2xl p-5" style={GLASS}>
+                  <div className="flex items-center gap-2 mb-3">
+                    <Megaphone className="w-4 h-4" style={{ color: A.gold }} />
+                    <span className="text-xs font-bold tracking-widest uppercase" style={{ color: A.gold }}>Broadcast Message</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <input
+                      value={broadcastText}
+                      onChange={(e) => setBroadcastText(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && submitBroadcast()}
+                      placeholder="Správa pre všetkých používateľov..."
+                      className="flex-1 rounded-xl px-3 py-2 text-xs outline-none"
+                      style={{ background: "rgba(255,255,255,0.04)", border: `1px solid ${A.crimsonBorder}`, color: "#f1f5f9", caretColor: A.gold }}
+                    />
+                    <button onClick={submitBroadcast} disabled={broadcastSending || !broadcastText.trim()}
+                      className="px-4 py-2 rounded-xl text-xs font-bold transition-all disabled:opacity-40"
+                      style={{ background: broadcastSent ? "rgba(16,185,129,0.2)" : A.crimsonDim, border: `1px solid ${broadcastSent ? "#10b981" : A.crimsonBorder}`, color: broadcastSent ? "#10b981" : A.crimson }}>
+                      {broadcastSending ? <Loader2 className="w-4 h-4 animate-spin" /> : broadcastSent ? "✓ Odoslaná" : "Odoslať"}
+                    </button>
+                  </div>
                 </div>
               </motion.div>
             )}
@@ -434,30 +557,41 @@ export default function AdminClient({ adminEmail, users, stats, recentRequests }
                   </div>
                   <div className="p-4 space-y-1.5 max-h-[60vh] overflow-y-auto"
                     style={{ background: "rgba(4,0,3,0.92)" }}>
+                    {/* Admin action log first */}
+                    {adminLog.map((entry, i) => (
+                      <motion.div key={entry.id}
+                        initial={{ opacity: 0, x: -4 }} animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: i * 0.01 }}
+                        className="flex items-start gap-3 leading-relaxed">
+                        <span style={{ color: "#44202a" }}>{new Date(entry.ts).toLocaleTimeString("sk-SK")}</span>
+                        <span style={{ color: A.gold, textShadow: `0 0 6px ${A.goldGlow}` }}>[ADMIN_ACTION]</span>
+                        <span style={{ color: A.cream }}>{entry.detail}</span>
+                      </motion.div>
+                    ))}
+                    {/* AI request log */}
+                    {adminLog.length > 0 && recentRequests.length > 0 && (
+                      <div className="my-2" style={{ borderTop: `1px solid rgba(239,68,68,0.1)` }} />
+                    )}
                     {recentRequests.map((r, i) => (
                       <motion.div key={r.id}
                         initial={{ opacity: 0, x: -4 }} animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: i * 0.02 }}
+                        transition={{ delay: i * 0.01 }}
                         className="flex items-start gap-3 leading-relaxed">
-                        <span style={{ color: "#44202a" }}>
-                          {new Date(r.createdAt).toLocaleTimeString("sk-SK")}
-                        </span>
-                        <span style={{ color: A.crimson, textShadow: `0 0 8px ${A.crimsonGlow}` }}>
-                          [AI/{r.module.toUpperCase()}]
-                        </span>
+                        <span style={{ color: "#44202a" }}>{new Date(r.createdAt).toLocaleTimeString("sk-SK")}</span>
+                        <span style={{ color: A.crimson, textShadow: `0 0 8px ${A.crimsonGlow}` }}>[AI/{r.module.toUpperCase()}]</span>
                         <span style={{ color: A.cream }}>{r.user.email}</span>
                         <span style={{ color: A.gold }}>tokens={r.tokens}</span>
                       </motion.div>
                     ))}
-                    {recentRequests.length === 0 && (
+                    {adminLog.length === 0 && recentRequests.length === 0 && (
                       <p style={{ color: "#44202a" }}>// Žiadne udalosti.</p>
                     )}
-                    <motion.div
-                      animate={{ opacity: [1, 0, 1] }} transition={{ duration: 1.2, repeat: Infinity }}
+                    <motion.div animate={{ opacity: [1, 0, 1] }} transition={{ duration: 1.2, repeat: Infinity }}
                       className="flex items-center gap-2 mt-3">
                       <span style={{ color: A.crimson, textShadow: `0 0 6px ${A.crimson}` }}>▋</span>
                       <span style={{ color: "#44202a" }}>// čakám na ďalšie udalosti...</span>
                     </motion.div>
+                    <div ref={logEndRef} />
                   </div>
                 </div>
               </motion.div>
@@ -466,6 +600,50 @@ export default function AdminClient({ adminEmail, users, stats, recentRequests }
           </AnimatePresence>
         </div>
       </div>
+
+      {/* ── Credits Modal ── */}
+      <AnimatePresence>
+        {creditModal && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            style={{ background: "rgba(0,0,0,0.7)", backdropFilter: "blur(8px)" }}
+            onClick={(e) => e.target === e.currentTarget && setCreditModal(null)}>
+            <motion.div
+              initial={{ scale: 0.92, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.92, opacity: 0 }}
+              className="rounded-2xl p-6 w-full max-w-sm"
+              style={{ background: "rgba(7,0,5,0.97)", border: `1px solid ${A.goldBorder}`, boxShadow: `0 0 40px ${A.crimsonGlow}` }}>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-sm font-black tracking-widest uppercase" style={{ color: A.gold }}>Upraviť kredity</h3>
+                <button onClick={() => setCreditModal(null)} style={{ color: "#44202a" }}>
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              <p className="text-xs mb-4" style={{ color: "#64748b" }}>{creditModal.user.email}</p>
+              <p className="text-xs mb-1" style={{ color: "#4b2030" }}>Aktuálne: <span style={{ color: A.gold, fontWeight: 700 }}>{creditModal.user.credits}</span></p>
+              <div className="flex gap-2 mt-3">
+                <button onClick={() => setCreditDelta(String(parseInt(creditDelta || "0", 10) - 10))}
+                  className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: A.crimsonDim, border: `1px solid ${A.crimsonBorder}`, color: A.crimson }}>
+                  <Minus className="w-4 h-4" />
+                </button>
+                <input type="number" value={creditDelta} onChange={(e) => setCreditDelta(e.target.value)}
+                  placeholder="+500 alebo -50"
+                  className="flex-1 rounded-xl px-3 py-2 text-sm text-center outline-none font-bold"
+                  style={{ background: "rgba(255,255,255,0.04)", border: `1px solid ${A.goldBorder}`, color: A.gold, caretColor: A.gold }} />
+                <button onClick={() => setCreditDelta(String(parseInt(creditDelta || "0", 10) + 10))}
+                  className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: A.goldDim, border: `1px solid ${A.goldBorder}`, color: A.gold }}>
+                  <Plus className="w-4 h-4" />
+                </button>
+              </div>
+              <button onClick={submitCredits} disabled={creditLoading || !creditDelta || creditDelta === "0"}
+                className="w-full mt-4 py-2.5 rounded-xl text-sm font-bold transition-all disabled:opacity-40"
+                style={{ background: `linear-gradient(135deg,${A.crimson},#7f1d1d)`, color: "#fff", boxShadow: `0 0 16px ${A.crimsonGlow}` }}>
+                {creditLoading ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Potvrdiť zmenu"}
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
