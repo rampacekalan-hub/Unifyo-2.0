@@ -10,9 +10,12 @@ const COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7 dní
 export interface SessionPayload {
   userId: string;
   email: string;
+  role: "USER" | "ADMIN" | "SUPERADMIN";
 }
 
 export async function createSession(payload: SessionPayload) {
+  // role must always be present — default USER for safety
+  if (!payload.role) (payload as SessionPayload).role = "USER";
   const token = await new SignJWT({ ...payload })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()

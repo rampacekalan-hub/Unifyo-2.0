@@ -6,20 +6,29 @@ const JWT_SECRET = new TextEncoder().encode(
 );
 const COOKIE_NAME = "unifyo_session";
 
-// Routes requiring authentication
+interface JwtPayload {
+  userId: string;
+  email: string;
+  role: "USER" | "ADMIN" | "SUPERADMIN";
+}
+
+// Routes requiring any authenticated user
 const PROTECTED = ["/dashboard"];
 
 // Routes inaccessible when already logged in
 const AUTH_ONLY = ["/login", "/register"];
 
-async function getSessionFromRequest(req: NextRequest): Promise<boolean> {
+// Routes requiring ADMIN or SUPERADMIN role
+const ADMIN_ONLY = ["/admin"];
+
+async function getSessionPayload(req: NextRequest): Promise<JwtPayload | null> {
   const token = req.cookies.get(COOKIE_NAME)?.value;
-  if (!token) return false;
+  if (!token) return null;
   try {
-    await jwtVerify(token, JWT_SECRET);
-    return true;
+    const { payload } = await jwtVerify(token, JWT_SECRET);
+    return payload as unknown as JwtPayload;
   } catch {
-    return false;
+    return null;
   }
 }
 
@@ -28,19 +37,32 @@ export async function middleware(req: NextRequest) {
 
   const isProtected = PROTECTED.some((p) => pathname.startsWith(p));
   const isAuthOnly = AUTH_ONLY.some((p) => pathname.startsWith(p));
+  const isAdminOnly = ADMIN_ONLY.some((p) => pathname.startsWith(p));
 
-  if (!isProtected && !isAuthOnly) return NextResponse.next();
+  if (!isProtected && !isAuthOnly && !isAdminOnly) return NextResponse.next();
 
-  const authenticated = await getSessionFromRequest(req);
+  const session = await getSessionPayload(req);
 
-  if (isProtected && !authenticated) {
+  // --- Admin routes: 404 for everyone except ADMIN/SUPERADMIN ---
+  if (isAdminOnly) {
+    const isAdmin = session?.role === "ADMIN" || session?.role === "SUPERADMIN";
+    if (!isAdmin) {
+      // Return 404 — attacker cannot know this route exists
+      return new NextResponse(null, { status: 404 });
+    }
+    return NextResponse.next();
+  }
+
+  // --- Protected routes: redirect to login ---
+  if (isProtected && !session) {
     const loginUrl = req.nextUrl.clone();
     loginUrl.pathname = "/login";
     loginUrl.searchParams.set("from", pathname);
     return NextResponse.redirect(loginUrl);
   }
 
-  if (isAuthOnly && authenticated) {
+  // --- Auth-only routes: redirect logged-in users to dashboard ---
+  if (isAuthOnly && session) {
     const dashboardUrl = req.nextUrl.clone();
     dashboardUrl.pathname = "/dashboard";
     dashboardUrl.search = "";
@@ -51,5 +73,5 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/login", "/register"],
+  matcher: ["/dashboard/:path*", "/admin/:path*", "/login", "/register"],
 };

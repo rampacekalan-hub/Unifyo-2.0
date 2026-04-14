@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    await createSession({ userId: user.id, email: user.email });
+    await createSession({ userId: user.id, email: user.email, role: user.role });
 
     return NextResponse.json({ success: true }, { status: 201 });
   } catch (error) {
