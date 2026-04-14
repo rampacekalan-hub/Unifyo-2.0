@@ -105,7 +105,7 @@ export default function HeroSection() {
   const SceneIcon = scene.icon;
 
   return (
-    <section style={{
+    <section className="hero-section" style={{
       position: "relative",
       width: "100%",
       minHeight: "100vh",
@@ -113,8 +113,8 @@ export default function HeroSection() {
       flexDirection: "column",
       alignItems: "center",
       justifyContent: "center",
-      paddingTop: "96px",
-      paddingBottom: "80px",
+      paddingTop: "clamp(88px, 12vw, 120px)",
+      paddingBottom: "clamp(48px, 8vw, 80px)",
       overflow: "hidden",
     }}>
 
@@ -144,8 +144,8 @@ export default function HeroSection() {
             border: "1px solid rgba(139,92,246,0.28)",
             color: "#c4b5fd",
             borderRadius: "999px",
-            padding: "8px 18px",
-            fontSize: "0.82rem",
+            padding: "7px 16px",
+            fontSize: "clamp(0.72rem, 2vw, 0.82rem)",
             fontWeight: 600,
             letterSpacing: "0.02em",
           }}>
@@ -159,7 +159,7 @@ export default function HeroSection() {
           initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.65, delay: 0.1 }}
           style={{
-            fontSize: "clamp(2.8rem, 7vw, 5.2rem)",
+            fontSize: "clamp(2.2rem, 7vw, 5.2rem)",
             fontWeight: 900,
             letterSpacing: "-0.04em",
             lineHeight: 1.06,
@@ -184,11 +184,11 @@ export default function HeroSection() {
           initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.55, delay: 0.18 }}
           style={{
-            fontSize: "clamp(1rem, 2.2vw, 1.18rem)",
+            fontSize: "clamp(0.93rem, 2.2vw, 1.18rem)",
             color: "#8b9ab0",
             lineHeight: 1.7,
-            maxWidth: "48ch",
-            margin: "0 auto 40px",
+            maxWidth: "44ch",
+            margin: "0 auto 36px",
           }}
         >
           Jeden AI asistent po slovensky — kalendár, emaily, CRM aj hovory.
@@ -199,7 +199,7 @@ export default function HeroSection() {
         <motion.div
           initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.26 }}
-          style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "12px", marginBottom: "0" }}
+          style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "10px", marginBottom: "0" }}
         >
           <Link href="/register" style={{
             display: "inline-flex", alignItems: "center", gap: "10px",
@@ -207,8 +207,8 @@ export default function HeroSection() {
             boxShadow: "0 0 0 1px rgba(139,92,246,0.35), 0 8px 28px rgba(124,58,237,0.35)",
             color: "#fff",
             borderRadius: "14px",
-            padding: "14px 28px",
-            fontSize: "1rem",
+            padding: "13px 24px",
+            fontSize: "clamp(0.9rem, 2.5vw, 1rem)",
             fontWeight: 700,
             textDecoration: "none",
           }}>
@@ -221,8 +221,8 @@ export default function HeroSection() {
             border: "1px solid rgba(255,255,255,0.1)",
             color: "#d1d5db",
             borderRadius: "14px",
-            padding: "14px 24px",
-            fontSize: "1rem",
+            padding: "13px 22px",
+            fontSize: "clamp(0.9rem, 2.5vw, 1rem)",
             fontWeight: 600,
             textDecoration: "none",
           }}>
@@ -241,7 +241,7 @@ export default function HeroSection() {
           zIndex: 10,
           width: "100%",
           maxWidth: "760px",
-          margin: "56px auto 0",
+          margin: "clamp(32px, 5vw, 56px) auto 0",
           padding: "0 24px",
         }}
       >
@@ -297,8 +297,8 @@ export default function HeroSection() {
                 color: "#34d399", fontSize: "0.68rem", padding: "2px 8px", borderRadius: "999px", fontWeight: 600,
               }}>Online</span>
             </div>
-            {/* Scene tabs */}
-            <div style={{ marginLeft: "auto", display: "flex", gap: "4px" }}>
+            {/* Scene tabs — hidden on small screens */}
+            <div className="hidden sm:flex" style={{ marginLeft: "auto", gap: "4px" }}>
               {SCENES.map((s, i) => {
                 const TabIcon = s.icon;
                 return (
@@ -322,7 +322,7 @@ export default function HeroSection() {
           {/* Messages — FIXED HEIGHT container, animations only inside */}
           <div style={{
             position: "relative",
-            height: "230px",
+            height: "clamp(200px, 30vw, 230px)",
             overflow: "hidden",
             padding: "16px 20px",
             display: "flex",
@@ -460,7 +460,7 @@ export default function HeroSection() {
               borderRadius: "12px", padding: "10px 14px",
             }}>
               <SceneIcon style={{ width: "15px", height: "15px", color: scene.accent, flexShrink: 0 }} />
-              <span style={{ flex: 1, fontSize: "0.85rem", color: "#374151" }}>
+              <span style={{ flex: 1, fontSize: "clamp(0.75rem, 2vw, 0.85rem)", color: "#374151" }}>
                 Opýtaj sa Unifyo AI čokoľvek po slovensky...
               </span>
               <div style={{

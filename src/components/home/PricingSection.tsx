@@ -101,7 +101,7 @@ export default function PricingSection() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5 items-start">
           {config.pricing.map((plan, i) => {
             const displayPrice = plan.price > 0
-              ? (yearly ? Math.round(plan.price * YEARLY_DISCOUNT * 10) / 10 : plan.price)
+              ? (yearly ? Math.round(plan.price * YEARLY_DISCOUNT * 100) / 100 : plan.price)
               : 0;
             const isHighlighted = plan.highlighted;
 

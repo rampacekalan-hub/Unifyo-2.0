@@ -95,7 +95,7 @@ export default function BentoGrid() {
         </motion.div>
 
         {/* Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
           {features.map((f, i) => (
             <motion.div
               key={f.title}
@@ -105,12 +105,13 @@ export default function BentoGrid() {
               transition={{ duration: 0.5, delay: i * 0.07, ease: [0.21, 0.47, 0.32, 0.98] }}
             >
               <div
-                className="group h-full rounded-2xl p-6 flex flex-col gap-4 cursor-default transition-all duration-300"
+                className="group h-full rounded-2xl p-5 sm:p-6 flex flex-col gap-4 cursor-default transition-all duration-300"
                 style={{
                   background: f.bg,
                   border: `1px solid ${f.border}`,
                   backdropFilter: "blur(12px)",
                   WebkitBackdropFilter: "blur(12px)",
+                  minHeight: "180px",
                 }}
                 onMouseEnter={e => {
                   (e.currentTarget as HTMLDivElement).style.background = f.bg.replace("0.07", "0.13").replace("0.06", "0.12");
@@ -126,16 +127,16 @@ export default function BentoGrid() {
                 }}
               >
                 {/* Icon badge */}
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
                   style={{ background: `${f.accent}18`, border: `1px solid ${f.accent}30` }}>
                   <f.icon className="w-5 h-5" style={{ color: f.accent }} />
                 </div>
 
                 <div>
-                  <h3 className="font-semibold text-[0.93rem] mb-1.5 tracking-tight" style={{ color: "#eef2ff" }}>
+                  <h3 className="font-semibold text-[0.95rem] mb-2 tracking-tight" style={{ color: "#eef2ff" }}>
                     {f.title}
                   </h3>
-                  <p className="text-sm leading-relaxed" style={{ color: "#94a3b8" }}>
+                  <p className="text-[0.84rem] leading-relaxed" style={{ color: "#94a3b8" }}>
                     {f.desc}
                   </p>
                 </div>

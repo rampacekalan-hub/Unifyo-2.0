@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState, useEffect } from "react";
+import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X } from "lucide-react";
 import { getSiteConfig } from "@/config/site-settings";
@@ -11,6 +12,7 @@ const config = getSiteConfig();
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const pathname = usePathname();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
@@ -45,18 +47,24 @@ export default function Navbar() {
 
         {/* Desktop Nav */}
         <div className="hidden md:flex items-center gap-1">
-          {config.links.nav.slice(0, 2).map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className="px-4 py-2 text-sm rounded-lg transition-all duration-200"
-              style={{ color: "#94a3b8" }}
-              onMouseEnter={e => (e.currentTarget.style.color = "#eef2ff")}
-              onMouseLeave={e => (e.currentTarget.style.color = "#94a3b8")}
-            >
-              {link.label}
-            </Link>
-          ))}
+          {config.links.nav.slice(0, 2).map((link) => {
+            const isActive = pathname === link.href || (link.href !== "/" && pathname.startsWith(link.href.split("#")[0]));
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                className="px-4 py-2 text-sm rounded-lg transition-all duration-200 relative"
+                style={{ color: isActive ? "#eef2ff" : "#94a3b8" }}
+                onMouseEnter={e => (e.currentTarget.style.color = "#eef2ff")}
+                onMouseLeave={e => (e.currentTarget.style.color = isActive ? "#eef2ff" : "#94a3b8")}
+              >
+                {link.label}
+                {isActive && (
+                  <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-4 h-px rounded-full" style={{ background: "#8b5cf6" }} />
+                )}
+              </Link>
+            );
+          })}
         </div>
 
         {/* Desktop CTA */}
@@ -102,23 +110,34 @@ export default function Navbar() {
               borderBottom: "1px solid rgba(139,92,246,0.1)",
             }}
           >
-            <div className="px-6 py-4 flex flex-col gap-2">
-              {config.links.nav.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  onClick={() => setMobileOpen(false)}
-                  className="py-3 px-4 text-gray-300 hover:text-white rounded-lg hover:bg-white/5 transition-all duration-200"
-                >
-                  {link.label}
-                </Link>
-              ))}
-              <div className="pt-3 border-t border-white/5 mt-2 flex flex-col gap-2">
-                <Link href="/login" onClick={() => setMobileOpen(false)} className="text-center text-sm text-gray-300 py-2 border border-white/10 rounded-lg">
+            <div className="px-5 py-4 flex flex-col gap-1">
+              {config.links.nav.slice(0, 2).map((link) => {
+                const isActive = pathname === link.href || (link.href !== "/" && pathname.startsWith(link.href.split("#")[0]));
+                return (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    onClick={() => setMobileOpen(false)}
+                    className="py-3 px-4 text-sm rounded-xl transition-all duration-200"
+                    style={{
+                      color: isActive ? "#eef2ff" : "#94a3b8",
+                      background: isActive ? "rgba(139,92,246,0.08)" : "transparent",
+                    }}
+                  >
+                    {link.label}
+                  </Link>
+                );
+              })}
+              <div className="pt-3 border-t mt-2 flex flex-col gap-2" style={{ borderColor: "rgba(139,92,246,0.1)" }}>
+                <Link href="/login" onClick={() => setMobileOpen(false)}
+                  className="text-center text-sm py-3 rounded-xl transition-all duration-200"
+                  style={{ color: "#94a3b8", border: "1px solid rgba(255,255,255,0.08)" }}>
                   Prihlásiť sa
                 </Link>
-                <Link href="/register" onClick={() => setMobileOpen(false)} className="text-center text-sm text-white py-2 bg-[#7c3aed] rounded-lg font-medium">
-                  Začať teraz →
+                <Link href="/register" onClick={() => setMobileOpen(false)}
+                  className="text-center text-sm text-white font-semibold py-3 rounded-xl"
+                  style={{ background: "linear-gradient(135deg, #7c3aed, #5b21b6)", boxShadow: "0 4px 16px rgba(124,58,237,0.3)" }}>
+                  Začať zadarmo →
                 </Link>
               </div>
             </div>

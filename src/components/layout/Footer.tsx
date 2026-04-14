@@ -11,11 +11,11 @@ export default function Footer() {
         style={{ background: "linear-gradient(90deg, transparent, rgba(139,92,246,0.25), transparent)" }}
       />
 
-      <div className="max-w-6xl mx-auto px-6 pt-14 pb-10">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-10 mb-12">
+      <div className="max-w-6xl mx-auto px-5 sm:px-6 pt-10 sm:pt-14 pb-8 sm:pb-10">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 sm:gap-10 mb-10 sm:mb-12">
 
           {/* Brand */}
-          <div className="col-span-2 md:col-span-1 flex flex-col gap-4">
+          <div className="col-span-2 md:col-span-1 flex flex-col gap-3">
             <div className="flex items-center gap-2.5">
               <div className="w-7 h-7 rounded-xl flex items-center justify-center"
                 style={{ background: "linear-gradient(135deg, #7c3aed, #06b6d4)", boxShadow: "0 0 12px rgba(124,58,237,0.25)" }}>
@@ -25,7 +25,7 @@ export default function Footer() {
                 {config.name}
               </span>
             </div>
-            <p className="text-xs leading-relaxed max-w-[180px]" style={{ color: "#64748b" }}>
+            <p className="text-xs leading-relaxed max-w-[200px]" style={{ color: "#64748b" }}>
               {config.texts.footer.tagline}
             </p>
             {/* Status indicator */}
