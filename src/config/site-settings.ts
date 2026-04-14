@@ -228,6 +228,16 @@ export interface LinksConfig {
   };
 }
 
+export interface SecurityConfig {
+  rateLimit: {
+    auth: { maxRequests: number; windowMs: number };   // login/register
+    ai: { maxRequests: number; windowMs: number };     // AI endpoints
+    api: { maxRequests: number; windowMs: number };    // general API
+  };
+  bcryptRounds: number;
+  sessionMaxAgeSec: number;
+}
+
 export interface SiteConfig {
   name: string;
   tagline: string;
@@ -243,6 +253,7 @@ export interface SiteConfig {
   links: LinksConfig;
   pricing: PricingPlan[];
   validation: ValidationConfig;
+  security: SecurityConfig;
 }
 
 // ─── SYSTEM CORE DEFINITION ──────────────────────────────────
@@ -554,6 +565,17 @@ const siteConfig: SiteConfig = {
       minLength: 2,
       maxLength: 100,
     },
+  },
+
+  // ─── BEZPEČNOSŤ (Security First) ───────────────────────────
+  security: {
+    rateLimit: {
+      auth: { maxRequests: 10, windowMs: 15 * 60 * 1000 },   // 10x / 15 min
+      ai:   { maxRequests: 30, windowMs: 60 * 1000 },         // 30x / minútu
+      api:  { maxRequests: 100, windowMs: 60 * 1000 },        // 100x / minútu
+    },
+    bcryptRounds: 12,
+    sessionMaxAgeSec: 60 * 60 * 24 * 7, // 7 dní
   },
 };
 

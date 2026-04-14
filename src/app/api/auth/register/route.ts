@@ -3,15 +3,18 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { registerSchema } from "@/lib/validations";
 import { createSession } from "@/lib/auth";
+import { rateLimit } from "@/lib/rate-limit";
 import { getSiteConfig } from "@/config/site-settings";
 
 const config = getSiteConfig();
 
-// Default onboarding values — single source of truth from System Core
 const DEFAULT_CREDITS = config.ai.requestLimits.basic;
 const DEFAULT_PLAN = "basic" as const;
 
 export async function POST(req: NextRequest) {
+  const limited = rateLimit(req, config.security.rateLimit.auth, "register");
+  if (limited) return limited;
+
   try {
     const body = await req.json();
     const parsed = registerSchema.safeParse(body);
@@ -33,7 +36,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const hashedPassword = await bcrypt.hash(password, 12);
+    const hashedPassword = await bcrypt.hash(password, config.security.bcryptRounds);
     const user = await prisma.user.create({
       data: {
         email,

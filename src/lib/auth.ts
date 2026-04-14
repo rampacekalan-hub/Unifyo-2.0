@@ -45,3 +45,32 @@ export async function deleteSession() {
   const cookieStore = await cookies();
   cookieStore.delete(COOKIE_NAME);
 }
+
+/**
+ * Use in API route handlers to enforce authentication.
+ * Returns { session } if valid, or { response } with 401 to return immediately.
+ */
+export async function requireAuth(
+  req: import("next/server").NextRequest
+): Promise<
+  | { session: SessionPayload; response: null }
+  | { session: null; response: import("next/server").NextResponse }
+> {
+  const { NextResponse } = await import("next/server");
+  const token = req.cookies.get(COOKIE_NAME)?.value;
+  if (!token) {
+    return {
+      session: null,
+      response: NextResponse.json({ error: "Neautorizovaný prístup" }, { status: 401 }),
+    };
+  }
+  try {
+    const { payload } = await jwtVerify(token, JWT_SECRET);
+    return { session: payload as unknown as SessionPayload, response: null };
+  } catch {
+    return {
+      session: null,
+      response: NextResponse.json({ error: "Neplatná alebo expirovaná session" }, { status: 401 }),
+    };
+  }
+}

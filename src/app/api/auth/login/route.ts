@@ -3,8 +3,15 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { loginSchema } from "@/lib/validations";
 import { createSession } from "@/lib/auth";
+import { rateLimit } from "@/lib/rate-limit";
+import { getSiteConfig } from "@/config/site-settings";
+
+const config = getSiteConfig();
 
 export async function POST(req: NextRequest) {
+  const limited = rateLimit(req, config.security.rateLimit.auth, "login");
+  if (limited) return limited;
+
   try {
     const body = await req.json();
     const parsed = loginSchema.safeParse(body);
