@@ -122,6 +122,7 @@ export interface FeaturesConfig {
 
 export interface SystemPrompts {
   base: string;           // Zakladny kontext o Unifyo — ide do kazdeho API volania
+  dashboard: string;      // Kontext pre hlavny AI chat
   calendar: string;       // Kontext pre kalendar akcie
   email: string;          // Kontext pre email akcie
   crm: string;            // Kontext pre CRM/pipeline akcie
@@ -214,7 +215,16 @@ export interface TextsConfig {
   };
   dashboard: {
     welcome: string;
+    systemsOnline: string;
     aiReady: string;
+    chatPlaceholder: string;
+  };
+  errorStates: {
+    aiUnavailable: string;
+    rateLimited: string;
+    noCredits: string;
+    networkError: string;
+    sessionExpired: string;
   };
 }
 
@@ -334,6 +344,10 @@ const siteConfig: SiteConfig = {
         "Komunikujes v slovenskom jazyku, si strucny, presny a proaktivny. " +
         "Pomahaj s kalendacom, emailmi, CRM a obchodnymi rozhodnutiami. " +
         "Nikdy nevymyslaj informacie — ak niecos nevies, povedz to.",
+      dashboard:
+        "Nachádzaš sa v hlavnom AI chate Unifyo Dashboardu. " +
+        "Môžeš pomáhať so všetkými modulmi — kalendár, email, CRM, hovory. " +
+        "Ak používateľ potrebuje konkrétny modul, navrhni mu prechod do neho.",
       calendar:
         "Pracujes s Google Calendar a Microsoft Outlook API. " +
         "Pri planovani stretnut kontroluj konflikty, casove zony (Europe/Bratislava) " +
@@ -455,8 +469,17 @@ const siteConfig: SiteConfig = {
       registerSubtitle: "Začnite s Unifyo ešte dnes — zadarmo",
     },
     dashboard: {
-      welcome: "Vitaj v Unifyo 2.0",
-      aiReady: "Tvôj AI asistent sa pripravuje...",
+      welcome: "Všetky systémy sú online.",
+      systemsOnline: "Systémy online • AI pripojený",
+      aiReady: "Pripojený. Som tvoj AI asistent. Čím môžem začať?",
+      chatPlaceholder: "Napíš správu...",
+    },
+    errorStates: {
+      aiUnavailable: "AI služba je momentálne nedostupná. Skús to znova o chvíľu.",
+      rateLimited: "Príliš veľa požiadavkov. Spomalte a skúste to o pár minút.",
+      noCredits: "Dochodziť ti kredity. Prejdi na vyšší plán pre viac AI odpovedí.",
+      networkError: "Chyba siete. Overte pripojenie a skúste znova.",
+      sessionExpired: "Tvoja session expirovala. Prihláste sa znova.",
     },
   },
 
