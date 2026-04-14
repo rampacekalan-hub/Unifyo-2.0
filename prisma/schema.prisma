@@ -9,10 +9,38 @@ datasource db {
   provider = "postgresql"
 }
 
+enum Role {
+  USER
+  ADMIN
+  SUPERADMIN
+}
+
+enum Plan {
+  basic
+  pro
+  enterprise
+}
+
 model User {
   id        String   @id @default(cuid())
   email     String   @unique
   password  String
+  name      String?
+  role      Role     @default(USER)
+  plan      Plan     @default(basic)
+  credits   Int      @default(10)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  aiRequests AiRequest[]
+}
+
+model AiRequest {
+  id        String   @id @default(cuid())
+  userId    String
+  module    String
+  tokens    Int      @default(0)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

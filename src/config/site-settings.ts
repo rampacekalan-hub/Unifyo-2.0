@@ -212,6 +212,10 @@ export interface TextsConfig {
     registerTitle: string;
     registerSubtitle: string;
   };
+  dashboard: {
+    welcome: string;
+    aiReady: string;
+  };
 }
 
 export interface LinksConfig {
@@ -277,7 +281,7 @@ const siteConfig: SiteConfig = {
     },
     borderRadius: "0.875rem",
     themeEngine: {
-      glowIntensity: 0.25,
+      glowIntensity: 0.8,
       glowRadius: 32,
       blurStrength: 16,
       noiseOpacity: 0.025,
@@ -285,7 +289,7 @@ const siteConfig: SiteConfig = {
       animationSpeed: 1.0,
       particleDensity: 80,
       particleOpacity: 0.45,
-      particleSpeed: 0.3,
+      particleSpeed: 2.0,
     },
   },
 
@@ -438,6 +442,10 @@ const siteConfig: SiteConfig = {
       loginSubtitle: "Prihláste sa do svojho účtu",
       registerTitle: "Vytvorte si účet",
       registerSubtitle: "Začnite s Unifyo ešte dnes — zadarmo",
+    },
+    dashboard: {
+      welcome: "Vitaj v Unifyo 2.0",
+      aiReady: "Tvôj AI asistent sa pripravuje...",
     },
   },
 

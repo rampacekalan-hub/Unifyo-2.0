@@ -3,6 +3,13 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { registerSchema } from "@/lib/validations";
 import { createSession } from "@/lib/auth";
+import { getSiteConfig } from "@/config/site-settings";
+
+const config = getSiteConfig();
+
+// Default onboarding values — single source of truth from System Core
+const DEFAULT_CREDITS = config.ai.requestLimits.basic;
+const DEFAULT_PLAN = "basic" as const;
 
 export async function POST(req: NextRequest) {
   try {
@@ -16,7 +23,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { email, password } = parsed.data;
+    const { email, password, name } = parsed.data;
 
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
@@ -28,7 +35,13 @@ export async function POST(req: NextRequest) {
 
     const hashedPassword = await bcrypt.hash(password, 12);
     const user = await prisma.user.create({
-      data: { email, password: hashedPassword },
+      data: {
+        email,
+        password: hashedPassword,
+        name: name ?? null,
+        plan: DEFAULT_PLAN,
+        credits: DEFAULT_CREDITS,
+      },
     });
 
     await createSession({ userId: user.id, email: user.email });

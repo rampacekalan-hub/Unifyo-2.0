@@ -4,6 +4,11 @@ import { getSiteConfig } from "@/config/site-settings";
 const { validation } = getSiteConfig();
 
 export const registerSchema = z.object({
+  name: z
+    .string()
+    .min(validation.name.minLength, `Meno musí mať aspoň ${validation.name.minLength} znaky`)
+    .max(validation.name.maxLength, `Meno môže mať najviac ${validation.name.maxLength} znakov`)
+    .optional(),
   email: z
     .string()
     .email("Zadajte platný e-mail")
