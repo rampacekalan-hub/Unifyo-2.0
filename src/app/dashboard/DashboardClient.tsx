@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import {
   LogOut, Bot, Calendar, Mail, BarChart3,
-  Phone, Zap, Lock, Send, Loader2, AlertTriangle, ChevronRight, Shield,
+  Phone, Zap, Lock, Send, Loader2, AlertTriangle, ChevronRight, ShieldAlert,
 } from "lucide-react";
 import NeuralBackground from "@/components/ui/NeuralBackground";
 import { getSiteConfig } from "@/config/site-settings";
@@ -171,20 +171,21 @@ export default function DashboardClient({ user }: DashboardClientProps) {
             <Link href="/admin"
               className="w-full flex items-center gap-2 px-2 py-2.5 rounded-xl mb-2 transition-all duration-200 relative overflow-hidden"
               style={{
-                background: "rgba(16,185,129,0.08)",
-                border: "1px solid rgba(16,185,129,0.25)",
-                color: "#10b981",
+                background: "rgba(239,68,68,0.06)",
+                border: "1px solid rgba(245,158,11,0.45)",
+                color: "#f59e0b",
+                boxShadow: "0 0 10px rgba(239,68,68,0.15)",
               }}>
               <motion.div
                 className="absolute inset-0 rounded-xl"
-                animate={{ opacity: [0.15, 0.35, 0.15] }}
-                transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
-                style={{ background: "radial-gradient(ellipse at center, rgba(16,185,129,0.25) 0%, transparent 70%)" }}
+                animate={{ opacity: [0.08, 0.22, 0.08] }}
+                transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
+                style={{ background: "radial-gradient(ellipse at center, rgba(239,68,68,0.30) 0%, transparent 70%)" }}
               />
-              <Shield className="w-4 h-4 flex-shrink-0 relative z-10"
-                style={{ filter: "drop-shadow(0 0 5px #10b981)" }} />
-              <span className="text-xs font-semibold hidden md:block relative z-10"
-                style={{ letterSpacing: "0.04em" }}>System Control</span>
+              <ShieldAlert className="w-4 h-4 flex-shrink-0 relative z-10"
+                style={{ filter: "drop-shadow(0 0 5px #ef4444)" }} />
+              <span className="text-xs font-bold hidden md:block relative z-10 tracking-widest uppercase"
+                style={{ color: "#f59e0b", letterSpacing: "0.08em" }}>System Control</span>
             </Link>
           )}
           <form action="/api/auth/logout" method="POST">
