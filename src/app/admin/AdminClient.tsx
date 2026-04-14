@@ -14,25 +14,46 @@ import type { AdminLogEntry } from "@/lib/admin-store";
 
 const config = getSiteConfig();
 
-// ── Event Horizon palette ──────────────────────────────────────
+// ── Event Horizon palette — refined ruby edition ────────────────
 const A = {
-  crimson:       "#ef4444",
-  crimsonGlow:   "rgba(239,68,68,0.22)",
-  crimsonBorder: "rgba(239,68,68,0.28)",
-  crimsonDim:    "rgba(239,68,68,0.08)",
+  crimson:       "#dc2626",          // deep ruby — easier on eyes
+  crimsonGlow:   "rgba(220,38,38,0.18)",
+  crimsonBorder: "rgba(220,38,38,0.22)",
+  crimsonDim:    "rgba(220,38,38,0.07)",
+  crimsonSoft:   "rgba(220,38,38,0.12)",
   gold:          "#f59e0b",
-  goldGlow:      "rgba(245,158,11,0.22)",
-  goldBorder:    "rgba(245,158,11,0.35)",
-  goldDim:       "rgba(245,158,11,0.08)",
+  goldGlow:      "rgba(245,158,11,0.20)",
+  goldBorder:    "rgba(245,158,11,0.30)",
+  goldDim:       "rgba(245,158,11,0.07)",
   cream:         "#fef3c7",
-  bg:            "#070005",
+  bg:            "#060004",
 };
 
 const GLASS: React.CSSProperties = {
-  background: "rgba(7,0,5,0.88)",
+  background: "rgba(6,0,4,0.82)",
   border: `1px solid ${A.crimsonBorder}`,
-  backdropFilter: "blur(24px)",
-  WebkitBackdropFilter: "blur(24px)",
+  backdropFilter: "blur(28px)",
+  WebkitBackdropFilter: "blur(28px)",
+};
+
+const INPUT_STYLE: React.CSSProperties = {
+  background: "rgba(255,255,255,0.03)",
+  border: `1px solid ${A.crimsonBorder}`,
+  borderRadius: "0.875rem",
+  color: "#f1f5f9",
+  outline: "none",
+};
+
+const DATETIME_STYLE: React.CSSProperties = {
+  background: "rgba(255,255,255,0.03)",
+  border: `1px solid rgba(220,38,38,0.15)`,
+  borderRadius: "0.875rem",
+  color: A.gold,
+  outline: "none",
+  colorScheme: "dark" as const,
+  padding: "0.5rem 0.75rem",
+  fontSize: "0.75rem",
+  width: "100%",
 };
 
 type NavSection = "overview" | "users" | "toggles" | "logs";
@@ -434,7 +455,7 @@ export default function AdminClient({ adminEmail, users: initUsers, stats, recen
                       <thead>
                         <tr style={{ borderBottom: `1px solid ${A.crimsonBorder}`, background: A.crimsonDim }}>
                           {["Email", "Meno", "Rola", "Plán", "Kredity", "Requesty", "Registrácia"].map((h) => (
-                            <th key={h} className="px-4 py-3 text-left font-bold tracking-widest uppercase"
+                            <th key={h} className="px-5 py-4 text-left font-bold tracking-widest uppercase"
                               style={{ color: A.gold }}>{h}</th>
                           ))}
                         </tr>
@@ -445,40 +466,40 @@ export default function AdminClient({ adminEmail, users: initUsers, stats, recen
                             initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }}
                             transition={{ delay: i * 0.03 }}
                             className="transition-colors cursor-default"
-                            style={{ borderBottom: `1px solid rgba(239,68,68,0.06)` }}
+                            style={{ borderBottom: `1px solid rgba(220,38,38,0.06)` }}
                             onMouseEnter={(e) => (e.currentTarget.style.background = A.crimsonDim)}
                             onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
-                            <td className="px-4 py-3" style={{ color: "#cbd5e1" }}>{u.email}</td>
-                            <td className="px-4 py-3" style={{ color: "#64748b" }}>{u.name ?? "—"}</td>
-                            <td className="px-4 py-3">
-                              <span className="px-2 py-0.5 rounded-full text-[0.6rem] font-bold"
+                            <td className="px-5 py-4" style={{ color: "#cbd5e1" }}>{u.email}</td>
+                            <td className="px-5 py-4" style={{ color: "#64748b" }}>{u.name ?? "—"}</td>
+                            <td className="px-5 py-4">
+                              <span className="px-2.5 py-1 rounded-full text-[0.6rem] font-bold"
                                 style={u.role === "ADMIN" || u.role === "SUPERADMIN"
-                                  ? { background: A.crimsonDim, color: A.crimson, border: `1px solid ${A.crimsonBorder}` }
+                                  ? { background: A.crimsonSoft, color: A.crimson, border: `1px solid ${A.crimsonBorder}` }
                                   : { background: "rgba(255,255,255,0.03)", color: "#44202a", border: "1px solid rgba(255,255,255,0.06)" }}>
                                 {u.role}
                               </span>
                             </td>
-                            <td className="px-4 py-3">
-                              <span className="px-2 py-0.5 rounded-full text-[0.6rem]"
+                            <td className="px-5 py-4">
+                              <span className="px-2.5 py-1 rounded-full text-[0.6rem]"
                                 style={{ background: A.goldDim, color: A.gold, border: `1px solid ${A.goldBorder}` }}>
                                 {u.plan}
                               </span>
                             </td>
-                            <td className="px-4 py-3">
-                              <div className="flex items-center gap-2">
+                            <td className="px-5 py-4">
+                              <div className="flex items-center gap-2.5">
                                 <span className="font-bold" style={{ color: u.credits > 20 ? A.gold : u.credits > 5 ? "#fb923c" : A.crimson }}>
                                   {u.credits}
                                 </span>
                                 <button onClick={() => { setCreditModal({ user: u }); setCreditDelta(""); }}
-                                  className="w-5 h-5 rounded flex items-center justify-center transition-all"
+                                  className="w-6 h-6 rounded-lg flex items-center justify-center transition-all"
                                   style={{ background: A.goldDim, border: `1px solid ${A.goldBorder}`, color: A.gold }}
                                   title="Upraviť kredity">
                                   <Plus className="w-3 h-3" />
                                 </button>
                               </div>
                             </td>
-                            <td className="px-4 py-3" style={{ color: "#4b2030" }}>{u._count.aiRequests}</td>
-                            <td className="px-4 py-3" style={{ color: "#44202a" }}>
+                            <td className="px-5 py-4" style={{ color: "#4b2030" }}>{u._count.aiRequests}</td>
+                            <td className="px-5 py-4" style={{ color: "#44202a" }}>
                               {new Date(u.createdAt).toLocaleDateString("sk-SK")}
                             </td>
                           </motion.tr>
@@ -587,29 +608,29 @@ export default function AdminClient({ adminEmail, users: initUsers, stats, recen
                     value={broadcastText}
                     onChange={(e) => setBroadcastText(e.target.value)}
                     placeholder="Správa pre všetkých používateľov..."
-                    className="w-full rounded-xl px-3 py-2 text-xs outline-none"
-                    style={{ background: "rgba(255,255,255,0.04)", border: `1px solid ${A.crimsonBorder}`, color: "#f1f5f9", caretColor: A.gold }}
+                    className="w-full px-4 py-3 text-xs"
+                    style={{ ...INPUT_STYLE, caretColor: A.gold }}
                   />
 
-                  {/* Scheduling inputs */}
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className="block text-[0.6rem] mb-1 tracking-widest uppercase" style={{ color: "#44202a" }}>Začínok (voliteľné)</label>
+                  {/* Scheduling inputs — Event Horizon styled */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="rounded-2xl p-3" style={{ background: A.crimsonDim, border: `1px solid ${A.crimsonBorder}` }}>
+                      <label className="block text-[0.6rem] mb-2 tracking-widest uppercase font-semibold" style={{ color: A.gold, opacity: 0.7 }}>Začínok</label>
                       <input type="datetime-local"
                         value={broadcastStartsAt}
                         onChange={(e) => setBroadcastStartsAt(e.target.value)}
-                        className="w-full rounded-xl px-3 py-1.5 text-xs outline-none"
-                        style={{ background: "rgba(255,255,255,0.04)", border: `1px solid rgba(239,68,68,0.15)`, color: A.gold, colorScheme: "dark" }}
+                        style={DATETIME_STYLE}
                       />
+                      <p className="text-[0.55rem] mt-1.5" style={{ color: "#44202a" }}>Voliteľné — prázdne = okamžite</p>
                     </div>
-                    <div>
-                      <label className="block text-[0.6rem] mb-1 tracking-widest uppercase" style={{ color: "#44202a" }}>Koniec (expirácia)</label>
+                    <div className="rounded-2xl p-3" style={{ background: A.goldDim, border: `1px solid ${A.goldBorder}` }}>
+                      <label className="block text-[0.6rem] mb-2 tracking-widest uppercase font-semibold" style={{ color: A.gold, opacity: 0.85 }}>Expirácia</label>
                       <input type="datetime-local"
                         value={broadcastExpiresAt}
                         onChange={(e) => setBroadcastExpiresAt(e.target.value)}
-                        className="w-full rounded-xl px-3 py-1.5 text-xs outline-none"
-                        style={{ background: "rgba(255,255,255,0.04)", border: `1px solid ${A.goldBorder}`, color: A.gold, colorScheme: "dark" }}
+                        style={{ ...DATETIME_STYLE, border: `1px solid ${A.goldBorder}` }}
                       />
+                      <p className="text-[0.55rem] mt-1.5" style={{ color: A.gold, opacity: 0.5 }}>Auto-zmazanie po expirácii</p>
                     </div>
                   </div>
 
