@@ -52,8 +52,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true }, { status: 201 });
   } catch (error) {
     console.error("[REGISTER]", error);
+    const msg = error instanceof Error ? error.message : "";
+    const isDbError =
+      msg.includes("connect") ||
+      msg.includes("ECONNREFUSED") ||
+      msg.includes("P1001") ||
+      msg.includes("P1002") ||
+      msg.includes("P1008");
     return NextResponse.json(
-      { error: "Nastala chyba servera. Skúste to znova neskôr." },
+      { error: isDbError
+          ? "Databázové systémy sú dočasne offline. Skúste to neskôr."
+          : "Nastala chyba servera. Skúste to znova neskôr." },
       { status: 500 }
     );
   }
