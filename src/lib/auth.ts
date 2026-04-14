@@ -1,11 +1,16 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET ?? "unifyo-secret-change-in-production-min-32-chars"
-);
+const RAW_SECRET = process.env.JWT_SECRET ?? "unifyo-secret-change-in-production-min-32-chars";
+
+// Enforce minimum secret strength at startup
+if (RAW_SECRET.length < 32) {
+  throw new Error("[AUTH] JWT_SECRET must be at least 32 characters. Set a strong secret in .env");
+}
+
+const JWT_SECRET = new TextEncoder().encode(RAW_SECRET);
 const COOKIE_NAME = "unifyo_session";
-const COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7 dní
+const COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7 dní — rotate on sensitive role changes
 
 export interface SessionPayload {
   userId: string;

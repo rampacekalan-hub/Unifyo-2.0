@@ -6,7 +6,20 @@ import AdminClient from "./AdminClient";
 export default async function AdminPage() {
   const session = await getSession();
 
+  // Layer 1: JWT presence + role claim
   if (!session || (session.role !== "ADMIN" && session.role !== "SUPERADMIN")) {
+    console.log(`[SECURITY_AUDIT] ADMIN_PAGE_DENIED | userId=${session?.userId ?? "anonymous"} | ts=${new Date().toISOString()}`);
+    notFound();
+  }
+
+  // Layer 2: Live DB verification — role may have been revoked since token was issued
+  const dbUser = await prisma.user.findUnique({
+    where: { id: session.userId },
+    select: { id: true, role: true },
+  });
+
+  if (!dbUser || (dbUser.role !== "ADMIN" && dbUser.role !== "SUPERADMIN")) {
+    console.log(`[SECURITY_AUDIT] ADMIN_PAGE_DB_REVOKED | userId=${session.userId} | dbRole=${dbUser?.role ?? "not_found"} | ts=${new Date().toISOString()}`);
     notFound();
   }
 

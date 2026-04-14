@@ -12,14 +12,17 @@ interface JwtPayload {
   role: "USER" | "ADMIN" | "SUPERADMIN";
 }
 
-// Routes requiring any authenticated user
-const PROTECTED = ["/dashboard"];
-
-// Routes inaccessible when already logged in
-const AUTH_ONLY = ["/login", "/register"];
-
-// Routes requiring ADMIN or SUPERADMIN role
+const PROTECTED  = ["/dashboard"];
+const AUTH_ONLY  = ["/login", "/register"];
 const ADMIN_ONLY = ["/admin"];
+
+function getClientIp(req: NextRequest): string {
+  return (
+    req.headers.get("x-forwarded-for")?.split(",")[0].trim() ??
+    req.headers.get("x-real-ip") ??
+    "unknown"
+  );
+}
 
 async function getSessionPayload(req: NextRequest): Promise<JwtPayload | null> {
   const token = req.cookies.get(COOKIE_NAME)?.value;
@@ -34,26 +37,35 @@ async function getSessionPayload(req: NextRequest): Promise<JwtPayload | null> {
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
+  const ip = getClientIp(req);
 
-  const isProtected = PROTECTED.some((p) => pathname.startsWith(p));
-  const isAuthOnly = AUTH_ONLY.some((p) => pathname.startsWith(p));
-  const isAdminOnly = ADMIN_ONLY.some((p) => pathname.startsWith(p));
+  const isProtected  = PROTECTED.some((p)  => pathname.startsWith(p));
+  const isAuthOnly   = AUTH_ONLY.some((p)  => pathname.startsWith(p));
+  const isAdminOnly  = ADMIN_ONLY.some((p) => pathname.startsWith(p));
 
   if (!isProtected && !isAuthOnly && !isAdminOnly) return NextResponse.next();
 
   const session = await getSessionPayload(req);
 
-  // --- Admin routes: 404 for everyone except ADMIN/SUPERADMIN ---
+  // ── Admin routes ─────────────────────────────────────────────
   if (isAdminOnly) {
     const isAdmin = session?.role === "ADMIN" || session?.role === "SUPERADMIN";
+
     if (!isAdmin) {
-      // Return 404 — attacker cannot know this route exists
+      // [SECURITY_AUDIT] — denied access logged, but 404 returned (obscurity)
+      console.log(
+        `[SECURITY_AUDIT] ADMIN_ACCESS_DENIED | ip=${ip} | userId=${session?.userId ?? "anonymous"} | role=${session?.role ?? "none"} | path=${pathname} | ts=${new Date().toISOString()}`
+      );
       return new NextResponse(null, { status: 404 });
     }
+
+    console.log(
+      `[SECURITY_AUDIT] ADMIN_ACCESS_GRANTED | ip=${ip} | userId=${session.userId} | role=${session.role} | path=${pathname} | ts=${new Date().toISOString()}`
+    );
     return NextResponse.next();
   }
 
-  // --- Protected routes: redirect to login ---
+  // ── Protected user routes ─────────────────────────────────────
   if (isProtected && !session) {
     const loginUrl = req.nextUrl.clone();
     loginUrl.pathname = "/login";
@@ -61,7 +73,7 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  // --- Auth-only routes: redirect logged-in users to dashboard ---
+  // ── Auth-only routes ──────────────────────────────────────────
   if (isAuthOnly && session) {
     const dashboardUrl = req.nextUrl.clone();
     dashboardUrl.pathname = "/dashboard";

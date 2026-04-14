@@ -33,8 +33,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const ip =
+      req.headers.get("x-forwarded-for")?.split(",")[0].trim() ??
+      req.headers.get("x-real-ip") ??
+      "unknown";
+
     const passwordMatch = await bcrypt.compare(password, user.password);
     if (!passwordMatch) {
+      console.log(`[SECURITY_AUDIT] LOGIN_FAILED | ip=${ip} | email=${email} | reason=wrong_password | ts=${new Date().toISOString()}`);
       return NextResponse.json(
         { error: "Nesprávny e-mail alebo heslo" },
         { status: 401 }
@@ -43,6 +49,7 @@ export async function POST(req: NextRequest) {
 
     await createSession({ userId: user.id, email: user.email, role: user.role });
 
+    console.log(`[SECURITY_AUDIT] LOGIN_SUCCESS | ip=${ip} | userId=${user.id} | email=${user.email} | role=${user.role} | ts=${new Date().toISOString()}`);
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (error) {
     console.error("[LOGIN]", error);

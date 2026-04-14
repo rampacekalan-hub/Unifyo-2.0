@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import {
   LogOut, Bot, Calendar, Mail, BarChart3,
-  Phone, Zap, Lock, Send, Loader2, AlertTriangle, ChevronRight,
+  Phone, Zap, Lock, Send, Loader2, AlertTriangle, ChevronRight, Shield,
 } from "lucide-react";
 import NeuralBackground from "@/components/ui/NeuralBackground";
 import { getSiteConfig } from "@/config/site-settings";
@@ -26,6 +26,7 @@ interface DashboardClientProps {
     name: string | null;
     plan: string;
     credits: number;
+    role: string;
   };
 }
 
@@ -165,6 +166,27 @@ export default function DashboardClient({ user }: DashboardClientProps) {
                 style={{ background: creditsColor }} />
             </div>
           </div>
+          {/* System Control — visible only to SUPERADMIN */}
+          {user.role === "SUPERADMIN" && (
+            <Link href="/admin"
+              className="w-full flex items-center gap-2 px-2 py-2.5 rounded-xl mb-2 transition-all duration-200 relative overflow-hidden"
+              style={{
+                background: "rgba(16,185,129,0.08)",
+                border: "1px solid rgba(16,185,129,0.25)",
+                color: "#10b981",
+              }}>
+              <motion.div
+                className="absolute inset-0 rounded-xl"
+                animate={{ opacity: [0.15, 0.35, 0.15] }}
+                transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
+                style={{ background: "radial-gradient(ellipse at center, rgba(16,185,129,0.25) 0%, transparent 70%)" }}
+              />
+              <Shield className="w-4 h-4 flex-shrink-0 relative z-10"
+                style={{ filter: "drop-shadow(0 0 5px #10b981)" }} />
+              <span className="text-xs font-semibold hidden md:block relative z-10"
+                style={{ letterSpacing: "0.04em" }}>System Control</span>
+            </Link>
+          )}
           <form action="/api/auth/logout" method="POST">
             <button type="submit" className="w-full flex items-center gap-2 px-2 py-2 rounded-xl transition-colors"
               style={{ color: "#475569" }}
