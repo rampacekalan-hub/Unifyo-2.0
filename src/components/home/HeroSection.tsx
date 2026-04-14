@@ -4,6 +4,9 @@ import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { ArrowRight, Calendar, Mail, BarChart3, Phone, Sparkles } from "lucide-react";
+import { getSiteConfig } from "@/config/site-settings";
+
+const { texts, links } = getSiteConfig();
 
 const SCENES = [
   {
@@ -150,7 +153,7 @@ export default function HeroSection() {
             letterSpacing: "0.02em",
           }}>
             <Sparkles style={{ width: "13px", height: "13px" }} />
-            Nová éra práce — Unifyo AI je tu
+            {texts.hero.badge}
           </span>
         </motion.div>
 
@@ -167,7 +170,7 @@ export default function HeroSection() {
             marginBottom: "24px",
           }}
         >
-          Zabudni na chaos.
+          {texts.hero.headline}
           <br />
           <span style={{
             background: "linear-gradient(90deg, #a78bfa 0%, #38bdf8 55%, #6ee7b7 100%)",
@@ -175,7 +178,7 @@ export default function HeroSection() {
             WebkitTextFillColor: "transparent",
             backgroundClip: "text",
           }}>
-            AI robí prácu za teba.
+            {texts.hero.headlineAccent}
           </span>
         </motion.h1>
 
@@ -191,8 +194,7 @@ export default function HeroSection() {
             margin: "0 auto 36px",
           }}
         >
-          Jeden AI asistent po slovensky — kalendár, emaily, CRM aj hovory.
-          Ušetri hodiny denne. Začni zadarmo.
+          {texts.hero.subheadline}
         </motion.p>
 
         {/* CTA buttons */}
@@ -212,7 +214,7 @@ export default function HeroSection() {
             fontWeight: 700,
             textDecoration: "none",
           }}>
-            Začať zadarmo — žiadna karta
+            {texts.hero.cta}
             <ArrowRight style={{ width: "18px", height: "18px" }} />
           </Link>
           <Link href="/#pricing" style={{
@@ -226,7 +228,7 @@ export default function HeroSection() {
             fontWeight: 600,
             textDecoration: "none",
           }}>
-            Pozrieť ceny
+            {texts.hero.ctaSecondary}
           </Link>
         </motion.div>
 

@@ -120,9 +120,19 @@ export interface FeaturesConfig {
   showCookieBanner: boolean;
 }
 
+export interface SystemPrompts {
+  base: string;           // Zakladny kontext o Unifyo — ide do kazdeho API volania
+  calendar: string;       // Kontext pre kalendar akcie
+  email: string;          // Kontext pre email akcie
+  crm: string;            // Kontext pre CRM/pipeline akcie
+  calls: string;          // Kontext pre prepis hovorov
+}
+
 export interface AiConfig {
   defaultModel: string;
   fallbackModel: string;
+  maxTokens: number;
+  temperature: number;
   requestLimits: Record<"basic" | "pro" | "enterprise", number>;
   features: {
     calendarEnabled: boolean;
@@ -135,6 +145,30 @@ export interface AiConfig {
     chat: string;
     transcribe: string;
     summarize: string;
+  };
+  systemPrompts: SystemPrompts;
+}
+
+export type DbFieldType = "string" | "number" | "boolean" | "datetime" | "enum" | "relation";
+
+export interface DbField {
+  type: DbFieldType;
+  required: boolean;
+  description: string;
+  enumValues?: string[];
+}
+
+export interface DbTableSchema {
+  table: string;
+  fields: Record<string, DbField>;
+}
+
+export interface DataStrategyConfig {
+  // Mapovanie Prisma tabuliek — bez citlivych dat, len pre AI kontext a CMS
+  schema: {
+    user: DbTableSchema;
+    subscription: DbTableSchema;
+    aiRequest: DbTableSchema;
   };
 }
 
@@ -159,6 +193,7 @@ export interface TextsConfig {
   hero: {
     badge: string;
     headline: string;
+    headlineAccent: string;
     subheadline: string;
     cta: string;
     ctaSecondary: string;
@@ -199,6 +234,7 @@ export interface SiteConfig {
   features: FeaturesConfig;
   ai: AiConfig;
   modules: ModulesConfig;
+  dataStrategy: DataStrategyConfig;
   texts: TextsConfig;
   links: LinksConfig;
   pricing: PricingPlan[];
@@ -253,10 +289,12 @@ const siteConfig: SiteConfig = {
     },
   },
 
-  // ─── AI CONFIG (Modely, limity, prepínače) ──────────────────
+  // ─── AI CONFIG (Modely, limity, systemPrompts) ──────────────
   ai: {
     defaultModel: "gpt-4o-mini",
     fallbackModel: "gpt-3.5-turbo",
+    maxTokens: 2048,
+    temperature: 0.7,
     requestLimits: {
       basic: 100,
       pro: 1000,
@@ -274,17 +312,80 @@ const siteConfig: SiteConfig = {
       transcribe: "/api/ai/transcribe",
       summarize: "/api/ai/summarize",
     },
+    systemPrompts: {
+      base:
+        "Si Unifyo AI — inteligentny asistent pre slovensky hovoriacich podnikatelov a timy. " +
+        "Prevadzkuje ta spolocnost ALAN RAMPACEK s. r. o. (ICO: 56908377). " +
+        "Komunikujes v slovenskom jazyku, si strucny, presny a proaktivny. " +
+        "Pomahaj s kalendacom, emailmi, CRM a obchodnymi rozhodnutiami. " +
+        "Nikdy nevymyslaj informacie — ak niecos nevies, povedz to.",
+      calendar:
+        "Pracujes s Google Calendar a Microsoft Outlook API. " +
+        "Pri planovani stretnut kontroluj konflikty, casove zony (Europe/Bratislava) " +
+        "a automaticky navrhuj optimalne casy. Odosielaj pozvienky len po potvrdeni.",
+      email:
+        "Mas pristup k Gmail a Outlook cez OAuth. " +
+        "Pis profesionalne, strucne emaily v slovenskom jazyku. " +
+        "Pred odoslanim vzdy zhrn obsah a vypytaj si potvrdenie.",
+      crm:
+        "Spravujes obchodne kontakty a pipeline. " +
+        "Sleduj stav dealov: lead, qualified, proposal, negotiation, closed_won, closed_lost. " +
+        "Navrhuj dalsi krok pre kazdy deal na zaklade historickych interakcii.",
+      calls:
+        "Prepysujes a sumarizujes hovory. " +
+        "Z prepisu extrahuj: ucastnikov, klucove rozhodnutia, action items s deadlinmi. " +
+        "Format vystup ako strukturovany zoznam.",
+    },
   },
 
   // ─── MODULES (Feature flags pre budúce moduly) ──────────────
   modules: {
-    dashboard: { id: "dashboard", enabled: true, requiredPlan: "all", path: "/dashboard" },
-    crm: { id: "crm", enabled: true, requiredPlan: "pro", path: "/dashboard/crm" },
-    calendar: { id: "calendar", enabled: true, requiredPlan: "all", path: "/dashboard/calendar" },
-    email: { id: "email", enabled: true, requiredPlan: "all", path: "/dashboard/email" },
-    calls: { id: "calls", enabled: false, requiredPlan: "pro", path: "/dashboard/calls" },
-    analytics: { id: "analytics", enabled: false, requiredPlan: "pro", path: "/dashboard/analytics" },
+    dashboard:         { id: "dashboard",         enabled: true,  requiredPlan: "all",        path: "/dashboard" },
+    crm:               { id: "crm",               enabled: true,  requiredPlan: "pro",        path: "/dashboard/crm" },
+    calendar:          { id: "calendar",          enabled: true,  requiredPlan: "all",        path: "/dashboard/calendar" },
+    email:             { id: "email",             enabled: true,  requiredPlan: "all",        path: "/dashboard/email" },
+    calls:             { id: "calls",             enabled: false, requiredPlan: "pro",        path: "/dashboard/calls" },
+    analytics:         { id: "analytics",         enabled: false, requiredPlan: "pro",        path: "/dashboard/analytics" },
     automationBuilder: { id: "automationBuilder", enabled: false, requiredPlan: "enterprise", path: "/dashboard/automation" },
+  },
+
+  // ─── DATA STRATEGY (Prisma schema mapping — pre AI kontext) ─
+  dataStrategy: {
+    schema: {
+      user: {
+        table: "User",
+        fields: {
+          id:        { type: "string",   required: true,  description: "UUID primarny kluc" },
+          email:     { type: "string",   required: true,  description: "Unikatny email pouzivatela" },
+          name:      { type: "string",   required: false, description: "Cele meno" },
+          role:      { type: "enum",     required: true,  description: "Rola v systeme", enumValues: ["USER", "ADMIN", "SUPERADMIN"] },
+          credits:   { type: "number",   required: true,  description: "Zostatok AI kreditov" },
+          plan:      { type: "enum",     required: true,  description: "Aktivny plan", enumValues: ["basic", "pro", "enterprise"] },
+          createdAt: { type: "datetime", required: true,  description: "Datum registracie" },
+        },
+      },
+      subscription: {
+        table: "Subscription",
+        fields: {
+          id:         { type: "string",   required: true,  description: "UUID" },
+          userId:     { type: "relation", required: true,  description: "FK -> User.id" },
+          plan:       { type: "enum",     required: true,  description: "Plan", enumValues: ["basic", "pro", "enterprise"] },
+          status:     { type: "enum",     required: true,  description: "Stav", enumValues: ["active", "cancelled", "past_due", "trialing"] },
+          currentPeriodEnd: { type: "datetime", required: true, description: "Koniec aktualneho obdobia" },
+          stripeSubId: { type: "string",  required: false, description: "Stripe subscription ID" },
+        },
+      },
+      aiRequest: {
+        table: "AiRequest",
+        fields: {
+          id:        { type: "string",   required: true,  description: "UUID" },
+          userId:    { type: "relation", required: true,  description: "FK -> User.id" },
+          module:    { type: "enum",     required: true,  description: "Modul", enumValues: ["chat", "calendar", "email", "crm", "calls"] },
+          tokens:    { type: "number",   required: true,  description: "Spotrebovane tokeny" },
+          createdAt: { type: "datetime", required: true,  description: "Timestamp requestu" },
+        },
+      },
+    },
   },
 
   // ─── SEO (Google meta tagy) ────────────────────────────────
@@ -317,12 +418,12 @@ const siteConfig: SiteConfig = {
   // ─── TEXTY (Sväté — neupravovať bez súhlasu) ───────────────
   texts: {
     hero: {
-      badge: "Nová éra produktivity",
-      headline: "Váš tím. Jeden systém. Nekonečné možnosti.",
-      subheadline:
-        "Unifyo spája komunikáciu, projekty a ľudí do jednej plynulej skúsenosti. Zabudnite na chaos — vitajte v ére sústredenia.",
-      cta: "Začať zadarmo",
-      ctaSecondary: "Pozrieť demo",
+      badge: "Nová éra práce — Unifyo AI je tu",
+      headline: "Zabudni na chaos.",
+      headlineAccent: "AI robí prácu za teba.",
+      subheadline: "Jeden AI asistent po slovensky — kalendár, emaily, CRM aj hovory. Ušetri hodiny denne. Začni zadarmo.",
+      cta: "Začať zadarmo — žiadna karta",
+      ctaSecondary: "Pozrieť ceny",
     },
     about: {
       title: "Prečo Unifyo?",

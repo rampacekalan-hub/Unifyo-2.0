@@ -6,11 +6,14 @@ import PricingSection from "@/components/home/PricingSection";
 import MarqueeSection from "@/components/home/MarqueeSection";
 import CtaSection from "@/components/home/CtaSection";
 import NeuralBackground from "@/components/ui/NeuralBackground";
+import { getSiteConfig } from "@/config/site-settings";
+
+const config = getSiteConfig();
 
 export default function Home() {
   return (
     <>
-      <NeuralBackground />
+      <NeuralBackground themeEngine={config.branding.themeEngine} />
       <Navbar />
       <main className="flex-1" style={{ position: "relative", zIndex: 1 }}>
         <HeroSection />

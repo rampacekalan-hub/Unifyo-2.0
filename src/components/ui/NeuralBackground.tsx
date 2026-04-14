@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import type { ThemeEngine } from "@/config/site-settings";
 
 interface Particle {
   x: number; y: number;
@@ -17,11 +18,19 @@ interface Pulse {
 }
 
 const COLS = ["139,92,246", "139,92,246", "139,92,246", "56,189,248", "52,211,153"];
-const N = 120;
 const LINK_DIST = 200;
 const MAX_PULSES = 28;
 
-export default function NeuralBackground() {
+interface NeuralBackgroundProps {
+  themeEngine?: Partial<ThemeEngine>;
+}
+
+export default function NeuralBackground({ themeEngine }: NeuralBackgroundProps) {
+  const N         = themeEngine?.particleDensity ?? 80;
+  const speed     = themeEngine?.particleSpeed   ?? 0.3;
+  const opacity   = themeEngine?.particleOpacity ?? 0.45;
+  const glowI     = themeEngine?.glowIntensity   ?? 0.25;
+
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -46,8 +55,8 @@ export default function NeuralBackground() {
       particles = Array.from({ length: N }, () => ({
         x: Math.random() * W,
         y: Math.random() * H,
-        vx: (Math.random() - 0.5) * 0.35,
-        vy: (Math.random() - 0.5) * 0.35,
+        vx: (Math.random() - 0.5) * speed,
+        vy: (Math.random() - 0.5) * speed,
         r: 2 + Math.random() * 2.5,
         pulse: Math.random() * Math.PI * 2,
         pulseSpeed: 0.012 + Math.random() * 0.01,
@@ -77,7 +86,6 @@ export default function NeuralBackground() {
       frame++;
       ctx.clearRect(0, 0, W, H);
 
-      // Move particles, bounce off edges
       for (const p of particles) {
         p.x += p.vx;
         p.y += p.vy;
@@ -88,7 +96,6 @@ export default function NeuralBackground() {
 
       if (frame % 35 === 0) spawnPulse();
 
-      // Build live links
       const links: [number, number, number][] = [];
       for (let i = 0; i < particles.length; i++)
         for (let j = i + 1; j < particles.length; j++) {
@@ -98,9 +105,8 @@ export default function NeuralBackground() {
           if (d < LINK_DIST) links.push([i, j, d]);
         }
 
-      // Draw links
       for (const [i, j, d] of links) {
-        const a = (1 - d / LINK_DIST) * 0.28;
+        const a = (1 - d / LINK_DIST) * 0.28 * (glowI / 0.25);
         const pi = particles[i], pj = particles[j];
         const g = ctx.createLinearGradient(pi.x, pi.y, pj.x, pj.y);
         g.addColorStop(0,   `rgba(${pi.col},0)`);
@@ -114,7 +120,6 @@ export default function NeuralBackground() {
         ctx.stroke();
       }
 
-      // Draw pulses traveling along links
       pulses = pulses.filter(p => p.t <= 1);
       for (const p of pulses) {
         p.t += p.speed;
@@ -135,10 +140,8 @@ export default function NeuralBackground() {
         ctx.fill();
       }
 
-      // Draw particles
       for (const p of particles) {
-        const bright = 0.3 + Math.sin(p.pulse) * 0.2;
-        // Soft halo
+        const bright = (0.3 + Math.sin(p.pulse) * 0.2) * (glowI / 0.25);
         const halo = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r * 5);
         halo.addColorStop(0, `rgba(${p.col},${bright * 0.25})`);
         halo.addColorStop(1, `rgba(${p.col},0)`);
@@ -146,7 +149,6 @@ export default function NeuralBackground() {
         ctx.arc(p.x, p.y, p.r * 5, 0, Math.PI * 2);
         ctx.fillStyle = halo;
         ctx.fill();
-        // Core dot
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
         ctx.fillStyle = `rgba(${p.col},${bright})`;
@@ -160,7 +162,7 @@ export default function NeuralBackground() {
     window.addEventListener("resize", resize);
     draw();
     return () => { cancelAnimationFrame(animId); window.removeEventListener("resize", resize); };
-  }, []);
+  }, [N, speed, glowI]);
 
   return (
     <canvas
@@ -173,7 +175,7 @@ export default function NeuralBackground() {
         height: "100%",
         zIndex: 0,
         pointerEvents: "none",
-        opacity: 0.9,
+        opacity,
       }}
     />
   );
