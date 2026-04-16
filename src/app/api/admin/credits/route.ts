@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { adminStore, logAdminAction, publishSSE } from "@/lib/admin-store";
+import { logAdminAction, publishSSE } from "@/lib/admin-store";
 import { z } from "zod";
 
 function isAdmin(role: string) {
@@ -10,7 +10,7 @@ function isAdmin(role: string) {
 
 const schema = z.object({
   userId: z.string().min(1),
-  delta: z.number().int().min(-10000).max(10000),
+  membershipTier: z.enum(["BASIC", "PREMIUM", "ENTERPRISE"]),
 });
 
 export async function POST(req: NextRequest) {
@@ -22,32 +22,31 @@ export async function POST(req: NextRequest) {
   const parsed = schema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: "Invalid input" }, { status: 400 });
 
-  const { userId, delta } = parsed.data;
+  const { userId, membershipTier } = parsed.data;
 
   try {
     const target = await prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, email: true, name: true, credits: true },
+      select: { id: true, email: true, name: true },
     });
     if (!target) return NextResponse.json({ error: "Používateľ neexistuje" }, { status: 404 });
 
     const updated = await prisma.user.update({
       where: { id: userId },
-      data: { credits: { increment: delta } },
-      select: { id: true, email: true, credits: true },
+      data: { membershipTier },
+      select: { id: true, email: true },
     });
 
-    const sign = delta >= 0 ? "+" : "";
-    const detail = `Credits ${sign}${delta} for ${target.email} (${target.name ?? "—"}) — new balance: ${updated.credits}`;
-    const entry = logAdminAction(session.email, "CREDITS_UPDATE", detail);
-
+    const detail = `Tier zmenený: → ${membershipTier} pre ${target.email} (${target.name ?? "—"})`;
+    const entry = logAdminAction(session.email, "TIER_UPDATE", detail);
     publishSSE("admin_log", entry);
 
-    console.log(`[SECURITY_AUDIT] ADMIN_CREDITS | admin=${session.email} | userId=${userId} | delta=${sign}${delta} | newBalance=${updated.credits} | ts=${new Date().toISOString()}`);
+    console.log(`[SECURITY_AUDIT] ADMIN_TIER | admin=${session.email} | userId=${userId} | ->${membershipTier} | ts=${new Date().toISOString()}`);
 
-    return NextResponse.json({ success: true, credits: updated.credits });
+    void updated;
+    return NextResponse.json({ success: true, membershipTier });
   } catch (error) {
-    console.error("[ADMIN_CREDITS]", error);
+    console.error("[ADMIN_TIER]", error);
     return NextResponse.json({ error: "Chyba servera" }, { status: 500 });
   }
 }

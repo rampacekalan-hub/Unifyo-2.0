@@ -11,6 +11,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
+    const today = new Date().toISOString().slice(0, 10);
     const users = await prisma.user.findMany({
       select: {
         id: true,
@@ -18,13 +19,24 @@ export async function GET(req: NextRequest) {
         name: true,
         role: true,
         plan: true,
-        credits: true,
+        membershipTier: true,
         createdAt: true,
         _count: { select: { aiRequests: true } },
+        dailyUsages: {
+          where: { date: today },
+          select: { count: true },
+        },
       },
       orderBy: { createdAt: "desc" },
     });
-    return NextResponse.json({ users });
+
+    type RawUser = typeof users[number];
+    const mapped = (users as RawUser[]).map((row) => {
+      const { dailyUsages, ...u } = row;
+      return { ...u, todayUsage: dailyUsages[0]?.count ?? 0 };
+    });
+
+    return NextResponse.json({ users: mapped });
   } catch (error) {
     console.error("[ADMIN_USERS]", error);
     return NextResponse.json({ error: "Chyba pri načítaní používateľov" }, { status: 500 });

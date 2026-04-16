@@ -16,6 +16,7 @@ export interface SessionPayload {
   userId: string;
   email: string;
   role: "USER" | "ADMIN" | "SUPERADMIN";
+  membershipTier: "BASIC" | "PREMIUM" | "ENTERPRISE";
 }
 
 export async function createSession(payload: SessionPayload) {

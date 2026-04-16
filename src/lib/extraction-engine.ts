@@ -1,0 +1,877 @@
+export type ActionCardType = "contact" | "task" | "company" | "event";
+
+export interface ActionCard {
+  id: string;
+  type: ActionCardType;
+  status: "pending" | "confirmed" | "dismissed";
+  fields: Record<string, string>;
+  targetModule: "crm" | "calendar";
+  rawText: string;
+  missingRequiredFields?: string[];
+  extractionDebug?: ExtractionDebug;
+}
+
+interface ExtractionDebug {
+  classifiedWords: Array<{ word: string; type: "person" | "intent" | "title" | "other" }>;
+  chosenName: string;
+  confidence: number;
+}
+
+function uid() {
+  return Math.random().toString(36).slice(2, 10);
+}
+
+function capitalise(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+// ═════════════════════════════════════════════════════════════════
+// VISUAL DEBUG — Console logging for extraction troubleshooting
+// ═════════════════════════════════════════════════════════════════
+const DEBUG_ENABLED = true;
+
+function debugExtraction(text: string, result: { name: string; note: string; classified: Array<{ word: string; type: string }>; confidence: number }) {
+  if (!DEBUG_ENABLED) return;
+  console.group("🔍 EXTRACTION DEBUG");
+  console.log("Input:", text);
+  console.log("Classified words:", result.classified.map(c => `${c.word}=${c.type}`).join(", "));
+  console.log("Chosen name:", result.name || "(empty)");
+  console.log("Confidence:", result.confidence + "%");
+  console.groupEnd();
+}
+
+// ═════════════════════════════════════════════════════════════════
+// ZERO TOLERANCE STRIP — Remove ALL code fragments from display
+// ═════════════════════════════════════════════════════════════════
+export function stripActionCardBlocks(text: string): string {
+  let out = text;
+  
+  const aggressiveBlockPattern = /(?:```|\{)[\s\S]*?"type"[\s\S]*?(?:```|\})/gi;
+  out = out.replace(aggressiveBlockPattern, "");
+  out = out.replace(/```[\s\S]*?(?:action|card|type)[\s\S]*?```/gi, "");
+  out = out.replace(/```[\s\S]*$/gi, "");
+  out = out.replace(/\s*[-\w]*card\s*\}/gi, "");
+  out = out.replace(/\s*\}\s*\}/g, "");
+  
+  const lines = out.split("\n");
+  const clean: string[] = [];
+  for (const line of lines) {
+    const isCodeLine = /["']type["']\s*:|\{[^{}]*["']contact["']|\{[^{}]*["']task["']|action-card|```/.test(line);
+    const isBraceOnly = /^\s*[{}\[\]]\s*$/.test(line);
+    if (isCodeLine || isBraceOnly) continue;
+    clean.push(line);
+  }
+  out = clean.join("\n");
+  
+  out = out.replace(/\{\s*\}/g, "");
+  out = out.replace(/```/g, "");
+  out = out.replace(/action-card/gi, "");
+  out = out.replace(/\n{3,}/g, "\n\n");
+  out = out.replace(/[ \t]+/g, " ");
+  
+  return out.trim();
+}
+
+// ═════════════════════════════════════════════════════════════════
+// ZERO-VISIBILITY MASK — Replace action-card blocks with animation
+// During streaming, when AI starts outputting JSON, show "Spracovávam..."
+// ═════════════════════════════════════════════════════════════════
+export function maskActionCardBlocks(text: string): string {
+  // Check if text contains action-card block start
+  const hasActionCard = /```action-card/.test(text);
+  
+  if (!hasActionCard) {
+    // No action card yet, return as-is
+    return text;
+  }
+  
+  // Replace the entire action-card block with placeholder
+  // This hides JSON from user during streaming
+  const masked = text.replace(/```action-card[\s\S]*?```/g, "_[Spracovávam dáta...]_");
+  
+  // Also mask any partial/incomplete blocks (still streaming)
+  const maskedPartial = masked.replace(/```action-card[\s\S]*$/, "_[Spracovávam dáta...]_");
+  
+  return maskedPartial;
+}
+
+// ═════════════════════════════════════════════════════════════════
+// STRICT ENTITY CLASSIFICATION
+// ═════════════════════════════════════════════════════════════════
+
+// ABSOLUTE BLACKLIST: These words can NEVER be part of a person's name
+const INTENT_WORDS_BLACKLIST = new Set([
+  // Intent/Action words
+  "prípravky", "príprava", "poistenie", "poistenia", "ponuka", "ponuky",
+  "zmluva", "zmluvy", "konzultácia", "konzultácie", "stretnutie", "stretnutia",
+  "záujem", "úver", "hypotéka", "hypotéky", "investícia", "investície",
+  "daně", "dane", "telefonát", "hovor", "úloha",
+  // Generic business words
+  "cenová", "cenové", "bytu", "domu", "auta", "spoločnosti", "firma",
+  // Time words (should go to date field)
+  "zajtra", "pozajtra", "dnes", "pondelok", "utorok", "streda", "štvrtok",
+  "piatok", "sobota", "nedeľa", "ráno", "poobede", "večer"
+]);
+
+// Common Slovak first names (whitelist for confidence boost)
+const COMMON_FIRST_NAMES = new Set([
+  "peter", "jana", "michal", "anna", "tomáš", "maria", "marek", "lucia",
+  "martin", "katarína", "ján", "eva", "štefan", "monika", "igor", "zuzana",
+  "vladimír", "alena", "patrik", "simona", "dušan", "veronika", "branislav",
+  "tereza", "roman", "natália", "matúš", "adriana", "filip", "andrea"
+]);
+
+// Titles that GUARANTEE the next words are a name
+const TITLES = /(?:^|[\s,;])(Ing\.?|ing\.?|Mgr\.?|mgr\.?|Dr\.?|dr\.?|MUDr\.?|mudr\.?|Bc\.?|bc\.?|PhDr\.?|phdr\.?|RNDr\.?|rndr\.?|JUDr\.?|judr\.?|Prof\.?|prof\.?|Doc\.?|doc\.?|pán|pani|pánovi|paní)(?:\s+)/i;
+
+// Check if word could be a person's name component
+function isLikelyNameComponent(word: string, allWords: string[], index: number): boolean {
+  const lower = word.toLowerCase();
+  
+  // Must be capitalized
+  if (!/^[A-ZÁČŠŽÝÍÉÚÄÔŇ]/.test(word)) return false;
+  
+  // Cannot be in blacklist
+  if (INTENT_WORDS_BLACKLIST.has(lower)) return false;
+  
+  // Cannot be at sentence start (unless preceded by title)
+  if (index === 0) {
+    // Check if previous char in original text indicates sentence start
+    return false; // First word of sentence is likely not a name
+  }
+  
+  return true;
+}
+
+// STRICT NAME EXTRACTION with absolute priority
+function extractStrictName(text: string): { 
+  name: string; 
+  note: string; 
+  classified: Array<{ word: string; type: "person" | "intent" | "title" | "other" }>;
+  confidence: number;
+} {
+  const classified: Array<{ word: string; type: "person" | "intent" | "title" | "other" }> = [];
+  
+  // PRIORITY 1: Title + Name pattern (Ing. Peter Vittek, pán Peter Vittek)
+  // This is GUARANTEED name - 100% confidence
+  const titleMatch = text.match(/(?:Ing\.?|ing\.?|Mgr\.?|mgr\.?|Dr\.?|dr\.?|MUDr\.?|mudr\.?|Bc\.?|bc\.?|PhDr\.?|RNDr\.?|JUDr\.?|Prof\.?|Doc\.?|pán|pani|pánovi|paní)\s+([A-ZÁČŠŽÝÍÉÚÄÔŇ][a-záčšžýíéúäôň]+(?:\s+[A-ZÁČŠŽÝÍÉÚÄÔŇ][a-záčšžýíéúäôň]+){1,2})/i);
+  
+  if (titleMatch) {
+    const namePart = titleMatch[1].trim();
+    const words = namePart.split(/\s+/);
+    
+    // Verify none of the name words are in blacklist
+    const isValidName = words.every(w => !INTENT_WORDS_BLACKLIST.has(w.toLowerCase()));
+    
+    if (isValidName) {
+      // Classify all words
+      const allWords = text.split(/\s+/);
+      for (const w of allWords) {
+        const lower = w.toLowerCase().replace(/[.,;!?]$/, "");
+        if (w.match(/^(?:Ing\.?|Mgr\.?|Dr\.?|MUDr\.?|Bc\.?|PhDr\.?|RNDr\.?|JUDr\.?|Prof\.?|Doc\.?|pán|pani)/i)) {
+          classified.push({ word: w, type: "title" });
+        } else if (words.includes(w) || words.includes(w.replace(/[.,;!?]$/, ""))) {
+          classified.push({ word: w, type: "person" });
+        } else if (INTENT_WORDS_BLACKLIST.has(lower)) {
+          classified.push({ word: w, type: "intent" });
+        } else {
+          classified.push({ word: w, type: "other" });
+        }
+      }
+      
+      debugExtraction(text, { name: namePart, note: "", classified, confidence: 100 });
+      return { name: namePart, note: "", classified, confidence: 100 };
+    }
+  }
+  
+  // PRIORITY 2: Find Capitalized pairs NOT at sentence start, NOT in blacklist
+  const sentences = text.split(/[.!?]+/);
+  
+  for (const sentence of sentences) {
+    const words = sentence.trim().split(/\s+/);
+    
+    for (let i = 1; i < words.length - 1; i++) {
+      const word1 = words[i].replace(/[.,;!?]$/, "");
+      const word2 = words[i + 1]?.replace(/[.,;!?]$/, "");
+      
+      if (!word2) continue;
+      
+      // Both must be capitalized
+      if (!/^[A-ZÁČŠŽÝÍÉÚÄÔŇ]/.test(word1) || !/^[A-ZÁČŠŽÝÍÉÚÄÔŇ]/.test(word2)) continue;
+      
+      // Neither can be in blacklist
+      if (INTENT_WORDS_BLACKLIST.has(word1.toLowerCase()) || INTENT_WORDS_BLACKLIST.has(word2.toLowerCase())) {
+        classified.push({ word: word1, type: "intent" });
+        continue;
+      }
+      
+      // Must look like names (2-4 syllables typical for Slovak names)
+      const looksLikeName = word1.length >= 3 && word2.length >= 3 && 
+                           !INTENT_WORDS_BLACKLIST.has(word1.toLowerCase()) &&
+                           !INTENT_WORDS_BLACKLIST.has(word2.toLowerCase());
+      
+      if (looksLikeName) {
+        const name = `${word1} ${word2}`;
+        
+        // Classify all words in sentence
+        for (let j = 0; j < words.length; j++) {
+          const w = words[j].replace(/[.,;!?]$/, "");
+          const lower = w.toLowerCase();
+          
+          if (j === i || j === i + 1) {
+            classified.push({ word: w, type: "person" });
+          } else if (INTENT_WORDS_BLACKLIST.has(lower)) {
+            classified.push({ word: w, type: "intent" });
+          } else if (w.match(/^(?:Ing|Mgr|Dr|MUDr|Bc|PhDr|RNDr|JUDr|Prof|Doc)/i)) {
+            classified.push({ word: w, type: "title" });
+          } else {
+            classified.push({ word: w, type: "other" });
+          }
+        }
+        
+        // Check if first name is common (confidence boost)
+        const isCommonName = COMMON_FIRST_NAMES.has(word1.toLowerCase());
+        const confidence = isCommonName ? 95 : 75;
+        
+        debugExtraction(text, { name, note: "", classified, confidence });
+        return { name, note: "", classified, confidence };
+      }
+    }
+  }
+  
+  // PRIORITY 3: Single capitalized word after common patterns like "volá sa", "meno je"
+  const patternMatch = text.match(/(?:volá sa|meno je|klient|kontakt|zákazník)\s+([A-ZÁČŠŽÝÍÉÚÄÔŇ][a-záčšžýíéúäôň]+(?:\s+[A-ZÁČŠŽÝÍÉÚÄÔŇ][a-záčšžýíéúäôň]+)?)/i);
+  if (patternMatch) {
+    const candidate = patternMatch[1];
+    if (!INTENT_WORDS_BLACKLIST.has(candidate.toLowerCase())) {
+      classified.push({ word: candidate, type: "person" });
+      debugExtraction(text, { name: candidate, note: "", classified, confidence: 70 });
+      return { name: candidate, note: "", classified, confidence: 70 };
+    }
+  }
+  
+  // NO ACTION ON JUNK: Return empty if confidence < 90%
+  debugExtraction(text, { name: "", note: "", classified, confidence: 0 });
+  return { name: "", note: "", classified, confidence: 0 };
+}
+
+// ═════════════════════════════════════════════════════════════════
+// LEGACY UTILITIES (for compatibility)
+// ═════════════════════════════════════════════════════════════════
+
+const TITLES_RE = /(?:pán|pani|pánovi|paní|p\.|ing\.?|mgr\.?|dr\.?|mudr\.?|bc\.?|phdr\.?|rndr\.?|judr\.?|prof\.?|doc\.?)\s*/gi;
+const BAD_NAME = /^(pán\s*name|pani\s*name|name|n\/a|undefined|null|unknown|neznámy|neznáma|-)$/i;
+const NOT_A_NAME = /^(?:Zajtra|Dnes|Prosím|Ahoj|Dobrý|Dobrá|Dobré|Vedomosti|Konzultácia|Príprava|Záujem|Stretnutie|Telefonát|Neural|Unifyo)$/i;
+
+function cleanName(raw: string): string {
+  return raw.replace(TITLES_RE, "").trim();
+}
+
+function isValidName(s: string): boolean {
+  if (!s || BAD_NAME.test(s.trim())) return false;
+  return /[A-ZÁČŠŽÝÍÉÚÄÔŇ][a-záčšžýíéúäôň]{1,}/.test(s);
+}
+
+function sanitiseFields(fields: Record<string, string>): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [k, v] of Object.entries(fields)) {
+    let val = String(v ?? "").trim();
+    if (k === "Meno") {
+      val = cleanName(val);
+      out[k] = isValidName(val) ? val : "";
+    } else {
+      out[k] = BAD_NAME.test(val) ? "" : val;
+    }
+  }
+  return out;
+}
+
+const SK_CAPS_NAME = /(?:^|[\s,;])([A-ZÁČŠŽÝÍÉÚÄÔŇ][a-záčšžýíéúäôň]{1,20}(?:\s+[A-ZÁČŠŽÝÍÉÚÄÔŇ][a-záčšžýíéúäôň]{1,20}){1,3})(?=[\s,;.!?]|$)/gm;
+
+function scanNameFromText(text: string): string {
+  SK_CAPS_NAME.lastIndex = 0;
+  let m: RegExpExecArray | null;
+  while ((m = SK_CAPS_NAME.exec(text)) !== null) {
+    const candidate = cleanName(m[1].trim());
+    if (isValidName(candidate) && !NOT_A_NAME.test(candidate.split(" ")[0])) {
+      return candidate;
+    }
+  }
+  return "";
+}
+
+// ═════════════════════════════════════════════════════════════════
+// CRM UTILITIES — Category, Email validation, Phone normalization
+// ═════════════════════════════════════════════════════════════════
+
+type Category = "Hypo" | "Poistenie" | "Investície" | "Iné";
+
+const CATEGORY_PATTERNS: Array<{ pattern: RegExp; category: Category }> = [
+  { pattern: /hypo(téku?|téky)?|hypotekárny|úver\s+na\s+byt/i, category: "Hypo" },
+  { pattern: /poisteni[ea]|poistiť|poistná|poistný/i, category: "Poistenie" },
+  { pattern: /invest(ici[ae]|ovať|ovanie)|fondy|cenné\s+papier/i, category: "Investície" },
+];
+
+function assignCategory(text: string): Category {
+  for (const { pattern, category } of CATEGORY_PATTERNS) {
+    if (pattern.test(text)) return category;
+  }
+  return "Iné";
+}
+
+function validateEmail(email: string): { valid: boolean; normalized: string } {
+  const trimmed = email.trim().toLowerCase();
+  const emailRe = /^[\w.+-]+@[\w-]+\.[a-z]{2,}$/;
+  return {
+    valid: emailRe.test(trimmed),
+    normalized: trimmed
+  };
+}
+
+function normalizePhone(phone: string): { valid: boolean; normalized: string } {
+  // Remove all non-digit characters except +
+  const cleaned = phone.replace(/[^\d+]/g, "");
+  
+  // Slovak phone patterns: +421 XXX XXX XXX or 0XXX XXX XXX
+  const skPattern = /^(?:\+421|0)(\d{9})$/;
+  const match = cleaned.match(skPattern);
+  
+  if (match) {
+    return {
+      valid: true,
+      normalized: `+421${match[1]}`
+    };
+  }
+  
+  // Generic validation: at least 9 digits
+  const digitsOnly = cleaned.replace(/\D/g, "");
+  return {
+    valid: digitsOnly.length >= 9,
+    normalized: cleaned
+  };
+}
+
+// Extract intent/note from text
+function extractNote(text: string): string {
+  const patterns = [
+    /(?:chce|chceme|potrebuje|potrebujú|záujem o)\s+(.{3,60}?)(?:\.|,|$)/i,
+    /(?:príprava|pripraviť)\s+(.{3,60}?)(?:\.|,|$)/i,
+    /(?:poistenie)\s+(.{3,40}?)(?:\.|,|$)/i,
+    /(?:cenová ponuka|cenovú ponuku)\s+(.{3,40}?)(?:\.|,|$)/i,
+  ];
+  
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match) {
+      return capitalise(match[1].trim());
+    }
+  }
+  
+  return "";
+}
+
+// ─────────────────────────────────────────────────────────────────
+// INTENT MAP
+// ─────────────────────────────────────────────────────────────────
+const INTENT_MAP: Array<{ pattern: RegExp; note: string; taskTitle: string }> = [
+  { pattern: /hypo(téku?|téky)?/i,           note: "Záujem o hypotéku",          taskTitle: "Konzultácia: Hypotéka"   },
+  { pattern: /poisteni[ea]/i,                 note: "Záujem o poistenie",         taskTitle: "Konzultácia: Poistenie"  },
+  { pattern: /poisteni[ea]\s+bytu/i,          note: "Záujem o poistenie bytu",    taskTitle: "Konzultácia: Poistenie bytu" },
+  { pattern: /cenov[aá]\s+ponuk[ua]/i,        note: "Záujem o cenovú ponuku",     taskTitle: "Príprava cenovej ponuky" },
+  { pattern: /ponuk[ua]/i,                    note: "Záujem o ponuku",            taskTitle: "Príprava ponuky"         },
+  { pattern: /zmluv[ua]/i,                    note: "Riešenie zmluvy",            taskTitle: "Príprava zmluvy"         },
+  { pattern: /invest(ici[ae]|ova)/i,          note: "Záujem o investíciu",        taskTitle: "Konzultácia: Investície" },
+  { pattern: /úver/i,                         note: "Záujem o úver",              taskTitle: "Konzultácia: Úver"       },
+  { pattern: /da[ňn]ov[eé]/i,                 note: "Daňové poradenstvo",         taskTitle: "Konzultácia: Dane"       },
+  { pattern: /chce\s+riešiť\s+(.{3,40})/i,   note: "",                           taskTitle: "Konzultácia"             },
+];
+
+function resolveIntent(text: string): { note: string; taskTitle: string } | null {
+  // Sort longer patterns first to catch "poistenie bytu" before "poistenie"
+  for (const entry of INTENT_MAP) {
+    const re = new RegExp(entry.pattern.source, entry.pattern.flags);
+    const m = re.exec(text);
+    if (m) {
+      const note = entry.note || (m[1] ? `Záujem o ${m[1].trim()}` : "");
+      return { note, taskTitle: entry.taskTitle };
+    }
+  }
+  return null;
+}
+
+// Build a human-readable note from the full user sentence (for Poznámka field)
+function buildNoteFromText(text: string): string {
+  // Extract the substantive intent phrase — everything after "chce" / "záujem" / "potrebuje"
+  const m = /(?:chce|záujem o|potrebuje|riešiť|dohodli sme sa na)\s+(.{5,80}?)(?:\.|,|$)/i.exec(text);
+  return m ? capitalise(m[1].trim()) : "";
+}
+
+// ─────────────────────────────────────────────────────────────────
+// DATE EXTRACTION AND NORMALIZATION
+// Converts relative dates to absolute YYYY-MM-DD format
+// ─────────────────────────────────────────────────────────────────
+const RELATIVE_DATE_RE = /(?:v\s+)?(pondelok|utorok|stredu|štvrtok|piatok|sobotu|nedeľu|zajtra|pozajtra|dnes)/i;
+const ABSOLUTE_DATE_RE = /(\d{1,2})\.\s*(\d{1,2})\.?(?:\s*(\d{2,4}))?/;
+
+function getNextWeekday(targetDay: number): Date {
+  const days = ['nedeľu', 'pondelok', 'utorok', 'stredu', 'štvrtok', 'piatok', 'sobotu'];
+  const now = new Date();
+  const currentDay = now.getDay();
+  let daysUntil = targetDay - currentDay;
+  if (daysUntil <= 0) daysUntil += 7;
+  const result = new Date(now);
+  result.setDate(now.getDate() + daysUntil);
+  return result;
+}
+
+function formatDateISO(date: Date): string {
+  return date.toISOString().split('T')[0]; // YYYY-MM-DD
+}
+
+function normalizeDate(text: string): { raw: string; normalized: string } {
+  // Check for relative dates first
+  const relativeMatch = RELATIVE_DATE_RE.exec(text);
+  if (relativeMatch) {
+    const raw = relativeMatch[1].toLowerCase();
+    let targetDate: Date | null = null;
+    
+    switch (raw) {
+      case 'zajtra':
+        targetDate = new Date();
+        targetDate.setDate(targetDate.getDate() + 1);
+        break;
+      case 'pozajtra':
+        targetDate = new Date();
+        targetDate.setDate(targetDate.getDate() + 2);
+        break;
+      case 'dnes':
+        targetDate = new Date();
+        break;
+      case 'pondelok':
+        targetDate = getNextWeekday(1);
+        break;
+      case 'utorok':
+        targetDate = getNextWeekday(2);
+        break;
+      case 'stredu':
+        targetDate = getNextWeekday(3);
+        break;
+      case 'štvrtok':
+        targetDate = getNextWeekday(4);
+        break;
+      case 'piatok':
+        targetDate = getNextWeekday(5);
+        break;
+      case 'sobotu':
+        targetDate = getNextWeekday(6);
+        break;
+      case 'nedeľu':
+        targetDate = getNextWeekday(0);
+        break;
+    }
+    
+    if (targetDate) {
+      return { raw: relativeMatch[0], normalized: formatDateISO(targetDate) };
+    }
+  }
+  
+  // Check for absolute dates (DD. MM. or DD. MM. YYYY)
+  const absoluteMatch = ABSOLUTE_DATE_RE.exec(text);
+  if (absoluteMatch) {
+    const day = parseInt(absoluteMatch[1], 10);
+    const month = parseInt(absoluteMatch[2], 10) - 1; // 0-indexed
+    let year = absoluteMatch[3] ? parseInt(absoluteMatch[3], 10) : new Date().getFullYear();
+    if (year < 100) year += 2000; // Convert 25 -> 2025
+    
+    const date = new Date(year, month, day);
+    if (!isNaN(date.getTime())) {
+      return { raw: absoluteMatch[0], normalized: formatDateISO(date) };
+    }
+  }
+  
+  return { raw: "", normalized: "" };
+}
+
+// ─────────────────────────────────────────────────────────────────
+// AI-BLOCK PARSER — parse ```action-card blocks
+// ─────────────────────────────────────────────────────────────────
+function parseActionCardBlocks(text: string): ActionCard[] {
+  const cards: ActionCard[] = [];
+  const blockRe = /```action-card\s*([\s\S]*?)```/gi;
+  let m: RegExpExecArray | null;
+  while ((m = blockRe.exec(text)) !== null) {
+    const raw = m[1].trim();
+    let parsed: { type?: string; fields?: Record<string, string> } | null = null;
+    try { parsed = JSON.parse(raw); } catch { continue; } // never show bad JSON
+    if (!parsed || typeof parsed !== "object") continue;
+    const type = (
+      parsed.type === "task" ? "task" :
+      parsed.type === "company" ? "company" : "contact"
+    ) as ActionCardType;
+    let fields = sanitiseFields(parsed.fields ?? {});
+
+    // FORCE NAME EXTRACTION: "Vittek Test"
+    // If Meno is empty for a contact card, FORCE strict extraction from raw text
+    let extractionDebug: ExtractionDebug | undefined;
+    if (type !== "task" && !fields["Meno"]) {
+      const { name: forcedName, classified, confidence } = extractStrictName(text);
+      if (forcedName) fields["Meno"] = forcedName;
+      extractionDebug = { classifiedWords: classified, chosenName: forcedName, confidence };
+    }
+    
+    // Normalize dates in task cards
+    if (type === "task" && fields["Dátum"]) {
+      const dateInfo = normalizeDate(fields["Dátum"]);
+      if (dateInfo.normalized) {
+        fields["Dátum"] = dateInfo.normalized;
+      }
+    }
+
+    // Validate before adding
+    const card: ActionCard = {
+      id: uid(),
+      type,
+      status: "pending",
+      fields,
+      targetModule: type === "task" ? "calendar" : "crm",
+      rawText: text,
+      extractionDebug
+    };
+    const validated = validateCard(card);
+    
+    // Don't skip cards with missing fields — show them with warning
+    cards.push(validated);
+  }
+  return cards;
+}
+
+// ─────────────────────────────────────────────────────────────────
+// REGEX FALLBACK — Multi-Entity Stack with Strict Name Priority
+// ─────────────────────────────────────────────────────────────────
+
+function forceEntityExtraction(text: string): { name: string; note: string; confidence: number } {
+  // USE STRICT EXTRACTION with 100% priority on names after titles
+  const result = extractStrictName(text);
+  
+  // Build note from intent extraction
+  const note = extractNote(text) || "";
+  
+  return { name: result.name, note, confidence: result.confidence };
+}
+
+// ─────────────────────────────────────────────────────────────────
+// VALIDATION
+// ─────────────────────────────────────────────────────────────────
+export function validateCard(card: ActionCard): ActionCard {
+  const missing: string[] = [];
+  
+  if (card.type === "contact" || card.type === "company") {
+    if (!card.fields["Meno"]?.trim() && !card.fields["Firma"]?.trim()) {
+      missing.push("Meno");
+    }
+  }
+  
+  if (card.type === "task") {
+    if (!card.fields["Úloha"]?.trim()) {
+      missing.push("Úloha");
+    }
+  }
+  
+  return { ...card, missingRequiredFields: missing };
+}
+
+export function hasMissingRequiredFields(card: ActionCard): boolean {
+  return (card.missingRequiredFields?.length ?? 0) > 0;
+}
+
+function regexFallback(text: string): ActionCard[] {
+  const cards: ActionCard[] = [];
+
+  const emails  = text.match(/[\w.+-]+@[\w-]+\.[a-z]{2,}/gi) ?? [];
+  const phones  = text.match(/(?:\+421|0)[\s]?[0-9]{3}[\s]?[0-9]{3}[\s]?[0-9]{3}/g) ?? [];
+  const intent  = resolveIntent(text);
+  const dateInfo = normalizeDate(text);
+
+  // FORCE entity extraction — "Vittek Test"
+  const { name: contactName, note: extractedNote, confidence } = forceEntityExtraction(text);
+  
+  // Visual debug for regex fallback
+  if (DEBUG_ENABLED && contactName) {
+    console.log("🎯 REGEX FALLBACK: Found name =", contactName, "(confidence:", confidence + "%)");
+  }
+
+  const hasTaskKw = /(?:zaplánuj|pripomeň|stretnutie|hovor|volanie|úloha|zavolaj|pošli|pozvi)/i.test(text);
+  const hasDate   = dateInfo.normalized !== "" || dateInfo.raw !== "";
+  const hasIntent = intent !== null;
+  const hasPersonSignal = contactName || emails.length > 0;
+
+  // ── CRM card ──────────────────────────────────────────────────
+  // ALWAYS create CRM card if we have any person signal
+  if (hasPersonSignal) {
+    const fields: Record<string, string> = {};
+    if (contactName)  fields["Meno"]    = contactName;
+    if (emails[0])    fields["Email"]   = emails[0];
+    if (phones[0])    fields["Telefón"] = phones[0].replace(/\s/g, "");
+    
+    // Poznámka = intent note OR extracted note — NEVER just the name
+    if (intent?.note) {
+      fields["Poznámka"] = intent.note;
+    } else if (extractedNote) {
+      fields["Poznámka"] = extractedNote;
+    }
+    
+    const card: ActionCard = { 
+      id: uid(), 
+      type: "contact", 
+      status: "pending", 
+      fields, 
+      targetModule: "crm", 
+      rawText: text,
+      extractionDebug: { classifiedWords: [], chosenName: contactName, confidence }
+    };
+    cards.push(validateCard(card));
+  }
+
+  // ── Company (only if no personal contact) ─────────────────────
+  if (!contactName) {
+    const companyPatterns = [
+      /(?:firma|spoločnosť|zo\s+spoločnosti|pre\s+firmu)\s+([A-ZÁČŠŽÝÍÉÚÄÔŇ][^\s,]{1,40}(?:\s+[^\s,]{1,40})?)/i,
+      /([A-Z][a-zA-Z]{2,}\s+(?:s\.r\.o\.|a\.s\.|s\.p\.|GmbH|Ltd\.|Inc\.))/,
+    ];
+    for (const re of companyPatterns) {
+      const m = re.exec(text);
+      if (m) {
+        const card: ActionCard = {
+          id: uid(),
+          type: "company",
+          status: "pending",
+          fields: { "Firma": m[1].trim() },
+          targetModule: "crm",
+          rawText: text,
+          extractionDebug: { classifiedWords: [], chosenName: m[1].trim(), confidence: 100 }
+        };
+        cards.push(validateCard(card));
+        break;
+      }
+    }
+  }
+
+  // ── Calendar card ─────────────────────────────────────────────
+  // MULTI-ENTITY RULE: Create Calendar card if ANY of:
+  // - explicit task keyword
+  // - date word (piatok, zajtra, etc.)
+  // - intent detected
+  // - person signal present (dual-entity: person + implied task)
+  const shouldCreateCalendar = hasTaskKw || hasDate || hasIntent || hasPersonSignal;
+  
+  if (shouldCreateCalendar) {
+    const fields: Record<string, string> = {};
+
+    if (intent?.taskTitle) {
+      fields["Úloha"] = intent.taskTitle;
+    } else if (hasTaskKw) {
+      const m = /(?:zaplánuj|pripomeň|stretnutie|hovor|zavolaj|pošli)\s+(.{3,60}?)(?:\.|,|\n|$)/i.exec(text);
+      if (m) fields["Úloha"] = capitalise(m[1].trim());
+    }
+
+    if (!fields["Úloha"] && contactName) fields["Úloha"] = `Stretnutie: ${contactName}`;
+    if (!fields["Úloha"]) fields["Úloha"] = intent?.taskTitle || "Konzultácia";
+
+    // Poznámka in task = name only (for CRM link reference)
+    if (contactName) fields["Poznámka"] = contactName;
+
+    // Use normalized date (YYYY-MM-DD) if available, otherwise raw
+    if (dateInfo.normalized) {
+      fields["Dátum"] = dateInfo.normalized;
+    } else if (dateInfo.raw) {
+      fields["Dátum"] = dateInfo.raw;
+    }
+
+    const card: ActionCard = {
+      id: uid(),
+      type: "task",
+      status: "pending",
+      fields,
+      targetModule: "calendar",
+      rawText: text,
+      extractionDebug: { classifiedWords: [], chosenName: contactName, confidence: 100 }
+    };
+    cards.push(validateCard(card));
+  }
+
+  return cards;
+}
+
+// ═════════════════════════════════════════════════════════════════
+// ARCHITECTURE OF SENSES — Core Identity Logic
+// ═════════════════════════════════════════════════════════════════
+// Hierarchy: 1. KTO (Person) → 2. ČO (Intent) → 3. KEDY (Time)
+// Rule: If person detected → CRM card is MANDATORY
+// Rule: If intent/time detected → Calendar card is MANDATORY
+// Rule: Dual-extraction = ALWAYS both cards when Person + Intent + Date present
+
+export function extractActionCards(text: string): ActionCard[] {
+  // Run AI parser first
+  const aiCards = parseActionCardBlocks(text);
+  
+  // Detect entities in raw text using fallback analysis
+  const { name: contactName, confidence } = forceEntityExtraction(text);
+  const dateInfo = normalizeDate(text);
+  const intent = resolveIntent(text);
+  const hasTaskKw = /(?:zaplánuj|pripomeň|stretnutie|hovor|volanie|úloha|zavolaj|pošli|pozvi)/i.test(text);
+  const hasDate = dateInfo.normalized !== "" || dateInfo.raw !== "";
+  const hasIntent = intent !== null || hasTaskKw;
+  const hasPerson = contactName && confidence >= 90; // Strict threshold
+  
+  // Architecture Check: Do we have both cards when we should?
+  const hasCRM = aiCards.some(c => c.targetModule === "crm");
+  const hasCalendar = aiCards.some(c => c.targetModule === "calendar");
+  
+  const result: ActionCard[] = [...aiCards];
+  
+  // MANDATORY CRM: If person exists but no CRM card, create one
+  if (hasPerson && !hasCRM) {
+    const emails = text.match(/[\w.+-]+@[\w-]+\.[a-z]{2,}/gi) ?? [];
+    const phones = text.match(/(?:\+421|0)[\s]?[0-9]{3}[\s]?[0-9]{3}[\s]?[0-9]{3}/g) ?? [];
+    
+    const crmFields: Record<string, string> = { "Meno": contactName };
+    
+    // Email validation and normalization
+    if (emails[0]) {
+      const emailCheck = validateEmail(emails[0]);
+      if (emailCheck.valid) crmFields["Email"] = emailCheck.normalized;
+    }
+    
+    // Phone normalization to international format
+    if (phones[0]) {
+      const phoneCheck = normalizePhone(phones[0]);
+      if (phoneCheck.valid) crmFields["Telefón"] = phoneCheck.normalized;
+    }
+    
+    // Poznámka = full business intent, not just name
+    const note = intent?.note || extractNote(text) || "";
+    if (note) crmFields["Poznámka"] = note;
+    
+    // Kategória = automatic assignment based on keywords
+    crmFields["Kategória"] = assignCategory(text);
+    
+    const crmCard: ActionCard = {
+      id: uid(),
+      type: "contact",
+      status: "pending",
+      fields: crmFields,
+      targetModule: "crm",
+      rawText: text,
+      extractionDebug: { classifiedWords: [], chosenName: contactName, confidence }
+    };
+    result.push(validateCard(crmCard));
+  }
+  
+  // MANDATORY CALENDAR: If intent/time exists but no Calendar card, create one
+  // This now triggers EVEN WITHOUT person (standalone task) or WITH person (dual-action)
+  if ((hasIntent || hasDate) && !hasCalendar) {
+    const calFields: Record<string, string> = {};
+    
+    // Úloha title from intent or default
+    if (intent?.taskTitle) {
+      calFields["Úloha"] = intent.taskTitle;
+    } else if (hasTaskKw) {
+      const m = /(?:zaplánuj|pripomeň|stretnutie|hovor|zavolaj|pošli)\s+(.{3,60}?)(?:\.|,|\n|$)/i.exec(text);
+      if (m) calFields["Úloha"] = capitalise(m[1].trim());
+    }
+    
+    // Default: "Následný kontakt" if no specific task
+    if (!calFields["Úloha"]) {
+      calFields["Úloha"] = hasPerson ? `Následný kontakt: ${contactName}` : "Následný kontakt";
+    }
+    
+    // Link to person if available
+    if (contactName) calFields["Poznámka"] = contactName;
+    
+    // Date: normalized YYYY-MM-DD or raw
+    if (dateInfo.normalized) {
+      calFields["Dátum"] = dateInfo.normalized;
+    } else if (dateInfo.raw) {
+      calFields["Dátum"] = dateInfo.raw;
+    }
+    
+    // Čas: extract from text or default to 10:00
+    const timeMatch = text.match(/(\d{1,2}):(\d{2})/);
+    if (timeMatch) {
+      calFields["Čas"] = `${String(parseInt(timeMatch[1])).padStart(2, '0')}:${timeMatch[2]}`;
+    } else {
+      calFields["Čas"] = "10:00";
+    }
+    
+    const calCard: ActionCard = {
+      id: uid(),
+      type: "task",
+      status: "pending",
+      fields: calFields,
+      targetModule: "calendar",
+      rawText: text,
+      extractionDebug: { classifiedWords: [], chosenName: contactName, confidence: 100 }
+    };
+    result.push(validateCard(calCard));
+  }
+  
+  // If no AI cards and no forced cards, use full regex fallback
+  if (result.length === 0) {
+    return regexFallback(text);
+  }
+  
+  return result;
+}
+
+// Contextual Glue: standalone email/phone → merge into existing pending card
+export function detectContextualUpdate(text: string): { field: string; value: string } | null {
+  // Try email first
+  const emailMatch = text.match(/^[\w.+-]+@[\w-]+\.[a-z]{2,}$/i);
+  if (emailMatch) {
+    const emailCheck = validateEmail(emailMatch[0]);
+    if (emailCheck.valid) return { field: "Email", value: emailCheck.normalized };
+  }
+  
+  // Then try phone
+  const phoneMatch = text.match(/^(?:\+421|0)[\s]?[0-9]{3}[\s]?[0-9]{3}[\s]?[0-9]{3}$/);
+  if (phoneMatch) {
+    const phoneCheck = normalizePhone(phoneMatch[0]);
+    if (phoneCheck.valid) return { field: "Telefón", value: phoneCheck.normalized };
+  }
+  
+  return null;
+}
+
+// ═════════════════════════════════════════════════════════════════
+// EMAIL DRAFT GENERATION
+// ═════════════════════════════════════════════════════════════════
+
+export interface EmailDraftParams {
+  recipientName: string;
+  recipientEmail?: string;
+  context: string;
+  intent: "hypo" | "poistenie" | "investicie" | "default";
+  proposedDate?: string;
+  proposedTime?: string;
+}
+
+export async function generateEmailDraft(params: EmailDraftParams): Promise<{
+  subject: string;
+  body: string;
+  recipient: { name: string; email?: string };
+}> {
+  const res = await fetch("/api/email/draft", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(params),
+  });
+  
+  if (!res.ok) {
+    throw new Error("Failed to generate email draft");
+  }
+  
+  return res.json();
+}
+
+// Export new utilities for use in UI components
+export { assignCategory, validateEmail, normalizePhone, normalizeDate, type Category };

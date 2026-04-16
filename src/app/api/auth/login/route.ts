@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
 
     const { email, password } = parsed.data;
 
-    const user = await prisma.user.findUnique({ where: { email }, select: { id: true, email: true, password: true, role: true } });
+    const user = await prisma.user.findUnique({ where: { email }, select: { id: true, email: true, password: true, role: true, membershipTier: true } });
     if (!user) {
       return NextResponse.json(
         { error: "Nesprávny e-mail alebo heslo" },
@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    await createSession({ userId: user.id, email: user.email, role: user.role });
+    await createSession({ userId: user.id, email: user.email, role: user.role, membershipTier: user.membershipTier });
 
     console.log(`[SECURITY_AUDIT] LOGIN_SUCCESS | ip=${ip} | userId=${user.id} | email=${user.email} | role=${user.role} | ts=${new Date().toISOString()}`);
     return NextResponse.json({ success: true }, { status: 200 });

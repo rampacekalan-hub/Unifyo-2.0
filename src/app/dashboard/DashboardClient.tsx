@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import {
   LogOut, Bot, Calendar, Mail, BarChart3,
-  Phone, Zap, Lock, Send, Loader2, AlertTriangle, ChevronRight, ShieldAlert, X,
+  Phone, Zap, Lock, Send, Loader2, AlertTriangle, ChevronRight, ShieldAlert, X, Check,
 } from "lucide-react";
 import NeuralBackground from "@/components/ui/NeuralBackground";
 import { getSiteConfig } from "@/config/site-settings";
@@ -14,9 +14,60 @@ const config = getSiteConfig();
 const { errorStates, dashboard } = config.texts;
 
 interface ChatMessage {
-  role: "user" | "ai" | "error";
+  role: "user" | "ai" | "error" | "integration" | "thinking";
   content: string;
   tokens?: number;
+  integrationMeta?: { label: string; color: string; name: string };
+  detectedEntities?: { person?: boolean; date?: boolean; intent?: boolean };
+}
+
+// Compact Smart Thinking UI - Eye Icon + Neural Pulse
+interface SmartThinkingUIProps {
+  detectedEntities?: { person?: boolean; date?: boolean; intent?: boolean };
+}
+
+function SmartThinkingUI({ detectedEntities }: SmartThinkingUIProps) {
+  return (
+    <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-indigo-500/30 bg-indigo-500/10 backdrop-blur-sm">
+      {/* Pulsing Eye Icon */}
+      <motion.div
+        animate={{
+          scale: [1, 1.1, 1],
+          opacity: [0.6, 1, 0.6],
+        }}
+        transition={{
+          duration: 2,
+          repeat: Infinity,
+          ease: "easeInOut",
+        }}
+      >
+        <svg className="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+        </svg>
+      </motion.div>
+
+      {/* Neural Pulse Dots */}
+      <span className="flex gap-0.5">
+        {[0, 1, 2].map((i) => (
+          <motion.span
+            key={i}
+            className="w-1 h-1 rounded-full bg-indigo-400"
+            animate={{
+              scale: [1, 1.3, 1],
+              opacity: [0.3, 0.8, 0.3],
+            }}
+            transition={{
+              duration: 1,
+              repeat: Infinity,
+              delay: i * 0.2,
+              ease: "easeInOut",
+            }}
+          />
+        ))}
+      </span>
+    </div>
+  );
 }
 
 interface DashboardClientProps {
@@ -109,36 +160,131 @@ export default function DashboardClient({ user }: DashboardClientProps) {
     enabled: liveToggles ? (liveToggles[m.id] ?? m.enabled) : m.enabled,
   }));
 
-  async function sendMessage() {
+  // ── Streaming AI Handler ─────────────────────────────────────
+  async function handleSend() {
     const text = input.trim();
     if (!text || loading) return;
+    
     setInput("");
     setMessages((prev) => [...prev, { role: "user", content: text }]);
     setLoading(true);
+    
+    // Add thinking message
+    setMessages((prev) => [...prev, { role: "thinking", content: "" }]);
+
     try {
-      const res = await fetch("/api/ai/chat", {
+      const res = await fetch("/api/ai/stream", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: text, module: activeModule }),
       });
-      const data = await res.json();
+
       if (!res.ok) {
+        const data = await res.json();
         const errMsg =
           res.status === 429 ? errorStates.rateLimited :
           res.status === 402 ? errorStates.noCredits :
           res.status === 401 ? errorStates.sessionExpired :
           res.status >= 500  ? errorStates.aiUnavailable :
           (data.error ?? errorStates.aiUnavailable);
-        setMessages((prev) => [...prev, { role: "error", content: errMsg }]);
-      } else {
-        setMessages((prev) => [...prev, { role: "ai", content: data.response, tokens: data.tokensUsed }]);
-        setCredits(data.creditsRemaining ?? Math.max(0, credits - 1));
+        
+        setMessages((prev) => prev.filter(m => m.role !== "thinking").concat({ role: "error", content: errMsg }));
+        setLoading(false);
+        return;
       }
+
+      const reader = res.body?.getReader();
+      const decoder = new TextDecoder();
+      let fullContent = "";
+      let tokensUsed = 0;
+      let isDone = false;
+
+      if (!reader) {
+        setMessages((prev) => prev.filter(m => m.role !== "thinking").concat({ role: "error", content: errorStates.aiUnavailable }));
+        setLoading(false);
+        return;
+      }
+
+      while (!isDone) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split("\n").filter(l => l.trim());
+        
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          
+          const data = line.slice(6).trim();
+          if (data === "[DONE]") {
+            isDone = true;
+            continue;
+          }
+          
+          try {
+            const parsed = JSON.parse(data);
+            
+            // Handle streaming delta content
+            if (parsed.delta) {
+              fullContent += parsed.delta;
+            }
+            
+            // Handle final metadata
+            if (parsed.done) {
+              isDone = true;
+              if (parsed.tokens) tokensUsed = parsed.tokens;
+              if (parsed.creditsRemaining !== undefined) {
+                setCredits(parsed.creditsRemaining);
+              }
+            }
+          } catch {
+            // Ignore parse errors for malformed chunks
+          }
+        }
+
+        // Detect entities during streaming for Smart Thinking UI
+        const hasPerson = /\b[A-Z][a-z]+\s+[A-Z][a-z]+\b/.test(fullContent) || 
+                         /(?:Ing\.?|Mgr\.?|Dr\.?|pán|pani)\s+[A-Z]/.test(fullContent) ||
+                         fullContent.toLowerCase().includes("klient");
+        const hasDate = /\d{1,2}[./]\d{1,2}[./]\d{2,4}|\b(?:zajtra|dnes|pondelok|utorok|streda|štvrtok|piatok)\b/i.test(fullContent);
+        const hasIntent = /\b(?:hypot[eé]k|sch[oó]dzk|stretnut|konzult[aá]ci|záujem|chce|riešiť)\b/i.test(fullContent);
+
+        // Update thinking message with detected entities
+        if (hasPerson || hasDate || hasIntent) {
+          setMessages((prev) => {
+            const withoutThinking = prev.filter(m => m.role !== "thinking");
+            return [...withoutThinking, { 
+              role: "thinking", 
+              content: "",
+              detectedEntities: { person: hasPerson, date: hasDate, intent: hasIntent }
+            }];
+          });
+        }
+      }
+
+      // Clean content for display
+      const cleanContent = fullContent.trim();
+
+      // Replace thinking with final message
+      setMessages((prev) => 
+        prev.filter(m => m.role !== "thinking").concat({ 
+          role: "ai", 
+          content: cleanContent || "Rozumiem, spracoval som vašu požiadavku.",
+          tokens: tokensUsed 
+        })
+      );
     } catch {
-      setMessages((prev) => [...prev, { role: "error", content: errorStates.networkError }]);
+      setMessages((prev) => 
+        prev.filter(m => m.role !== "thinking").concat({ role: "error", content: errorStates.networkError })
+      );
     } finally {
       setLoading(false);
     }
+  }
+
+  // Legacy sendMessage function (alias for compatibility)
+  async function sendMessage() {
+    return handleSend();
   }
 
   const creditsColor = credits > 20 ? "#10b981" : credits > 5 ? "#f59e0b" : "#ef4444";
@@ -171,9 +317,9 @@ export default function DashboardClient({ user }: DashboardClientProps) {
             const isActive = activeModule === mod.id && !isDisabled;
             const isPlanLocked = mod.enabled && mod.requiredPlan !== "all" && mod.requiredPlan !== user.plan;
             return (
-              <button key={mod.id}
-                onClick={() => !isDisabled && setActiveModule(mod.id)}
-                disabled={isDisabled}
+              <Link key={mod.id}
+                href={mod.id === "dashboard" ? "/dashboard" : mod.id === "crm" ? "/crm" : mod.id === "calendar" ? "/calendar" : mod.id === "email" ? "/email" : "/dashboard"}
+                onClick={() => mod.id === "dashboard" && !isDisabled && setActiveModule(mod.id)}
                 title={isDisabled ? "Coming Soon" : meta.label}
                 className="w-full flex items-center gap-3 px-3 py-3 rounded-2xl mb-1.5 transition-all duration-200"
                 style={{
@@ -182,6 +328,7 @@ export default function DashboardClient({ user }: DashboardClientProps) {
                   boxShadow: isActive ? `0 0 14px ${D.indigoGlow}` : "none",
                   opacity: isDisabled ? 0.32 : 1,
                   cursor: isDisabled ? "not-allowed" : "pointer",
+                  pointerEvents: isDisabled ? "none" : "auto",
                 }}>
                 <Icon className="w-4 h-4 flex-shrink-0" style={{ color: isActive ? D.indigo : D.muted }} />
                 <span className="text-xs font-medium hidden md:block flex-1 text-left"
@@ -193,25 +340,13 @@ export default function DashboardClient({ user }: DashboardClientProps) {
                     {mod.requiredPlan}
                   </span>
                 )}
-              </button>
+              </Link>
             );
           })}
         </nav>
 
-        {/* Credits + logout */}
+        {/* Logout only - credits removed */}
         <div className="p-4 flex-shrink-0" style={{ borderTop: `1px solid ${D.indigoBorder}` }}>
-          <div className="mb-4 hidden md:block">
-            <div className="flex items-center justify-between mb-1.5">
-              <span className="text-[0.65rem] tracking-widest uppercase" style={{ color: D.muted }}>Kredity</span>
-              <span className="text-[0.65rem] font-bold" style={{ color: creditsColor }}>{credits}</span>
-            </div>
-            <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.05)" }}>
-              <motion.div className="h-full rounded-full"
-                animate={{ width: creditsPercent + "%" }}
-                transition={{ duration: 0.6, ease: "easeOut" }}
-                style={{ background: creditsColor, boxShadow: `0 0 6px ${creditsColor}` }} />
-            </div>
-          </div>
           {/* System Control — visible only to SUPERADMIN */}
           {user.role === "SUPERADMIN" && (
             <Link href="/admin"
@@ -302,20 +437,10 @@ export default function DashboardClient({ user }: DashboardClientProps) {
               </span>
             </h1>
           </div>
-          <div className="flex items-center gap-3">
-            <span className="text-xs px-3 py-1 rounded-full hidden sm:block"
-              style={{ background: D.indigoDim, border: `1px solid ${D.indigoBorder}`, color: "#a5b4fc" }}>
-              {user.plan}
-            </span>
-            <div className="hidden sm:flex items-center gap-1.5 text-xs">
-              <motion.span key={credits} initial={{ scale: 1.4 }} animate={{ scale: 1 }} transition={{ duration: 0.3 }}
-                style={{ color: creditsColor, fontWeight: 700 }}>{credits}</motion.span>
-              <span style={{ color: D.mutedDark }}>kreditov</span>
-            </div>
-          </div>
+          {/* Plan and credits removed */}
         </header>
 
-        {/* Chat panel (dashboard module) */}
+        {/* Chat panel (dashboard only) */}
         {activeModule === "dashboard" ? (
           <div className="flex-1 flex flex-col overflow-hidden">
             <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-5 space-y-4">
@@ -328,10 +453,18 @@ export default function DashboardClient({ user }: DashboardClientProps) {
                       <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 mr-2.5 mt-0.5"
                         style={msg.role === "error"
                           ? { background: "rgba(239,68,68,0.15)", border: "1px solid rgba(239,68,68,0.3)" }
+                          : msg.role === "integration"
+                          ? { background: "rgba(16,185,129,0.15)", border: "1px solid rgba(16,185,129,0.3)" }
+                          : msg.role === "thinking"
+                          ? { background: "rgba(99,102,241,0.2)", border: "1px solid rgba(99,102,241,0.3)" }
                           : { background: "linear-gradient(135deg,#7c3aed,#4f46e5)", boxShadow: "0 0 10px rgba(124,58,237,0.3)" }
                         }>
                         {msg.role === "error"
                           ? <AlertTriangle className="w-3.5 h-3.5" style={{ color: "#f87171" }} />
+                          : msg.role === "integration"
+                          ? <Check className="w-3.5 h-3.5 text-emerald-400" />
+                          : msg.role === "thinking"
+                          ? <Bot className="w-3.5 h-3.5 text-indigo-300" />
                           : <Bot className="w-3.5 h-3.5 text-white" />
                         }
                       </div>
@@ -341,16 +474,28 @@ export default function DashboardClient({ user }: DashboardClientProps) {
                         ? { background: "linear-gradient(135deg,rgba(124,58,237,0.3),rgba(79,70,229,0.3))", border: "1px solid rgba(124,58,237,0.3)", color: "#eef2ff" }
                         : msg.role === "error"
                         ? { background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", color: "#fca5a5" }
+                        : msg.role === "integration"
+                        ? { background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.2)", color: "#6ee7b7" }
+                        : msg.role === "thinking"
+                        ? { background: "transparent", border: "none" }
                         : { background: "rgba(139,92,246,0.07)", border: "1px solid rgba(139,92,246,0.15)", color: "#c4b5fd" }
                       }>
-                      {msg.content}
-                      {msg.tokens && msg.tokens > 0 && (
-                        <span className="block mt-1 text-[0.62rem]" style={{ color: "#334155" }}>{msg.tokens} tokenov</span>
+                      {msg.role === "thinking" ? (
+                        <SmartThinkingUI detectedEntities={msg.detectedEntities} />
+                      ) : (
+                        <>
+                          {msg.content}
+                          {msg.tokens && msg.tokens > 0 && (
+                            <span className="block mt-1 text-[0.62rem]" style={{ color: "#334155" }}>{msg.tokens} tokenov</span>
+                          )}
+                        </>
                       )}
                     </div>
                   </motion.div>
                 ))}
-                {loading && (
+
+
+                {loading && !messages.some(m => m.role === "thinking") && (
                   <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex justify-start">
                     <div className="w-7 h-7 rounded-lg flex items-center justify-center mr-2.5"
                       style={{ background: "linear-gradient(135deg,#7c3aed,#4f46e5)" }}>
@@ -376,10 +521,10 @@ export default function DashboardClient({ user }: DashboardClientProps) {
                 <input value={input} onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && sendMessage()}
                   placeholder={dashboard.chatPlaceholder}
-                  disabled={loading || credits <= 0}
+                  disabled={loading}
                   className="flex-1 bg-transparent text-sm outline-none"
                   style={{ color: "#eef2ff", caretColor: "#8b5cf6" }} />
-                <button onClick={sendMessage} disabled={loading || !input.trim() || credits <= 0}
+                <button onClick={sendMessage} disabled={loading || !input.trim()}
                   className="w-8 h-8 rounded-2xl flex items-center justify-center transition-all duration-200 flex-shrink-0 disabled:opacity-40"
                   style={{ background: `linear-gradient(135deg,${D.indigo},#4f46e5)`, boxShadow: `0 0 14px ${D.indigoGlow}` }}>
                   {loading
@@ -388,41 +533,9 @@ export default function DashboardClient({ user }: DashboardClientProps) {
                   }
                 </button>
               </div>
-              {credits <= 0 && (
-                <p className="text-xs mt-2 text-center" style={{ color: "#f87171" }}>
-                  {errorStates.noCredits}{" "}
-                  <Link href="/#pricing" style={{ color: "#a78bfa" }}>Upgradovať →</Link>
-                </p>
-              )}
             </div>
           </div>
-        ) : (
-          /* Coming soon placeholder for other modules */
-          <div className="flex-1 flex items-center justify-center p-8">
-            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.35 }}
-              className="text-center p-12 rounded-3xl" style={{ ...GLASS, maxWidth: 400 }}>
-              {(() => {
-                const meta = MODULE_META[activeModule] ?? { icon: Zap, label: activeModule };
-                const Icon = meta.icon;
-                return (
-                  <>
-                    <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-5"
-                      style={{ background: D.indigoDim, border: `1px solid ${D.indigoBorder}`, boxShadow: `0 0 20px ${D.indigoGlow}` }}>
-                      <Icon className="w-7 h-7" style={{ color: D.indigo }} />
-                    </div>
-                    <h2 className="text-lg font-bold mb-2" style={{ color: D.text }}>{meta.label}</h2>
-                    <p className="text-sm mb-7" style={{ color: D.muted }}>Tento modul je v príprave.</p>
-                    <Link href="/#pricing" className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl text-sm font-semibold text-white"
-                      style={{ background: `linear-gradient(135deg,${D.indigo},#4f46e5)`, boxShadow: `0 0 18px ${D.indigoGlow}` }}>
-                      Zobraziť plány <ChevronRight className="w-4 h-4" />
-                    </Link>
-                  </>
-                );
-              })()}
-            </motion.div>
-          </div>
-        )}
+        ) : null}
       </div>
     </div>
   );

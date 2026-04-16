@@ -1,0 +1,148 @@
+import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+import { prisma } from "@/lib/prisma";
+import { requireAuth } from "@/lib/auth";
+import { rateLimit } from "@/lib/rate-limit";
+import { getSiteConfig } from "@/config/site-settings";
+import { checkDailyLimit, incrementDailyUsage, retrieveContext, storeMemory, getActivePolicies, getUserPolicies } from "@/lib/ai/neural-core";
+import type { MembershipTier } from "@/lib/ai/neural-core";
+import { gdprAnonymize } from "@/lib/ai/neural-core";
+
+const config = getSiteConfig();
+
+const schema = z.object({
+  message: z.string().min(1).max(2000),
+  module: z.enum(["dashboard", "calendar", "email", "crm", "calls"]).default("dashboard"),
+  sessionId: z.string().optional(),
+});
+
+export async function POST(req: NextRequest) {
+  const limited = rateLimit(req, config.security.rateLimit.ai, "ai-stream");
+  if (limited) return limited;
+
+  const { session, response: authError } = await requireAuth(req);
+  if (authError) return authError;
+
+  let body: unknown;
+  try { body = await req.json(); }
+  catch { return NextResponse.json({ error: "Neplatný formát" }, { status: 400 }); }
+
+  const parsed = schema.safeParse(body);
+  if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
+
+  const { message, module, sessionId } = parsed.data;
+
+  const user = await prisma.user.findUnique({ where: { id: session.userId }, select: { membershipTier: true } });
+  if (!user) return NextResponse.json({ error: "Session expired" }, { status: 401 });
+
+  const tier = user.membershipTier as MembershipTier;
+
+  const { allowed, used, limit } = await checkDailyLimit(session.userId, tier);
+  if (!allowed) return NextResponse.json({ error: config.texts.errorStates.dailyLimitReached, used, limit }, { status: 402 });
+
+  if (!process.env.OPENAI_API_KEY) return NextResponse.json({ error: "AI nie je nakonfigurované — chýba OPENAI_API_KEY.", code: "MISSING_API_KEY" }, { status: 503 });
+
+  const ctx = { userId: session.userId, sessionId: sessionId ?? `${session.userId}-${Date.now()}`, module, tier };
+
+  // Load context
+  const memories = await retrieveContext(ctx);
+  await storeMemory(ctx, "user", message);
+
+  const memContext = memories.length > 0 ? (memories[0].context as "personal" | "work") : "work";
+  const [globalPolicies, userPolicies] = await Promise.all([getActivePolicies(memContext), getUserPolicies(ctx.userId)]);
+
+  const policyLines = globalPolicies.map(p => `[POLICY: ${p.name}] ${p.rule}`).join("\n");
+  const userPolicyLines = userPolicies.map(p => `[USER PREF: ${p.name}] ${p.rule}`).join("\n");
+  const ctxLines = memories.map(m => `[${m.role === "assistant" ? "AI" : "User"}] ${m.content}`).join("\n");
+
+  const systemPrompt = [
+    policyLines,
+    userPolicyLines,
+    "Si Personal Neural OS pre život a prácu. Si diskrétny, empatický a zameraný na výsledky.",
+    config.ai.systemPrompts.base,
+    config.ai.systemPrompts[module] ?? "",
+    memories.length > 0 ? `\n--- Kontext ---\n${ctxLines}\n--- Koniec kontextu ---` : "",
+  ].filter(Boolean).join("\n\n");
+
+  const sanitised = gdprAnonymize(message);
+
+  // Update lastActiveAt async
+  prisma.user.update({ where: { id: session.userId }, data: { lastActiveAt: new Date() } }).catch(() => {});
+
+  const openaiRes = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${process.env.OPENAI_API_KEY}` },
+    body: JSON.stringify({
+      model: config.ai.defaultModel,
+      max_tokens: config.ai.maxTokens,
+      temperature: config.ai.temperature,
+      stream: true,
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: sanitised },
+      ],
+    }),
+  });
+
+  if (!openaiRes.ok || !openaiRes.body) {
+    const err = await openaiRes.json().catch(() => ({}));
+    console.error("[AI_STREAM] OpenAI error:", err);
+    return NextResponse.json({ error: "AI služba je momentálne nedostupná.", code: "AI_UNAVAILABLE" }, { status: 502 });
+  }
+
+  // Stream response back to client
+  const encoder = new TextEncoder();
+  let fullContent = "";
+
+  const stream = new ReadableStream({
+    async start(controller) {
+      const reader = openaiRes.body!.getReader();
+      const dec = new TextDecoder();
+
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          const chunk = dec.decode(value, { stream: true });
+          const lines = chunk.split("\n").filter(l => l.startsWith("data: "));
+          for (const line of lines) {
+            const data = line.slice(6).trim();
+            if (data === "[DONE]") continue;
+            try {
+              const json = JSON.parse(data);
+              const delta = json.choices?.[0]?.delta?.content ?? "";
+              if (delta) {
+                fullContent += delta;
+                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ delta })}\n\n`));
+              }
+              const tokensUsed = json.usage?.total_tokens ?? 0;
+              if (tokensUsed > 0) {
+                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ tokens: tokensUsed, done: true, used: used + 1, limit })}\n\n`));
+              }
+            } catch { /* skip malformed chunks */ }
+          }
+        }
+      } finally {
+        // After stream: store memory + log + increment
+        if (fullContent) {
+          Promise.all([
+            storeMemory(ctx, "assistant", fullContent),
+            incrementDailyUsage(session.userId),
+            prisma.aiRequest.create({ data: { userId: session.userId, module, tokens: 0 } }),
+          ]).catch(e => console.error("[AI_STREAM] post-stream DB error:", e));
+          // Final done signal with usage
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ done: true, used: used + 1, limit })}\n\n`));
+        }
+        controller.close();
+      }
+    },
+  });
+
+  return new Response(stream, {
+    headers: {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      "Connection": "keep-alive",
+    },
+  });
+}

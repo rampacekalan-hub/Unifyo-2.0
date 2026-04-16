@@ -1,0 +1,356 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
+import Link from "next/link";
+import {
+  LogOut, Users, Calendar, Mail, BarChart3, Search, Plus,
+  Send, Inbox, Star, Trash2, Archive, Clock, Paperclip,
+  MoreVertical, ChevronLeft, Reply, Forward, RefreshCw,
+  Briefcase, FileText, Check
+} from "lucide-react";
+import NeuralBackground from "@/components/ui/NeuralBackground";
+import { getSiteConfig } from "@/config/site-settings";
+
+// Types
+interface Email {
+  id: string;
+  from: string;
+  to: string;
+  subject: string;
+  preview: string;
+  body: string;
+  date: string;
+  isRead: boolean;
+  isStarred: boolean;
+  hasAttachments: boolean;
+  folder: "inbox" | "sent" | "drafts" | "trash";
+}
+
+// Design tokens
+const D = {
+  indigo: "#6366f1",
+  sky: "#22d3ee",
+  violet: "#8b5cf6",
+  indigoGlow: "rgba(99,102,241,0.28)",
+  indigoBorder: "rgba(99,102,241,0.22)",
+  indigoDim: "rgba(99,102,241,0.08)",
+  text: "#eef2ff",
+  muted: "#94a3b8",
+  mutedDark: "#64748b",
+};
+
+const GLASS = {
+  background: "rgba(11,14,30,0.72)",
+  backdropFilter: "blur(20px) saturate(140%)",
+};
+
+const MODULE_META: Record<string, { icon: React.ElementType; label: string }> = {
+  dashboard: { icon: BarChart3, label: "Dashboard" },
+  crm: { icon: Users, label: "CRM" },
+  calendar: { icon: Calendar, label: "Kalendár" },
+  email: { icon: Mail, label: "Email" },
+};
+
+// Mock data
+const MOCK_EMAILS: Email[] = [
+  { id: "1", from: "peter@vittek.sk", to: "user@unifyo.sk", subject: "Re: Hypotéka - záujem o stretnutie", preview: "Dobrý deň, ďakujem za rýchlu odpoveď. Zajtra o 14:00 mi vyhovuje...", body: "Dobrý deň,\n\nďakujem za rýchlu odpoveď. Zajtra o 14:00 mi vyhovuje perfectne.\n\nS pozdravom,\nPeter Vittek", date: "2024-01-21 09:30", isRead: false, isStarred: true, hasAttachments: false, folder: "inbox" },
+  { id: "2", from: "maria.n@gmail.com", to: "user@unifyo.sk", subject: "Doplnenie informácií", preview: "Posielam požadované dokumenty v prílohe...", body: "Dobrý deň,\n\nposielam požadované dokumenty v prílohe.\n\nS pozdravom,\nMária Nováková", date: "2024-01-20 16:45", isRead: true, isStarred: false, hasAttachments: true, folder: "inbox" },
+  { id: "3", from: "user@unifyo.sk", to: "jan.kovac@seznam.cz", subject: "Ponuka produktov", preview: "Vážený pán Kováč, ďakujeme za Váš záujem...", body: "Vážený pán Kováč,\n\nďakujeme za Váš záujem o naše produkty. Posielame Vám detailnú ponuku...", date: "2024-01-19 11:20", isRead: true, isStarred: false, hasAttachments: true, folder: "sent" },
+  { id: "4", from: "newsletter@banka.sk", to: "user@unifyo.sk", subject: "Novinky v hypotekárnom centre", preview: "Prehľad aktuálnych zmien v hypotekárnom centre...", body: "Vážený klient,\n\nposielame Vám prehľad aktuálnych zmien...", date: "2024-01-18 08:00", isRead: true, isStarred: false, hasAttachments: false, folder: "inbox" },
+];
+
+export default function EmailPage() {
+  const [emails, setEmails] = useState<Email[]>(MOCK_EMAILS);
+  const [selectedFolder, setSelectedFolder] = useState<Email["folder"]>("inbox");
+  const [selectedEmail, setSelectedEmail] = useState<Email | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [user, setUser] = useState({ name: "User", email: "", role: "USER", plan: "basic", credits: 100 });
+
+  useEffect(() => {
+    fetch("/api/user/me").then(r => r.json()).then(data => {
+      if (data.user) setUser(data.user);
+    }).catch(() => {});
+  }, []);
+
+  const config = getSiteConfig();
+  const displayName = user?.name?.split(" ")[0] || user?.email?.split("@")[0] || "User";
+
+  const filteredEmails = emails.filter(e => 
+    e.folder === selectedFolder &&
+    (e.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
+     e.from.toLowerCase().includes(searchQuery.toLowerCase()) ||
+     e.preview.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
+
+  const unreadCount = emails.filter(e => e.folder === "inbox" && !e.isRead).length;
+
+  const getFolderIcon = (folder: Email["folder"]) => {
+    switch (folder) {
+      case "inbox": return Inbox;
+      case "sent": return Send;
+      case "drafts": return FileText;
+      case "trash": return Trash2;
+    }
+  };
+
+  const getFolderLabel = (folder: Email["folder"]) => {
+    switch (folder) {
+      case "inbox": return "Prijaté";
+      case "sent": return "Odoslané";
+      case "drafts": return "Koncepty";
+      case "trash": return "Kôš";
+    }
+  };
+
+  return (
+    <div className="flex h-screen overflow-hidden" style={{ background: "#05070f", color: "#eef2ff" }}>
+      <NeuralBackground themeEngine={config.branding.themeEngine} />
+
+      {/* ── SIDEBAR ── */}
+      <aside className="w-16 md:w-60 flex-shrink-0 flex flex-col h-full z-10"
+        style={{ ...GLASS, borderRight: `1px solid ${D.indigoBorder}` }}>
+        
+        {/* Logo */}
+        <div className="h-16 flex items-center px-4 md:px-5 gap-3 flex-shrink-0"
+          style={{ borderBottom: `1px solid ${D.indigoBorder}` }}>
+          <div className="w-8 h-8 rounded-2xl flex items-center justify-center flex-shrink-0"
+            style={{ background: "linear-gradient(135deg,#6366f1,#06b6d4)", boxShadow: `0 0 16px ${D.indigoGlow}` }}>
+            <span className="text-white text-[11px] font-black">U</span>
+          </div>
+          <span className="font-bold text-sm hidden md:block" style={{ color: D.text }}>{config.name}</span>
+        </div>
+
+        {/* Nav items */}
+        <nav className="flex-1 overflow-y-auto py-4 px-3">
+          {Object.values(config.modules).filter(m => m.path).map((mod) => {
+            const meta = MODULE_META[mod.id] ?? { icon: Briefcase, label: mod.id };
+            const Icon = meta.icon;
+            const isActive = mod.id === "email";
+            return (
+              <Link key={mod.id}
+                href={mod.id === "dashboard" ? "/dashboard" : `/${mod.id}`}
+                className="w-full flex items-center gap-3 px-3 py-3 rounded-2xl mb-1.5 transition-all duration-200"
+                style={{
+                  background: isActive ? D.indigoDim : "transparent",
+                  border: isActive ? `1px solid ${D.indigoBorder}` : "1px solid transparent",
+                  boxShadow: isActive ? `0 0 14px ${D.indigoGlow}` : "none",
+                }}>
+                <Icon className="w-4 h-4 flex-shrink-0" style={{ color: isActive ? D.indigo : D.muted }} />
+                <span className="text-xs font-medium hidden md:block flex-1 text-left"
+                  style={{ color: isActive ? D.text : D.muted }}>{meta.label}</span>
+              </Link>
+            );
+          })}
+        </nav>
+
+        {/* Logout */}
+        <div className="p-4 flex-shrink-0" style={{ borderTop: `1px solid ${D.indigoBorder}` }}>
+          <Link href="/api/auth/signout"
+            className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-medium transition-all"
+            style={{ color: D.muted, border: "1px solid transparent" }}>
+            <LogOut className="w-3.5 h-3.5" />
+            <span className="hidden md:block">Odhlásiť sa</span>
+          </Link>
+        </div>
+      </aside>
+
+      {/* ── MAIN CONTENT ── */}
+      <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        
+        {/* Header */}
+        <header className="h-16 flex items-center justify-between px-6 flex-shrink-0"
+          style={{ ...GLASS, borderBottom: `1px solid ${D.indigoBorder}` }}>
+          <div className="flex items-center gap-3">
+            <Mail className="w-5 h-5" style={{ color: D.indigo }} />
+            <h1 className="text-sm font-bold" style={{ color: D.text }}>Email</h1>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="text-xs" style={{ color: D.muted }}>Vitaj, {displayName}</span>
+          </div>
+        </header>
+
+        {/* Email Content */}
+        <div className="flex-1 flex overflow-hidden">
+          
+          {/* Folder Sidebar */}
+          <div className="w-48 flex-shrink-0 border-r flex flex-col" style={{ borderColor: D.indigoBorder }}>
+            <div className="p-3">
+              <button className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-medium transition-all"
+                style={{ background: "linear-gradient(135deg,#6366f1,#8b5cf6)", color: "white" }}>
+                <Plus className="w-4 h-4" />
+                Nový email
+              </button>
+            </div>
+
+            <nav className="flex-1 px-2 space-y-1">
+              {(["inbox", "sent", "drafts", "trash"] as const).map(folder => {
+                const Icon = getFolderIcon(folder);
+                const isActive = selectedFolder === folder;
+                const count = folder === "inbox" ? unreadCount : 0;
+
+                return (
+                  <button
+                    key={folder}
+                    onClick={() => { setSelectedFolder(folder); setSelectedEmail(null); }}
+                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all"
+                    style={{
+                      background: isActive ? D.indigoDim : "transparent",
+                      color: isActive ? D.text : D.muted,
+                    }}>
+                    <Icon className="w-4 h-4" />
+                    <span className="flex-1 text-left">{getFolderLabel(folder)}</span>
+                    {count > 0 && (
+                      <span className="px-1.5 py-0.5 rounded-full text-xs font-medium"
+                        style={{ background: D.indigo, color: "white" }}>
+                        {count}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </nav>
+          </div>
+
+          {/* Email List */}
+          <div className="w-80 flex-shrink-0 border-r flex flex-col" style={{ borderColor: D.indigoBorder }}>
+            {/* Search */}
+            <div className="p-3" style={{ borderBottom: `1px solid ${D.indigoBorder}` }}>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: D.muted }} />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Hľadať..."
+                  className="w-full pl-10 pr-4 py-2 rounded-xl text-sm outline-none"
+                  style={{ background: "rgba(255,255,255,0.05)", border: `1px solid ${D.indigoBorder}`, color: D.text }}
+                />
+              </div>
+            </div>
+
+            {/* Email List */}
+            <div className="flex-1 overflow-y-auto">
+              {filteredEmails.map((email) => (
+                <motion.button
+                  key={email.id}
+                  onClick={() => setSelectedEmail(email)}
+                  className="w-full text-left p-3 border-b transition-all"
+                  style={{
+                    background: selectedEmail?.id === email.id ? D.indigoDim : "transparent",
+                    borderColor: D.indigoBorder,
+                    opacity: email.isRead ? 0.8 : 1,
+                  }}
+                  whileHover={{ backgroundColor: "rgba(99,102,241,0.05)" }}>
+                  <div className="flex items-start gap-2">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEmails(emails.map(e => e.id === email.id ? { ...e, isStarred: !e.isStarred } : e));
+                      }}
+                      className="flex-shrink-0">
+                      <Star className={`w-4 h-4 ${email.isStarred ? "fill-yellow-400 text-yellow-400" : ""}`} 
+                        style={{ color: email.isStarred ? "#fbbf24" : D.mutedDark }} />
+                    </button>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className={`text-sm truncate ${!email.isRead ? "font-semibold" : ""}`} style={{ color: D.text }}>
+                          {email.from.split("@")[0]}
+                        </span>
+                        {!email.isRead && (
+                          <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: D.indigo }} />
+                        )}
+                      </div>
+                      <p className={`text-sm truncate ${!email.isRead ? "font-medium" : ""}`} style={{ color: D.text }}>
+                        {email.subject}
+                      </p>
+                      <p className="text-xs truncate" style={{ color: D.muted }}>{email.preview}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-[0.65rem]" style={{ color: D.mutedDark }}>{email.date.split(" ")[0]}</span>
+                        {email.hasAttachments && <Paperclip className="w-3 h-3" style={{ color: D.mutedDark }} />}
+                      </div>
+                    </div>
+                  </div>
+                </motion.button>
+              ))}
+            </div>
+          </div>
+
+          {/* Email Detail */}
+          <div className="flex-1 flex flex-col overflow-hidden">
+            {selectedEmail ? (
+              <>
+                {/* Email Actions */}
+                <div className="flex items-center gap-2 p-3" style={{ borderBottom: `1px solid ${D.indigoBorder}` }}>
+                  <button className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm transition-all"
+                    style={{ background: D.indigoDim, border: `1px solid ${D.indigoBorder}`, color: D.text }}>
+                    <Reply className="w-4 h-4" />
+                    Odpovedať
+                  </button>
+                  <button className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm transition-all"
+                    style={{ background: "transparent", border: `1px solid ${D.indigoBorder}`, color: D.muted }}>
+                    <Forward className="w-4 h-4" />
+                    Preposlať
+                  </button>
+                  <div className="flex-1" />
+                  <button className="p-2 rounded-xl" style={{ background: "rgba(255,255,255,0.05)" }}>
+                    <Archive className="w-4 h-4" style={{ color: D.muted }} />
+                  </button>
+                  <button className="p-2 rounded-xl" style={{ background: "rgba(255,255,255,0.05)" }}>
+                    <Trash2 className="w-4 h-4" style={{ color: "#ef4444" }} />
+                  </button>
+                  <button className="p-2 rounded-xl" style={{ background: "rgba(255,255,255,0.05)" }}>
+                    <MoreVertical className="w-4 h-4" style={{ color: D.muted }} />
+                  </button>
+                </div>
+
+                {/* Email Content */}
+                <div className="flex-1 overflow-y-auto p-6">
+                  <h2 className="text-xl font-bold mb-4" style={{ color: D.text }}>{selectedEmail.subject}</h2>
+                  
+                  <div className="flex items-center justify-between mb-6 pb-4" style={{ borderBottom: `1px solid ${D.indigoBorder}` }}>
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full flex items-center justify-center"
+                        style={{ background: "linear-gradient(135deg,#6366f1,#8b5cf6)" }}>
+                        <span className="text-white text-sm font-bold">
+                          {selectedEmail.from[0].toUpperCase()}
+                        </span>
+                      </div>
+                      <div>
+                        <p className="font-medium" style={{ color: D.text }}>{selectedEmail.from}</p>
+                        <p className="text-xs" style={{ color: D.muted }}>Komu: {selectedEmail.to}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs" style={{ color: D.muted }}>{selectedEmail.date}</span>
+                      {selectedEmail.hasAttachments && (
+                        <span className="px-2 py-1 rounded-lg text-xs flex items-center gap-1"
+                          style={{ background: D.indigoDim, border: `1px solid ${D.indigoBorder}`, color: D.text }}>
+                          <Paperclip className="w-3 h-3" />
+                          Prílohy
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="prose prose-invert max-w-none">
+                    <p className="whitespace-pre-wrap" style={{ color: D.text, lineHeight: "1.6" }}>
+                      {selectedEmail.body}
+                    </p>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="flex-1 flex items-center justify-center">
+                <div className="text-center">
+                  <Mail className="w-12 h-12 mx-auto mb-4" style={{ color: D.mutedDark }} />
+                  <p className="text-sm" style={{ color: D.muted }}>Vyberte email pre zobrazenie</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}

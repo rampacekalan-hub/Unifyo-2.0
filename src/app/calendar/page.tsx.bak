@@ -1,0 +1,214 @@
+"use client";
+
+import { useState } from "react";
+import { motion } from "framer-motion";
+import Link from "next/link";
+import { Calendar, Users, Plus, ChevronLeft, ChevronRight, Clock, Phone } from "lucide-react";
+import AppLayout from "@/components/layout/AppLayout";
+
+interface Event {
+  id: string;
+  title: string;
+  date: string;
+  time: string;
+  duration: number;
+  type: "meeting" | "call" | "task" | "reminder";
+  contact?: string;
+  description?: string;
+}
+
+const D = {
+  indigo: "#6366f1",
+  sky: "#22d3ee",
+  violet: "#8b5cf6",
+  emerald: "#10b981",
+  amber: "#f59e0b",
+  rose: "#f43f5e",
+  indigoBorder: "rgba(99,102,241,0.22)",
+  indigoDim: "rgba(99,102,241,0.08)",
+  text: "#eef2ff",
+  muted: "#94a3b8",
+  mutedDark: "#64748b",
+};
+
+const MOCK_EVENTS: Event[] = [
+  { id: "1", title: "Stretnutie - Peter Vittek", date: "2024-01-16", time: "14:00", duration: 60, type: "meeting", contact: "Peter Vittek", description: "Konzultácia ohľadom hypotéky" },
+  { id: "2", title: "Telefonát - Mária Nováková", date: "2024-01-17", time: "10:30", duration: 30, type: "call", contact: "Mária Nováková" },
+  { id: "3", title: "Pripomienka - Ján Kováč", date: "2024-01-18", time: "09:00", duration: 15, type: "reminder", contact: "Ján Kováč" },
+  { id: "4", title: "Úloha - Dokumentácia", date: "2024-01-19", time: "16:00", duration: 120, type: "task" },
+];
+
+const DAYS = ["Po", "Ut", "St", "Št", "Pi", "So", "Ne"];
+
+export default function CalendarPage() {
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth();
+  const firstDayOfMonth = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const startingDay = firstDayOfMonth === 0 ? 6 : firstDayOfMonth - 1;
+
+  const prevMonth = () => setCurrentDate(new Date(year, month - 1, 1));
+  const nextMonth = () => setCurrentDate(new Date(year, month + 1, 1));
+
+  const getEventsForDay = (day: number) => {
+    const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    return MOCK_EVENTS.filter(e => e.date === dateStr);
+  };
+
+  const getTypeColor = (type: Event["type"]) => {
+    switch (type) {
+      case "meeting": return D.indigo;
+      case "call": return D.emerald;
+      case "task": return D.amber;
+      case "reminder": return D.rose;
+    }
+  };
+
+  const getTypeLabel = (type: Event["type"]) => {
+    switch (type) {
+      case "meeting": return "Stretnutie";
+      case "call": return "Hovor";
+      case "task": return "Úloha";
+      case "reminder": return "Pripomienka";
+    }
+  };
+
+  const monthNames = ["Január", "Február", "Marec", "Apríl", "Máj", "Jún", "Júl", "August", "September", "Október", "November", "December"];
+
+  return (
+    <AppLayout title="Kalendár udalostí">
+      <div className="flex h-full p-6 gap-6">
+        {/* Calendar Grid */}
+        <div className="flex-1 flex flex-col">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-4">
+              <button onClick={prevMonth} className="p-2 rounded-lg" style={{ background: D.indigoDim, border: `1px solid ${D.indigoBorder}` }}>
+                <ChevronLeft className="w-5 h-5" style={{ color: D.text }} />
+              </button>
+              <h2 className="text-xl font-semibold" style={{ color: D.text }}>
+                {monthNames[month]} {year}
+              </h2>
+              <button onClick={nextMonth} className="p-2 rounded-lg" style={{ background: D.indigoDim, border: `1px solid ${D.indigoBorder}` }}>
+                <ChevronRight className="w-5 h-5" style={{ color: D.text }} />
+              </button>
+            </div>
+            <button className="px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-medium" style={{ background: D.indigo, color: "white" }}>
+              <Plus className="w-4 h-4" />
+              Nová udalosť
+            </button>
+          </div>
+
+          {/* Day headers */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: "8px", marginBottom: "8px" }}>
+            {DAYS.map(day => (
+              <div key={day} className="text-center py-2 text-sm font-medium" style={{ color: D.muted }}>
+                {day}
+              </div>
+            ))}
+          </div>
+
+          {/* Calendar days */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: "8px", flex: 1 }}>
+            {Array.from({ length: startingDay }).map((_, i) => (
+              <div key={`empty-${i}`} className="rounded-xl" style={{ background: "rgba(99,102,241,0.02)", border: `1px solid ${D.indigoBorder}` }} />
+            ))}
+            {Array.from({ length: daysInMonth }).map((_, i) => {
+              const day = i + 1;
+              const events = getEventsForDay(day);
+              const isToday = new Date().toDateString() === new Date(year, month, day).toDateString();
+              return (
+                <motion.div
+                  key={day}
+                  className="rounded-xl p-2 cursor-pointer min-h-[80px]"
+                  style={{
+                    background: isToday ? "rgba(99,102,241,0.15)" : "rgba(99,102,241,0.05)",
+                    border: `1px solid ${isToday ? D.indigo : D.indigoBorder}`,
+                  }}
+                  whileHover={{ scale: 1.02 }}
+                  onClick={() => events.length > 0 && setSelectedEvent(events[0])}
+                >
+                  <div className="text-sm font-medium mb-1" style={{ color: isToday ? D.indigo : D.text }}>{day}</div>
+                  {events.slice(0, 2).map(event => (
+                    <div
+                      key={event.id}
+                      className="text-[10px] truncate px-1 py-0.5 rounded mb-0.5"
+                      style={{ background: getTypeColor(event.type) + "30", color: getTypeColor(event.type) }}
+                    >
+                      {event.time} {event.title}
+                    </div>
+                  ))}
+                  {events.length > 2 && (
+                    <div className="text-[10px]" style={{ color: D.muted }}>+{events.length - 2} ďalšie</div>
+                  )}
+                </motion.div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Event Detail Panel */}
+        <div className="w-[350px] rounded-2xl p-5" style={{ background: "rgba(99,102,241,0.05)", border: `1px solid ${D.indigoBorder}` }}>
+          <h3 className="font-semibold mb-4" style={{ color: D.text }}>Detail udalosti</h3>
+          {selectedEvent ? (
+            <div className="space-y-4">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: getTypeColor(selectedEvent.type) + "30" }}>
+                  <Calendar className="w-5 h-5" style={{ color: getTypeColor(selectedEvent.type) }} />
+                </div>
+                <div>
+                  <h4 className="font-medium" style={{ color: D.text }}>{selectedEvent.title}</h4>
+                  <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: getTypeColor(selectedEvent.type) + "30", color: getTypeColor(selectedEvent.type) }}>
+                    {getTypeLabel(selectedEvent.type)}
+                  </span>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-sm" style={{ color: D.muted }}>
+                  <Clock className="w-4 h-4" />
+                  <span>{selectedEvent.date} o {selectedEvent.time}</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm" style={{ color: D.muted }}>
+                  <Clock className="w-4 h-4" />
+                  <span>Dĺžka: {selectedEvent.duration} min</span>
+                </div>
+                {selectedEvent.contact && (
+                  <div className="flex items-center gap-2 text-sm" style={{ color: D.muted }}>
+                    <Users className="w-4 h-4" />
+                    <span>{selectedEvent.contact}</span>
+                  </div>
+                )}
+              </div>
+
+              {selectedEvent.description && (
+                <div className="p-3 rounded-xl" style={{ background: D.indigoDim, border: `1px solid ${D.indigoBorder}` }}>
+                  <p className="text-sm" style={{ color: D.text }}>{selectedEvent.description}</p>
+                </div>
+              )}
+
+              <div className="flex gap-2 pt-2">
+                <Link href="/crm" className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-sm" style={{ background: D.indigoDim, border: `1px solid ${D.indigoBorder}`, color: D.text }}>
+                  <Users className="w-4 h-4" />
+                  CRM
+                </Link>
+                <button className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-sm" style={{ background: "linear-gradient(135deg,#6366f1,#8b5cf6)", color: "white" }}>
+                  <Phone className="w-4 h-4" />
+                  Zavolať
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <Calendar className="w-12 h-12 mx-auto mb-3" style={{ color: D.mutedDark }} />
+              <p className="text-sm" style={{ color: D.muted }}>Vyberte udalosť pre zobrazenie detailov</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </AppLayout>
+  );
+}

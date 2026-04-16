@@ -23,15 +23,25 @@ export default async function AdminPage() {
     notFound();
   }
 
-  const [users, totalRequests, planCounts, recentRequests] = await Promise.all([
-    prisma.user.findMany({
-      select: {
-        id: true, email: true, name: true,
-        role: true, plan: true, credits: true, createdAt: true,
-        _count: { select: { aiRequests: true } },
-      },
-      orderBy: { createdAt: "desc" },
-    }),
+  const today = new Date().toISOString().slice(0, 10);
+
+  const rawUsers = await prisma.user.findMany({
+    select: {
+      id: true, email: true, name: true,
+      role: true, plan: true, membershipTier: true, createdAt: true,
+      _count: { select: { aiRequests: true } },
+      dailyUsages: { where: { date: today }, select: { count: true } },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  type RawUser = typeof rawUsers[number];
+  const users = rawUsers.map((row: RawUser) => {
+    const { dailyUsages, ...u } = row;
+    return { ...u, todayUsage: dailyUsages[0]?.count ?? 0 };
+  });
+
+  const [totalRequests, planCounts, recentRequests] = await Promise.all([
     prisma.aiRequest.count(),
     prisma.user.groupBy({ by: ["plan"], _count: { plan: true } }),
     prisma.aiRequest.findMany({

@@ -35,7 +35,7 @@ async function getSessionPayload(req: NextRequest): Promise<JwtPayload | null> {
   }
 }
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
   const ip = getClientIp(req);
 

@@ -1,0 +1,398 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import Link from "next/link";
+import {
+  LogOut, Users, Calendar, Mail, BarChart3, ChevronLeft, ChevronRight,
+  Plus, Clock, MapPin, Phone, MoreVertical, Search, Filter,
+  CalendarDays, Clock3, User, Briefcase
+} from "lucide-react";
+import NeuralBackground from "@/components/ui/NeuralBackground";
+import { getSiteConfig } from "@/config/site-settings";
+
+// Types
+interface Event {
+  id: string;
+  title: string;
+  date: string;
+  time: string;
+  duration: number;
+  type: "meeting" | "call" | "task" | "reminder";
+  contact?: string;
+  location?: string;
+  notes: string;
+  status: "pending" | "completed" | "cancelled";
+}
+
+// Design tokens
+const D = {
+  indigo: "#6366f1",
+  sky: "#22d3ee",
+  violet: "#8b5cf6",
+  indigoGlow: "rgba(99,102,241,0.28)",
+  indigoBorder: "rgba(99,102,241,0.22)",
+  indigoDim: "rgba(99,102,241,0.08)",
+  text: "#eef2ff",
+  muted: "#94a3b8",
+  mutedDark: "#64748b",
+};
+
+const GLASS = {
+  background: "rgba(11,14,30,0.72)",
+  backdropFilter: "blur(20px) saturate(140%)",
+};
+
+const MODULE_META: Record<string, { icon: React.ElementType; label: string }> = {
+  dashboard: { icon: BarChart3, label: "Dashboard" },
+  crm: { icon: Users, label: "CRM" },
+  calendar: { icon: Calendar, label: "Kalendár" },
+  email: { icon: Mail, label: "Email" },
+};
+
+const EVENT_TYPE_COLORS: Record<Event["type"], string> = {
+  meeting: "#6366f1",
+  call: "#22d3ee",
+  task: "#f59e0b",
+  reminder: "#10b981",
+};
+
+const EVENT_TYPE_LABELS: Record<Event["type"], string> = {
+  meeting: "Stretnutie",
+  call: "Hovor",
+  task: "Úloha",
+  reminder: "Pripomienka",
+};
+
+// Mock data
+const MOCK_EVENTS: Event[] = [
+  { id: "1", title: "Schôdza - Peter Vittek", date: "2024-01-21", time: "14:00", duration: 60, type: "meeting", contact: "Peter Vittek", location: "Kancelária", notes: "Hypotéka, prezentácia produktov", status: "pending" },
+  { id: "2", title: "Telefonát - Mária Nováková", date: "2024-01-21", time: "10:00", duration: 30, type: "call", contact: "Mária Nováková", notes: "Referencia brata", status: "pending" },
+  { id: "3", title: "Príprava ponuky", date: "2024-01-21", time: "16:00", duration: 120, type: "task", notes: "Príprava materiálov pre klienta", status: "pending" },
+  { id: "4", title: "Follow-up Ján Kováč", date: "2024-01-22", time: "09:00", duration: 15, type: "reminder", contact: "Ján Kováč", notes: "Poslať email s ponukou", status: "pending" },
+];
+
+const WEEKDAYS = ["Po", "Ut", "St", "Št", "Pi", "So", "Ne"];
+
+export default function CalendarPage() {
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
+  const [events, setEvents] = useState<Event[]>(MOCK_EVENTS);
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [user, setUser] = useState({ name: "User", email: "", role: "USER", plan: "basic", credits: 100 });
+
+  useEffect(() => {
+    fetch("/api/user/me").then(r => r.json()).then(data => {
+      if (data.user) setUser(data.user);
+    }).catch(() => {});
+  }, []);
+
+  const config = getSiteConfig();
+  const displayName = user?.name?.split(" ")[0] || user?.email?.split("@")[0] || "User";
+
+  // Calendar generation
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth();
+  const firstDay = new Date(year, month, 1);
+  const lastDay = new Date(year, month + 1, 0);
+  const startOffset = (firstDay.getDay() + 6) % 7;
+  const daysInMonth = lastDay.getDate();
+
+  const calendarDays = [];
+  for (let i = 0; i < startOffset; i++) calendarDays.push(null);
+  for (let i = 1; i <= daysInMonth; i++) calendarDays.push(i);
+
+  const monthNames = ["Január", "Február", "Marec", "Apríl", "Máj", "Jún", "Júl", "August", "September", "Október", "November", "December"];
+
+  const getEventsForDate = (date: Date) => {
+    const dateStr = date.toISOString().split("T")[0];
+    return events.filter(e => e.date === dateStr).sort((a, b) => a.time.localeCompare(b.time));
+  };
+
+  const selectedDateEvents = selectedDate ? getEventsForDate(selectedDate) : [];
+
+  return (
+    <div className="flex h-screen overflow-hidden" style={{ background: "#05070f", color: "#eef2ff" }}>
+      <NeuralBackground themeEngine={config.branding.themeEngine} />
+
+      {/* ── SIDEBAR ── */}
+      <aside className="w-16 md:w-60 flex-shrink-0 flex flex-col h-full z-10"
+        style={{ ...GLASS, borderRight: `1px solid ${D.indigoBorder}` }}>
+        
+        {/* Logo */}
+        <div className="h-16 flex items-center px-4 md:px-5 gap-3 flex-shrink-0"
+          style={{ borderBottom: `1px solid ${D.indigoBorder}` }}>
+          <div className="w-8 h-8 rounded-2xl flex items-center justify-center flex-shrink-0"
+            style={{ background: "linear-gradient(135deg,#6366f1,#06b6d4)", boxShadow: `0 0 16px ${D.indigoGlow}` }}>
+            <span className="text-white text-[11px] font-black">U</span>
+          </div>
+          <span className="font-bold text-sm hidden md:block" style={{ color: D.text }}>{config.name}</span>
+        </div>
+
+        {/* Nav items */}
+        <nav className="flex-1 overflow-y-auto py-4 px-3">
+          {Object.values(config.modules).filter(m => m.path).map((mod) => {
+            const meta = MODULE_META[mod.id] ?? { icon: Briefcase, label: mod.id };
+            const Icon = meta.icon;
+            const isActive = mod.id === "calendar";
+            return (
+              <Link key={mod.id}
+                href={mod.id === "dashboard" ? "/dashboard" : `/${mod.id}`}
+                className="w-full flex items-center gap-3 px-3 py-3 rounded-2xl mb-1.5 transition-all duration-200"
+                style={{
+                  background: isActive ? D.indigoDim : "transparent",
+                  border: isActive ? `1px solid ${D.indigoBorder}` : "1px solid transparent",
+                  boxShadow: isActive ? `0 0 14px ${D.indigoGlow}` : "none",
+                }}>
+                <Icon className="w-4 h-4 flex-shrink-0" style={{ color: isActive ? D.indigo : D.muted }} />
+                <span className="text-xs font-medium hidden md:block flex-1 text-left"
+                  style={{ color: isActive ? D.text : D.muted }}>{meta.label}</span>
+              </Link>
+            );
+          })}
+        </nav>
+
+        {/* Logout */}
+        <div className="p-4 flex-shrink-0" style={{ borderTop: `1px solid ${D.indigoBorder}` }}>
+          <Link href="/api/auth/signout"
+            className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-medium transition-all"
+            style={{ color: D.muted, border: "1px solid transparent" }}>
+            <LogOut className="w-3.5 h-3.5" />
+            <span className="hidden md:block">Odhlásiť sa</span>
+          </Link>
+        </div>
+      </aside>
+
+      {/* ── MAIN CONTENT ── */}
+      <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        
+        {/* Header */}
+        <header className="h-16 flex items-center justify-between px-6 flex-shrink-0"
+          style={{ ...GLASS, borderBottom: `1px solid ${D.indigoBorder}` }}>
+          <div className="flex items-center gap-3">
+            <CalendarDays className="w-5 h-5" style={{ color: D.indigo }} />
+            <h1 className="text-sm font-bold" style={{ color: D.text }}>Kalendár udalostí</h1>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="text-xs" style={{ color: D.muted }}>Vitaj, {displayName}</span>
+          </div>
+        </header>
+
+        {/* Calendar Content */}
+        <div className="flex-1 flex overflow-hidden">
+          
+          {/* Calendar Grid */}
+          <div className="flex-1 flex flex-col p-6 overflow-y-auto">
+            
+            {/* Month Navigation */}
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={() => setCurrentDate(new Date(year, month - 1, 1))}
+                  className="p-2 rounded-xl transition-all"
+                  style={{ background: "rgba(255,255,255,0.05)", border: `1px solid ${D.indigoBorder}` }}>
+                  <ChevronLeft className="w-4 h-4" style={{ color: D.muted }} />
+                </button>
+                <h2 className="text-lg font-bold" style={{ color: D.text }}>
+                  {monthNames[month]} {year}
+                </h2>
+                <button
+                  onClick={() => setCurrentDate(new Date(year, month + 1, 1))}
+                  className="p-2 rounded-xl transition-all"
+                  style={{ background: "rgba(255,255,255,0.05)", border: `1px solid ${D.indigoBorder}` }}>
+                  <ChevronRight className="w-4 h-4" style={{ color: D.muted }} />
+                </button>
+              </div>
+              <button
+                onClick={() => setIsAddModalOpen(true)}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all"
+                style={{ background: "linear-gradient(135deg,#6366f1,#8b5cf6)", color: "white" }}>
+                <Plus className="w-4 h-4" />
+                Nová udalosť
+              </button>
+            </div>
+
+            {/* Weekday Headers */}
+            <div className="grid grid-cols-7 gap-1 mb-2">
+              {WEEKDAYS.map(day => (
+                <div key={day} className="text-center py-2 text-xs font-medium" style={{ color: D.muted }}>
+                  {day}
+                </div>
+              ))}
+            </div>
+
+            {/* Calendar Grid */}
+            <div className="grid grid-cols-7 gap-1">
+              {calendarDays.map((day, idx) => {
+                if (!day) return <div key={`empty-${idx}`} className="aspect-square" />;
+                
+                const date = new Date(year, month, day);
+                const dateStr = date.toISOString().split("T")[0];
+                const dayEvents = events.filter(e => e.date === dateStr);
+                const isToday = new Date().toDateString() === date.toDateString();
+                const isSelected = selectedDate?.toDateString() === date.toDateString();
+
+                return (
+                  <motion.button
+                    key={day}
+                    onClick={() => setSelectedDate(date)}
+                    className="aspect-square p-2 rounded-xl flex flex-col items-start justify-start transition-all"
+                    style={{
+                      background: isSelected ? D.indigoDim : isToday ? "rgba(99,102,241,0.1)" : "rgba(255,255,255,0.02)",
+                      border: isSelected ? `1px solid ${D.indigoBorder}` : isToday ? `1px solid ${D.indigo}` : "1px solid transparent",
+                    }}
+                    whileHover={{ backgroundColor: "rgba(99,102,241,0.08)" }}>
+                    <span className={`text-sm font-medium ${isToday ? "text-indigo-400" : ""}`} style={{ color: isToday ? D.indigo : D.text }}>
+                      {day}
+                    </span>
+                    {dayEvents.length > 0 && (
+                      <div className="flex gap-0.5 mt-auto">
+                        {dayEvents.slice(0, 3).map((e, i) => (
+                          <div key={i} className="w-1.5 h-1.5 rounded-full" style={{ background: EVENT_TYPE_COLORS[e.type] }} />
+                        ))}
+                        {dayEvents.length > 3 && (
+                          <span className="text-[0.5rem]" style={{ color: D.muted }}>+{dayEvents.length - 3}</span>
+                        )}
+                      </div>
+                    )}
+                  </motion.button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Day Detail Panel */}
+          <div className="w-80 flex-shrink-0 border-l flex flex-col" style={{ borderColor: D.indigoBorder }}>
+            <div className="p-4" style={{ borderBottom: `1px solid ${D.indigoBorder}` }}>
+              <h3 className="font-bold" style={{ color: D.text }}>
+                {selectedDate ? selectedDate.toLocaleDateString("sk-SK", { weekday: "long", day: "numeric", month: "long" }) : "Vyberte dátum"}
+              </h3>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto p-3 space-y-2">
+              {selectedDateEvents.length === 0 ? (
+                <div className="text-center py-8">
+                  <Calendar className="w-8 h-8 mx-auto mb-2" style={{ color: D.mutedDark }} />
+                  <p className="text-xs" style={{ color: D.muted }}>Žiadne udalosti</p>
+                </div>
+              ) : (
+                selectedDateEvents.map(event => (
+                  <motion.button
+                    key={event.id}
+                    onClick={() => setSelectedEvent(event)}
+                    className="w-full text-left p-3 rounded-xl transition-all"
+                    style={{
+                      background: selectedEvent?.id === event.id ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.03)",
+                      border: `1px solid ${selectedEvent?.id === event.id ? D.indigoBorder : "transparent"}`,
+                    }}
+                    whileHover={{ backgroundColor: "rgba(255,255,255,0.05)" }}>
+                    <div className="flex items-start gap-3">
+                      <div className="w-2 h-2 rounded-full mt-1.5 flex-shrink-0" style={{ background: EVENT_TYPE_COLORS[event.type] }} />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-medium" style={{ color: D.indigo }}>{event.time}</span>
+                          <span className="px-1.5 py-0.5 rounded text-[0.6rem] font-medium"
+                            style={{ background: EVENT_TYPE_COLORS[event.type] + "20", color: EVENT_TYPE_COLORS[event.type] }}>
+                            {EVENT_TYPE_LABELS[event.type]}
+                          </span>
+                        </div>
+                        <p className="text-sm font-medium truncate" style={{ color: D.text }}>{event.title}</p>
+                        {event.contact && (
+                          <p className="text-xs truncate" style={{ color: D.muted }}>
+                            <User className="w-3 h-3 inline mr-1" />
+                            {event.contact}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </motion.button>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Event Detail */}
+          {selectedEvent && (
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="w-80 flex-shrink-0 border-l flex flex-col"
+              style={{ borderColor: D.indigoBorder }}>
+              <div className="p-4 flex items-center justify-between" style={{ borderBottom: `1px solid ${D.indigoBorder}` }}>
+                <h3 className="font-bold" style={{ color: D.text }}>Detail udalosti</h3>
+                <button onClick={() => setSelectedEvent(null)} className="p-1 rounded">
+                  <ChevronRight className="w-4 h-4 rotate-90" style={{ color: D.muted }} />
+                </button>
+              </div>
+              
+              <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                    style={{ background: EVENT_TYPE_COLORS[selectedEvent.type] + "20" }}>
+                    <Calendar className="w-5 h-5" style={{ color: EVENT_TYPE_COLORS[selectedEvent.type] }} />
+                  </div>
+                  <div>
+                    <h4 className="font-bold" style={{ color: D.text }}>{selectedEvent.title}</h4>
+                    <span className="px-2 py-0.5 rounded-lg text-xs"
+                      style={{ background: EVENT_TYPE_COLORS[selectedEvent.type] + "20", color: EVENT_TYPE_COLORS[selectedEvent.type] }}>
+                      {EVENT_TYPE_LABELS[selectedEvent.type]}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3 p-3 rounded-xl" style={{ background: "rgba(255,255,255,0.03)" }}>
+                    <Clock3 className="w-4 h-4" style={{ color: D.indigo }} />
+                    <div>
+                      <p className="text-xs" style={{ color: D.muted }}>Čas</p>
+                      <p className="text-sm" style={{ color: D.text }}>{selectedEvent.time} ({selectedEvent.duration} min)</p>
+                    </div>
+                  </div>
+
+                  {selectedEvent.contact && (
+                    <div className="flex items-center gap-3 p-3 rounded-xl" style={{ background: "rgba(255,255,255,0.03)" }}>
+                      <User className="w-4 h-4" style={{ color: D.indigo }} />
+                      <div>
+                        <p className="text-xs" style={{ color: D.muted }}>Kontakt</p>
+                        <p className="text-sm" style={{ color: D.text }}>{selectedEvent.contact}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {selectedEvent.location && (
+                    <div className="flex items-center gap-3 p-3 rounded-xl" style={{ background: "rgba(255,255,255,0.03)" }}>
+                      <MapPin className="w-4 h-4" style={{ color: D.indigo }} />
+                      <div>
+                        <p className="text-xs" style={{ color: D.muted }}>Miesto</p>
+                        <p className="text-sm" style={{ color: D.text }}>{selectedEvent.location}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="p-3 rounded-xl" style={{ background: "rgba(255,255,255,0.03)" }}>
+                    <p className="text-xs mb-1" style={{ color: D.muted }}>Poznámky</p>
+                    <p className="text-sm" style={{ color: D.text }}>{selectedEvent.notes}</p>
+                  </div>
+                </div>
+
+                <div className="flex gap-2">
+                  <button className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-sm font-medium transition-all"
+                    style={{ background: D.indigoDim, border: `1px solid ${D.indigoBorder}`, color: D.text }}>
+                    <Phone className="w-4 h-4" />
+                    Zavolať
+                  </button>
+                  <Link href="/crm" className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-sm font-medium transition-all"
+                    style={{ background: "linear-gradient(135deg,#6366f1,#8b5cf6)", color: "white" }}>
+                    <Users className="w-4 h-4" />
+                    CRM
+                  </Link>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </div>
+      </main>
+    </div>
+  );
+}

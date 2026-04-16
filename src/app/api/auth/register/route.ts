@@ -8,7 +8,6 @@ import { getSiteConfig } from "@/config/site-settings";
 
 const config = getSiteConfig();
 
-const DEFAULT_CREDITS = config.ai.requestLimits.basic;
 const DEFAULT_PLAN = "basic" as const;
 
 export async function POST(req: NextRequest) {
@@ -43,11 +42,10 @@ export async function POST(req: NextRequest) {
         password: hashedPassword,
         name: name ?? null,
         plan: DEFAULT_PLAN,
-        credits: DEFAULT_CREDITS,
       },
     });
 
-    await createSession({ userId: user.id, email: user.email, role: user.role });
+    await createSession({ userId: user.id, email: user.email, role: user.role, membershipTier: user.membershipTier });
 
     return NextResponse.json({ success: true }, { status: 201 });
   } catch (error) {
