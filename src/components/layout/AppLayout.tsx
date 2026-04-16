@@ -69,7 +69,7 @@ export default function AppLayout({ children, title, subtitle, user }: AppLayout
 
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: "#05070f", color: "#eef2ff" }}>
-      <NeuralBackground className="!z-0" />
+      <NeuralBackground />
 
       {/* Sidebar - EXACT same style as DashboardClient */}
       <aside className="w-16 md:w-60 flex-shrink-0 flex flex-col h-full z-10" style={{ ...GLASS, borderRight: `1px solid ${D.indigoBorder}` }}>

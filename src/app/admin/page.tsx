@@ -30,15 +30,15 @@ export default async function AdminPage() {
       id: true, email: true, name: true,
       role: true, plan: true, membershipTier: true, createdAt: true,
       _count: { select: { aiRequests: true } },
-      dailyUsages: { where: { date: today }, select: { count: true } },
+      dailyUsage: { where: { date: today }, select: { count: true } },
     },
     orderBy: { createdAt: "desc" },
   });
 
   type RawUser = typeof rawUsers[number];
   const users = rawUsers.map((row: RawUser) => {
-    const { dailyUsages, ...u } = row;
-    return { ...u, todayUsage: dailyUsages[0]?.count ?? 0 };
+    const { dailyUsage, ...u } = row;
+    return { ...u, todayUsage: dailyUsage[0]?.count ?? 0 };
   });
 
   const [totalRequests, planCounts, recentRequests] = await Promise.all([

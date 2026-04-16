@@ -76,7 +76,7 @@ interface DashboardClientProps {
     email: string;
     name: string | null;
     plan: string;
-    credits: number;
+    credits?: number;
     role: string;
   };
 }
@@ -115,7 +115,7 @@ const GLASS: React.CSSProperties = {
 
 export default function DashboardClient({ user }: DashboardClientProps) {
   const displayName = user.name ?? user.email.split("@")[0];
-  const [credits, setCredits] = useState(user.credits);
+  const [credits, setCredits] = useState(user.credits ?? 0);
   const [activeModule, setActiveModule] = useState("dashboard");
   const [messages, setMessages] = useState<ChatMessage[]>([
     { role: "ai", content: dashboard.aiReady },
@@ -288,7 +288,7 @@ export default function DashboardClient({ user }: DashboardClientProps) {
   }
 
   const creditsColor = credits > 20 ? "#10b981" : credits > 5 ? "#f59e0b" : "#ef4444";
-  const creditsPercent = Math.min(100, (credits / Math.max(user.credits, 1)) * 100);
+  const creditsPercent = Math.min(100, (credits / Math.max(user.credits ?? 1, 1)) * 100);
 
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: "#05070f", color: "#eef2ff" }}>

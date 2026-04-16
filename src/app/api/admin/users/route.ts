@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
         membershipTier: true,
         createdAt: true,
         _count: { select: { aiRequests: true } },
-        dailyUsages: {
+        dailyUsage: {
           where: { date: today },
           select: { count: true },
         },
@@ -32,8 +32,8 @@ export async function GET(req: NextRequest) {
 
     type RawUser = typeof users[number];
     const mapped = (users as RawUser[]).map((row) => {
-      const { dailyUsages, ...u } = row;
-      return { ...u, todayUsage: dailyUsages[0]?.count ?? 0 };
+      const { dailyUsage, ...u } = row;
+      return { ...u, todayUsage: dailyUsage[0]?.count ?? 0 };
     });
 
     return NextResponse.json({ users: mapped });

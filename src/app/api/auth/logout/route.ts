@@ -1,7 +1,8 @@
+// src/app/api/auth/logout/route.ts
 import { NextResponse } from "next/server";
-import { deleteSession } from "@/lib/auth";
+import { clearSessionCookie } from "@/lib/auth";
 
 export async function POST() {
-  await deleteSession();
-  return NextResponse.redirect(new URL("/login", process.env.NEXT_PUBLIC_URL ?? "http://localhost:3000"));
+  await clearSessionCookie();
+  return NextResponse.json({ ok: true });
 }

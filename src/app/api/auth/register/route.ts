@@ -1,32 +1,33 @@
+// src/app/api/auth/register/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
+import { setSessionCookie } from "@/lib/auth";
 import { registerSchema } from "@/lib/validations";
-import { createSession } from "@/lib/auth";
 import { rateLimit } from "@/lib/rate-limit";
 import { getSiteConfig } from "@/config/site-settings";
 
-const config = getSiteConfig();
-
-const DEFAULT_PLAN = "basic" as const;
+const { security } = getSiteConfig();
 
 export async function POST(req: NextRequest) {
-  const limited = rateLimit(req, config.security.rateLimit.auth, "register");
+  // Rate limiting
+  const limited = rateLimit(req, security.rateLimit.auth, "register");
   if (limited) return limited;
 
   try {
     const body = await req.json();
-    const parsed = registerSchema.safeParse(body);
+    const result = registerSchema.safeParse(body);
 
-    if (!parsed.success) {
+    if (!result.success) {
       return NextResponse.json(
-        { error: parsed.error.issues[0].message },
+        { error: result.error.issues[0]?.message ?? "Neplatné údaje" },
         { status: 400 }
       );
     }
 
-    const { email, password, name } = parsed.data;
+    const { email, password, name } = result.data;
 
+    // Kontrola existujúceho usera
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
       return NextResponse.json(
@@ -35,32 +36,34 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const hashedPassword = await bcrypt.hash(password, config.security.bcryptRounds);
+    // Hash hesla
+    const hashed = await bcrypt.hash(password, security.bcryptRounds);
+
+    // Vytvorenie usera
     const user = await prisma.user.create({
       data: {
         email,
-        password: hashedPassword,
+        password: hashed,
         name: name ?? null,
-        plan: DEFAULT_PLAN,
+        role: "USER",
+        membershipTier: "BASIC",
       },
+      select: { id: true, email: true, name: true, role: true, membershipTier: true },
     });
 
-    await createSession({ userId: user.id, email: user.email, role: user.role, membershipTier: user.membershipTier });
+    // Nastavenie session
+    await setSessionCookie({
+      userId: user.id,
+      email: user.email,
+      role: user.role,
+      membershipTier: user.membershipTier,
+    });
 
-    return NextResponse.json({ success: true }, { status: 201 });
-  } catch (error) {
-    console.error("[REGISTER]", error);
-    const msg = error instanceof Error ? error.message : "";
-    const isDbError =
-      msg.includes("connect") ||
-      msg.includes("ECONNREFUSED") ||
-      msg.includes("P1001") ||
-      msg.includes("P1002") ||
-      msg.includes("P1008");
+    return NextResponse.json({ ok: true, user: { id: user.id, email: user.email, name: user.name } });
+  } catch (err) {
+    console.error("[REGISTER]", err);
     return NextResponse.json(
-      { error: isDbError
-          ? "Databázové systémy sú dočasne offline. Skúste to neskôr."
-          : "Nastala chyba servera. Skúste to znova neskôr." },
+      { error: "Registrácia zlyhala. Skúste to neskôr." },
       { status: 500 }
     );
   }

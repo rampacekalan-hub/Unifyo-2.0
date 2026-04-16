@@ -1,13 +1,22 @@
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 require("dotenv").config({ path: require("path").resolve(__dirname, "../.env") });
 
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, MembershipTier } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
 const prisma = new PrismaClient({ adapter } as ConstructorParameters<typeof PrismaClient>[0]);
 
-const PLANS = [
+const PLANS: Array<{
+  tier: MembershipTier;
+  label: string;
+  dailyRequests: number | null;
+  memorySlots: number;
+  contextWindow: number;
+  userPolicies: number;
+  price: number;
+  description: string;
+}> = [
   {
     tier: "BASIC",
     label: "Basic",

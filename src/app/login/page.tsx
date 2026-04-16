@@ -1,140 +1,187 @@
 "use client";
+// src/app/login/page.tsx
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { toast } from "sonner";
-import { Eye, EyeOff, Loader2, ArrowRight } from "lucide-react";
-import NeuralBackground from "@/components/ui/NeuralBackground";
+import { Loader2, Eye, EyeOff } from "lucide-react";
 import { getSiteConfig } from "@/config/site-settings";
+import { toast } from "sonner";
 
-const config = getSiteConfig();
-const { auth } = config.texts;
+const { branding, texts } = getSiteConfig();
+const B = branding.colors;
 
 export default function LoginPage() {
+  return (
+    <Suspense fallback={<main className="min-h-screen" style={{ background: B.background }} />}>
+      <LoginForm />
+    </Suspense>
+  );
+}
+
+function LoginForm() {
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
+  const params = useSearchParams();
+  const from = params.get("from") ?? "/dashboard";
+
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [showPass, setShowPass] = useState(false);
-  const [form, setForm] = useState({ email: "", password: "" });
+  const [loading, setLoading] = useState(false);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (loading) return;
     setLoading(true);
+
     try {
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ email, password }),
       });
+
       const data = await res.json();
+
       if (!res.ok) {
-        toast.error(data.error ?? "Nastala chyba");
+        toast.error(data.error ?? "Prihlásenie zlyhalo");
+        setLoading(false);
         return;
       }
-      toast.success("Prihlásenie úspešné!");
-      router.push("/dashboard");
+
+      toast.success("Prihlásenie úspešné");
+      router.push(from);
+      router.refresh();
     } catch {
-      toast.error("Nepodarilo sa spojiť so serverom. Skúste to znova.");
-    } finally {
+      toast.error("Sieťová chyba. Skúste to neskôr.");
       setLoading(false);
     }
-  };
-
-  const inputClass = "w-full h-11 px-4 rounded-xl text-sm text-white placeholder:text-[#374151] focus:outline-none transition-all duration-200"
-    + " bg-white/[0.04] border border-white/[0.08] focus:border-[#7c3aed] focus:shadow-[0_0_0_3px_rgba(124,58,237,0.18)]";
+  }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 relative overflow-hidden"
-      style={{ background: "#05070f" }}>
-      <NeuralBackground themeEngine={config.branding.themeEngine} />
-
+    <main
+      className="min-h-screen flex items-center justify-center p-4"
+      style={{ background: B.background }}
+    >
       <motion.div
-        initial={{ opacity: 0, y: 24 }}
+        initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, ease: "easeOut" }}
-        className="w-full max-w-md"
+        transition={{ duration: 0.45, ease: [0.21, 0.47, 0.32, 0.98] }}
+        className="w-full max-w-sm"
       >
         {/* Logo */}
-        <Link href="/" className="flex items-center gap-2 justify-center mb-8">
-          <div className="w-9 h-9 rounded-xl flex items-center justify-center"
-            style={{ background: "linear-gradient(135deg,#7c3aed,#06b6d4)", boxShadow: "0 0 20px rgba(124,58,237,0.45)" }}>
-            <span className="text-white text-[11px] font-black">U</span>
-          </div>
-          <span className="font-bold text-lg tracking-tight" style={{ color: "#eef2ff" }}>{config.name}</span>
-        </Link>
+        <div className="text-center mb-8">
+          <h1 className="text-2xl font-black tracking-tight" style={{ color: B.text }}>
+            Unifyo
+          </h1>
+          <p className="text-sm mt-1" style={{ color: B.textMuted }}>
+            {texts.auth.loginSubtitle}
+          </p>
+        </div>
 
-        {/* Glassmorphism card */}
-        <div style={{
-          borderRadius: "20px",
-          border: "1px solid rgba(139,92,246,0.18)",
-          background: "rgba(12,15,26,0.75)",
-          backdropFilter: "blur(24px)",
-          WebkitBackdropFilter: "blur(24px)",
-          boxShadow: "0 0 0 1px rgba(139,92,246,0.08), 0 32px 64px rgba(0,0,0,0.5), 0 0 80px rgba(124,58,237,0.08)",
-          padding: "32px",
-        }}>
-          <div className="mb-7 text-center">
-            <h1 className="text-2xl font-bold tracking-tight mb-1.5" style={{ color: "#eef2ff" }}>{auth.loginTitle}</h1>
-            <p className="text-sm" style={{ color: "#64748b" }}>{auth.loginSubtitle}</p>
-          </div>
+        {/* Card */}
+        <div
+          className="rounded-2xl p-6"
+          style={{
+            background: B.surface,
+            border: `1px solid ${B.border}`,
+            backdropFilter: "blur(20px)",
+          }}
+        >
+          <h2 className="text-lg font-bold mb-5" style={{ color: B.text }}>
+            {texts.auth.loginTitle}
+          </h2>
 
-          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium tracking-wide" style={{ color: "#94a3b8" }}>E-mail</label>
-              <input name="email" type="email" autoComplete="email" required
-                value={form.email} onChange={handleChange} placeholder="vas@email.sk"
-                className={inputClass} />
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Email */}
+            <div>
+              <label className="block text-xs font-medium mb-1.5" style={{ color: B.textMuted }}>
+                E-mail
+              </label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="vas@email.sk"
+                required
+                autoComplete="email"
+                className="w-full px-3.5 py-2.5 rounded-xl text-sm outline-none transition-all"
+                style={{
+                  background: "rgba(255,255,255,0.04)",
+                  border: `1px solid ${B.border}`,
+                  color: B.text,
+                }}
+                onFocus={(e) => (e.target.style.borderColor = B.primary)}
+                onBlur={(e) => (e.target.style.borderColor = B.border)}
+              />
             </div>
 
-            <div className="flex flex-col gap-1.5">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-medium tracking-wide" style={{ color: "#94a3b8" }}>Heslo</label>
-                <Link href="/forgot-password" className="text-[0.72rem] transition-colors hover:underline"
-                  style={{ color: "#475569" }}
-                  onMouseEnter={e => (e.currentTarget.style.color = "#8b5cf6")}
-                  onMouseLeave={e => (e.currentTarget.style.color = "#475569")}>
-                  Zabudnuté heslo?
-                </Link>
-              </div>
+            {/* Heslo */}
+            <div>
+              <label className="block text-xs font-medium mb-1.5" style={{ color: B.textMuted }}>
+                Heslo
+              </label>
               <div className="relative">
-                <input name="password" type={showPass ? "text" : "password"}
-                  autoComplete="current-password" required
-                  value={form.password} onChange={handleChange} placeholder="Vaše heslo"
-                  className={inputClass + " pr-11"} />
-                <button type="button" onClick={() => setShowPass(v => !v)} tabIndex={-1}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 transition-colors"
-                  style={{ color: "#475569" }}
-                  onMouseEnter={e => (e.currentTarget.style.color = "#eef2ff")}
-                  onMouseLeave={e => (e.currentTarget.style.color = "#475569")}>
+                <input
+                  type={showPass ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  required
+                  autoComplete="current-password"
+                  className="w-full px-3.5 py-2.5 rounded-xl text-sm outline-none transition-all pr-10"
+                  style={{
+                    background: "rgba(255,255,255,0.04)",
+                    border: `1px solid ${B.border}`,
+                    color: B.text,
+                  }}
+                  onFocus={(e) => (e.target.style.borderColor = B.primary)}
+                  onBlur={(e) => (e.target.style.borderColor = B.border)}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPass((v) => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2"
+                  style={{ color: B.textDim }}
+                >
                   {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
             </div>
 
-            <button type="submit" disabled={loading}
-              className="mt-2 h-11 flex items-center justify-center gap-2 rounded-xl font-semibold text-white text-sm transition-all duration-300 disabled:opacity-60"
+            {/* Submit */}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-2.5 rounded-xl text-sm font-semibold transition-all active:scale-[0.98] disabled:opacity-60 mt-2"
               style={{
-                background: "linear-gradient(135deg,#7c3aed,#4f46e5)",
-                boxShadow: "0 0 0 1px rgba(124,58,237,0.4), 0 4px 20px rgba(124,58,237,0.3)",
-              }}>
-              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : (<>{auth.loginTitle} <ArrowRight className="w-4 h-4" /></>)}
+                background: `linear-gradient(135deg, ${B.primary}, #5b21b6)`,
+                color: "#fff",
+                boxShadow: `0 0 20px ${B.primaryGlow}`,
+              }}
+            >
+              {loading ? (
+                <Loader2 className="w-4 h-4 animate-spin mx-auto" />
+              ) : (
+                "Prihlásiť sa"
+              )}
             </button>
           </form>
-
-          <div className="mt-6 pt-5 text-center" style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}>
-            <p className="text-sm" style={{ color: "#475569" }}>
-              Nemáte účet?{" "}
-              <Link href="/register" className="font-medium transition-colors hover:underline"
-                style={{ color: "#8b5cf6" }}>Registrujte sa zadarmo</Link>
-            </p>
-          </div>
         </div>
+
+        {/* Register link */}
+        <p className="text-center text-sm mt-5" style={{ color: B.textDim }}>
+          Nemáte účet?{" "}
+          <Link
+            href="/register"
+            className="font-medium transition-colors"
+            style={{ color: B.violet }}
+          >
+            Zaregistrujte sa
+          </Link>
+        </p>
       </motion.div>
-    </div>
+    </main>
   );
 }

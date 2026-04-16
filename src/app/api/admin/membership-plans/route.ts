@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import type { MembershipTier } from "@prisma/client";
 import { z } from "zod";
 
 function isAdmin(role: string) {
@@ -8,7 +9,16 @@ function isAdmin(role: string) {
 }
 
 // Seed defaults — used only on first GET if DB is empty
-const SEED_PLANS = [
+const SEED_PLANS: Array<{
+  tier: MembershipTier;
+  label: string;
+  dailyRequests: number | null;
+  memorySlots: number;
+  contextWindow: number;
+  userPolicies: number;
+  price: number;
+  description: string;
+}> = [
   {
     tier: "BASIC",
     label: "Basic",

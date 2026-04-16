@@ -123,7 +123,7 @@ export async function PATCH(req: NextRequest) {
   const purge = purgeSchema.safeParse(body);
   if (purge.success) {
     const count = await purgeUserMemories(purge.data.userId);
-    await prisma.auditLog.create({ data: { adminEmail: session.email, action: "PURGE", metadata: { userId: purge.data.userId, count } } });
+    await prisma.auditLog.create({ data: { adminEmail: session.email, action: "PURGE", targetId: purge.data.userId, after: { count } as object } });
     return NextResponse.json({ success: true, deleted: count });
   }
 
@@ -146,7 +146,7 @@ export async function PATCH(req: NextRequest) {
       affected = r.count;
     }
     await prisma.auditLog.create({
-      data: { adminEmail: session.email, action: `BULK_${action.toUpperCase()}`, targetIds: ids, metadata: { value, affected } },
+      data: { adminEmail: session.email, action: `BULK_${action.toUpperCase()}`, after: { ids, value, affected } as object },
     });
     return NextResponse.json({ success: true, affected });
   }

@@ -1,25 +1,19 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
+// Unifyo 2.0 — Prisma schema
+// Zdroj pravdy pre databázu. Každá tabuľka sa riadi odtiaľto.
 
 generator client {
-  provider        = "prisma-client-js"
-  previewFeatures = ["driverAdapters"]
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
 }
 
+// ── Enumy ────────────────────────────────────────────────────────
 enum Role {
   USER
   ADMIN
   SUPERADMIN
-}
-
-enum Plan {
-  basic
-  pro
-  enterprise
 }
 
 enum MembershipTier {
@@ -28,6 +22,13 @@ enum MembershipTier {
   ENTERPRISE
 }
 
+enum Plan {
+  basic
+  pro
+  enterprise
+}
+
+// ── Používateľ ───────────────────────────────────────────────────
 model User {
   id             String         @id @default(cuid())
   email          String         @unique
@@ -36,202 +37,195 @@ model User {
   role           Role           @default(USER)
   plan           Plan           @default(basic)
   membershipTier MembershipTier @default(BASIC)
-  lastActiveAt   DateTime?
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
+  lastActiveAt   DateTime?
 
   aiRequests    AiRequest[]
-  dailyUsages   DailyUsage[]
-  userPolicies  UserPolicy[]
-  conversations Conversation[]
+  dailyUsage    DailyUsage[]
+  neuralMemory  NeuralMemory[]
   crmContacts   CrmContact[]
   calendarTasks CalendarTask[]
+  conversations Conversation[]
+  userPolicies  UserPolicy[]
 }
 
-// ── Chat Conversations ─────────────────────────────────────────
-model Conversation {
+// ── AI requesty (audit / usage) ──────────────────────────────────
+model AiRequest {
   id        String   @id @default(cuid())
   userId    String
-  title     String   @default("Nová konverzácia")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  module    String
+  tokens    Int      @default(0)
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  user     User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  messages ConversationMsg[]
 
   @@index([userId, createdAt])
 }
 
-model ConversationMsg {
-  id             String   @id @default(cuid())
-  conversationId String
-  role           String   // "user" | "assistant"
-  content        String
-  tokens         Int      @default(0)
-  createdAt      DateTime @default(now())
+// ── Denný usage counter (tier limit) ─────────────────────────────
+model DailyUsage {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date      String
+  count     Int      @default(0)
+  updatedAt DateTime @updatedAt
 
-  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-
-  @@index([conversationId, createdAt])
+  @@unique([userId, date])
+  @@index([userId, date])
 }
 
-// ── CRM ────────────────────────────────────────────────────────
+// ── Neural memory (hlavný pamäťový substrát AI) ──────────────────
+model NeuralMemory {
+  id                String    @id @default(cuid())
+  userId            String?
+  sessionId         String?
+  module            String    @default("dashboard")
+  role              String
+  content           String
+  summary           String?
+  embedding         Json?
+  importance        Float     @default(0.5)
+  isEdited          Boolean   @default(false)
+  context           String    @default("work")
+  anonymizedContent String?
+  confidenceScore   Float     @default(0.5)
+  emotionalTone     String    @default("neutral")
+  isSimulated       Boolean   @default(false)
+  relevanceTTL      DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, module])
+  @@index([createdAt])
+  @@index([userId, context])
+  @@index([userId, emotionalTone])
+  @@index([relevanceTTL])
+}
+
+// ── CRM ──────────────────────────────────────────────────────────
 model CrmContact {
   id        String    @id @default(cuid())
   userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   name      String
   company   String?
   email     String?
   phone     String?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
+  notes     CrmNote[]
 
-  user  User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  notes CrmNote[]
-
-  @@index([userId])
+  @@index([userId, updatedAt])
 }
 
 model CrmNote {
-  id        String   @id @default(cuid())
+  id        String     @id @default(cuid())
   contactId String
+  contact   CrmContact @relation(fields: [contactId], references: [id], onDelete: Cascade)
   content   String
-  createdAt DateTime @default(now())
+  createdAt DateTime   @default(now())
 
-  contact CrmContact @relation(fields: [contactId], references: [id], onDelete: Cascade)
-
-  @@index([contactId])
+  @@index([contactId, createdAt])
 }
 
-// ── Calendar ───────────────────────────────────────────────────
+// ── Kalendár ─────────────────────────────────────────────────────
 model CalendarTask {
   id          String   @id @default(cuid())
   userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   title       String
   description String?
-  date        String   // YYYY-MM-DD
-  time        String?  // HH:MM
+  date        String // YYYY-MM-DD
+  time        String? // HH:MM
   done        Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
   @@index([userId, date])
 }
 
-model AiRequest {
-  id        String   @id @default(cuid())
+// ── Konverzácie (AI chat histórie) ───────────────────────────────
+model Conversation {
+  id        String            @id @default(cuid())
   userId    String
-  module    String
-  tokens    Int      @default(0)
-  createdAt DateTime @default(now())
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String            @default("Nová konverzácia")
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+  messages  ConversationMsg[]
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId, updatedAt])
 }
 
-// ── Daily usage counter per user per day ──────────────────────
-model DailyUsage {
+model ConversationMsg {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role           String
+  content        String
+  tokens         Int          @default(0)
+  createdAt      DateTime     @default(now())
+
+  @@index([conversationId, createdAt])
+}
+
+// ── Membership plans (upraviteľné adminom v reálnom čase) ────────
+model MembershipPlan {
+  tier          MembershipTier @id
+  label         String
+  dailyRequests Int?
+  memorySlots   Int
+  contextWindow Int
+  userPolicies  Int
+  price         Float
+  description   String
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+// ── Globálne neural policies (admin) ─────────────────────────────
+model NeuralPolicy {
   id        String   @id @default(cuid())
-  userId    String
-  date      String   // YYYY-MM-DD
-  count     Int      @default(0)
+  name      String
+  rule      String
+  severity  String   @default("medium") // low | medium | high | critical
+  context   String   @default("all") // all | personal | work
+  isActive  Boolean  @default(true)
+  createdBy String
+  createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, date])
-  @@index([userId, date])
+  @@index([isActive])
+  @@index([context])
 }
 
-// ── Membership Plans — editable tier limits stored in DB ──────
-model MembershipPlan {
-  id             String   @id @default(cuid())
-  tier           String   @unique // "BASIC" | "PREMIUM" | "ENTERPRISE"
-  label          String
-  dailyRequests  Int?     // null = unlimited
-  memorySlots    Int
-  contextWindow  Int
-  userPolicies   Int      @default(2)   // max personal policies
-  price          Float    @default(0)   // monthly EUR price (display only)
-  description    String   @default("")
-  updatedAt      DateTime @updatedAt
-
-  @@index([tier])
-}
-
-// ── User Personal Policies — per-user AI instructions ────────
+// ── Používateľské policies (osobné pravidlá pre AI) ──────────────
 model UserPolicy {
   id        String   @id @default(cuid())
   userId    String
-  name      String   // short label, e.g. "Vždy mi tykaj"
-  rule      String   // injected after global policies
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  rule      String
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId, isActive])
+  @@index([userId])
 }
 
-// ── Neural Policy Engine — top-priority AI instructions ────────
-model NeuralPolicy {
-  id          String   @id @default(cuid())
-  name        String   // short label, e.g. "No financial advice"
-  rule        String   // full instruction text injected into system prompt
-  severity    String   @default("medium") // "low" | "medium" | "high" | "critical"
-  context     String   @default("all")   // "all" | "personal" | "work"
-  isActive    Boolean  @default(true)
-  createdBy   String?  // admin email
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@index([isActive, severity])
-  @@index([context])
-}
-
-// ── Audit Trail — immutable log of NeuralMemory changes ────────
+// ── Audit log (admin akcie) ──────────────────────────────────────
 model AuditLog {
-  id          String   @id @default(cuid())
-  adminEmail  String
-  action      String   // "EDIT" | "DELETE" | "ARCHIVE" | "BULK_DELETE" | "BULK_ARCHIVE" | "RECATEGORIZE" | "PURGE"
-  targetId    String?  // NeuralMemory.id (null for bulk)
-  targetIds   Json?    // array of ids for bulk actions
-  before      Json?    // snapshot of changed fields before
-  after       Json?    // snapshot of changed fields after
-  metadata    Json?    // extra context (e.g. reason, filter used)
-  createdAt   DateTime @default(now())
+  id         String   @id @default(cuid())
+  adminEmail String
+  action     String
+  targetId   String?
+  before     Json?
+  after      Json?
+  createdAt  DateTime @default(now())
 
+  @@index([createdAt])
   @@index([adminEmail])
-  @@index([createdAt])
-  @@index([action])
-}
-
-// ── Neural Memory — on-premise vector-ready knowledge store ───
-model NeuralMemory {
-  id                 String   @id @default(cuid())
-  userId             String?  // null = global system memory
-  sessionId          String?  // groups memories from one conversation
-  module             String   @default("dashboard")
-  role               String   // "user" | "assistant" | "system"
-  content            String   // original text (stored locally only)
-  anonymizedContent  String?  // GDPR-safe version sent to admin view
-  summary            String?  // admin-editable distilled knowledge
-  context            String   @default("work") // "personal" | "work" — auto-tagged by AI
-  confidenceScore    Float    @default(0.5)    // 0-1 AI self-evaluation
-  emotionalTone      String   @default("neutral") // "positive"|"negative"|"neutral"|"anxious"|"excited"
-  relevanceTTL       DateTime?                // null = permanent; set = auto-stale after this date
-  embedding          Json?    // placeholder for pgvector
-  importance         Float    @default(0.5)    // 0-1 admin-adjustable weight
-  isEdited           Boolean  @default(false)  // true if admin manually corrected
-  isSimulated        Boolean  @default(false)  // true = Brain Sandbox test entry
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
-
-  @@index([userId, module])
-  @@index([userId, context])
-  @@index([userId, emotionalTone])
-  @@index([createdAt])
-  @@index([relevanceTTL])
 }

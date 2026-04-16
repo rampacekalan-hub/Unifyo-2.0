@@ -1,3 +1,5 @@
+// src/proxy.ts — Next.js 16 proxy (predtým middleware).
+
 import { NextRequest, NextResponse } from "next/server";
 import { jwtVerify } from "jose";
 
@@ -12,7 +14,7 @@ interface JwtPayload {
   role: "USER" | "ADMIN" | "SUPERADMIN";
 }
 
-const PROTECTED  = ["/dashboard"];
+const PROTECTED  = ["/dashboard", "/crm", "/calendar", "/email", "/calls", "/analytics"];
 const AUTH_ONLY  = ["/login", "/register"];
 const ADMIN_ONLY = ["/admin"];
 
@@ -50,18 +52,12 @@ export async function proxy(req: NextRequest) {
   // ── Admin routes ─────────────────────────────────────────────
   if (isAdminOnly) {
     const isAdmin = session?.role === "ADMIN" || session?.role === "SUPERADMIN";
-
     if (!isAdmin) {
-      // [SECURITY_AUDIT] — denied access logged, but 404 returned (obscurity)
       console.log(
-        `[SECURITY_AUDIT] ADMIN_ACCESS_DENIED | ip=${ip} | userId=${session?.userId ?? "anonymous"} | role=${session?.role ?? "none"} | path=${pathname} | ts=${new Date().toISOString()}`
+        `[SECURITY_AUDIT] ADMIN_ACCESS_DENIED | ip=${ip} | userId=${session?.userId ?? "anonymous"} | path=${pathname} | ts=${new Date().toISOString()}`
       );
       return new NextResponse(null, { status: 404 });
     }
-
-    console.log(
-      `[SECURITY_AUDIT] ADMIN_ACCESS_GRANTED | ip=${ip} | userId=${session.userId} | role=${session.role} | path=${pathname} | ts=${new Date().toISOString()}`
-    );
     return NextResponse.next();
   }
 
@@ -73,7 +69,7 @@ export async function proxy(req: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  // ── Auth-only routes ──────────────────────────────────────────
+  // ── Auth-only routes (presmerovanie ak už prihlásený) ─────────
   if (isAuthOnly && session) {
     const dashboardUrl = req.nextUrl.clone();
     dashboardUrl.pathname = "/dashboard";
@@ -85,5 +81,15 @@ export async function proxy(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/admin/:path*", "/login", "/register"],
+  matcher: [
+    "/dashboard/:path*",
+    "/crm/:path*",
+    "/calendar/:path*",
+    "/email/:path*",
+    "/calls/:path*",
+    "/analytics/:path*",
+    "/admin/:path*",
+    "/login",
+    "/register",
+  ],
 };
