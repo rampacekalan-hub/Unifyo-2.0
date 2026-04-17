@@ -3,7 +3,7 @@
 import { useRef, useEffect, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
-import { Bot, Send, Loader2, AlertTriangle, X, Check, Square, Copy, Sparkles, RefreshCw } from "lucide-react";
+import { Bot, Send, Loader2, AlertTriangle, X, Check, Square, Copy, Sparkles, RefreshCw, ArrowDown } from "lucide-react";
 import NeuralBackground from "@/components/ui/NeuralBackground";
 import Sidebar from "@/components/layout/Sidebar";
 import GuidedCard, { type GuidedDraft } from "@/components/ui/GuidedCard";
@@ -118,6 +118,12 @@ export default function DashboardClient({ user }: DashboardClientProps) {
   const { messages, draft, loading, conversationId } = useChatStore();
   const [input, setInput] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  // Track whether user has scrolled away from the bottom. We suppress
+  // auto-scroll in that case — forcing a jump is disruptive mid-read.
+  const [isAtBottom, setIsAtBottom] = useState(true);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const lastMsgCountRef = useRef(0);
 
   // ID of the currently-streaming AI message — the last ai/thinking one while loading.
   const streamingId = loading
@@ -175,9 +181,31 @@ export default function DashboardClient({ user }: DashboardClientProps) {
     return () => es.close();
   }, []);
 
+  // Auto-scroll only when user is already near the bottom. If they've scrolled
+  // up to re-read, we leave them alone and surface a "new messages" pill instead.
   useEffect(() => {
+    const grew = messages.length > lastMsgCountRef.current;
+    lastMsgCountRef.current = messages.length;
+    if (isAtBottom) {
+      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    } else if (grew) {
+      setUnreadCount((n) => n + 1);
+    }
+  }, [messages, draft, isAtBottom]);
+
+  const handleScroll = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const distance = el.scrollHeight - el.scrollTop - el.clientHeight;
+    const atBottom = distance < 80;
+    setIsAtBottom(atBottom);
+    if (atBottom) setUnreadCount(0);
+  }, []);
+
+  const scrollToBottom = useCallback(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, draft]);
+    setUnreadCount(0);
+  }, []);
 
   // ── Send wrapper ────────────────────────────────────────────
   const handleSend = useCallback(async () => {
@@ -330,13 +358,15 @@ export default function DashboardClient({ user }: DashboardClientProps) {
         </header>
 
         {/* Chat panel */}
-        <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="flex-1 flex flex-col overflow-hidden relative">
           <div
+            ref={scrollRef}
+            onScroll={handleScroll}
             role="log"
             aria-live="polite"
             aria-relevant="additions text"
             aria-label="AI rozhovor"
-            className="flex-1 overflow-y-auto px-4 sm:px-6 py-5 space-y-4"
+            className="flex-1 overflow-y-auto px-4 sm:px-6 py-5 space-y-4 relative"
           >
             {showGreeting && (
               <>
@@ -486,6 +516,35 @@ export default function DashboardClient({ user }: DashboardClientProps) {
             </AnimatePresence>
             <div ref={bottomRef} />
           </div>
+
+          {/* Scroll-to-bottom button — shown when user is scrolled up */}
+          <AnimatePresence>
+            {!isAtBottom && (
+              <motion.button
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 8 }}
+                transition={{ duration: 0.2 }}
+                onClick={scrollToBottom}
+                aria-label={unreadCount > 0 ? `${unreadCount} nových správ — skoč dole` : "Skoč dole"}
+                className="absolute left-1/2 -translate-x-1/2 bottom-28 z-20 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium"
+                style={{
+                  background: unreadCount > 0
+                    ? `linear-gradient(135deg,${D.indigo},${D.violet})`
+                    : "rgba(15,18,32,0.85)",
+                  border: `1px solid ${D.indigoBorder}`,
+                  color: unreadCount > 0 ? "#fff" : D.text,
+                  boxShadow: unreadCount > 0
+                    ? `0 0 20px ${D.indigoGlow}`
+                    : "0 6px 20px rgba(0,0,0,0.4)",
+                  backdropFilter: "blur(12px)",
+                }}
+              >
+                <ArrowDown className="w-3 h-3" />
+                {unreadCount > 0 ? `${unreadCount} ${unreadCount === 1 ? "nová správa" : unreadCount < 5 ? "nové správy" : "nových správ"}` : "Najnovšie"}
+              </motion.button>
+            )}
+          </AnimatePresence>
 
           {/* Guided draft — sticky above input */}
           <AnimatePresence>

@@ -6,7 +6,7 @@
 import { useState, useRef, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Bot, Send, X, Loader2, Sparkles, Square, Copy, RefreshCw } from "lucide-react";
+import { Bot, Send, X, Loader2, Sparkles, Square, Copy, RefreshCw, ArrowDown } from "lucide-react";
 import GuidedCard, { type GuidedDraft } from "@/components/ui/GuidedCard";
 import ChatHistory from "@/components/ui/ChatHistory";
 import { chatActions, useChatStore } from "@/lib/chatStore";
@@ -58,10 +58,44 @@ export default function FloatingAIWidget() {
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState("");
   const endRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [isAtBottom, setIsAtBottom] = useState(true);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const lastMsgCountRef = useRef(0);
 
   useEffect(() => {
-    if (isOpen) endRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, draft, isOpen]);
+    if (!isOpen) return;
+    const grew = messages.length > lastMsgCountRef.current;
+    lastMsgCountRef.current = messages.length;
+    if (isAtBottom) {
+      endRef.current?.scrollIntoView({ behavior: "smooth" });
+    } else if (grew) {
+      setUnreadCount((n) => n + 1);
+    }
+  }, [messages, draft, isOpen, isAtBottom]);
+
+  // Reset unread tracker when widget is re-opened.
+  useEffect(() => {
+    if (isOpen) {
+      setUnreadCount(0);
+      setIsAtBottom(true);
+      lastMsgCountRef.current = messages.length;
+    }
+  }, [isOpen, messages.length]);
+
+  const handleScroll = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const distance = el.scrollHeight - el.scrollTop - el.clientHeight;
+    const atBottom = distance < 60;
+    setIsAtBottom(atBottom);
+    if (atBottom) setUnreadCount(0);
+  };
+
+  const scrollToBottom = () => {
+    endRef.current?.scrollIntoView({ behavior: "smooth" });
+    setUnreadCount(0);
+  };
 
   const handleSend = async () => {
     const text = input.trim();
@@ -240,7 +274,7 @@ export default function FloatingAIWidget() {
             </div>
 
             {/* Messages */}
-            <div role="log" aria-live="polite" aria-relevant="additions text" aria-label="AI rozhovor" className="flex-1 overflow-y-auto p-4 space-y-3 min-h-0">
+            <div ref={scrollRef} onScroll={handleScroll} role="log" aria-live="polite" aria-relevant="additions text" aria-label="AI rozhovor" className="flex-1 overflow-y-auto p-4 space-y-3 min-h-0 relative">
               {messages.length === 0 && (
                 <div className="py-4">
                   <div className="text-center mb-4">
@@ -365,6 +399,37 @@ export default function FloatingAIWidget() {
 
               <div ref={endRef} />
             </div>
+
+            {/* Scroll-to-bottom pill — shown when user scrolled up */}
+            <AnimatePresence>
+              {!isAtBottom && (
+                <motion.button
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 6 }}
+                  transition={{ duration: 0.2 }}
+                  onClick={scrollToBottom}
+                  aria-label={unreadCount > 0 ? `${unreadCount} nových správ — skoč dole` : "Skoč dole"}
+                  className="absolute left-1/2 -translate-x-1/2 bottom-20 z-20 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium"
+                  style={{
+                    background: unreadCount > 0
+                      ? `linear-gradient(135deg,${D.indigo},${D.violet})`
+                      : "rgba(15,18,32,0.9)",
+                    border: `1px solid ${D.indigoBorder}`,
+                    color: unreadCount > 0 ? "#fff" : D.text,
+                    boxShadow: unreadCount > 0
+                      ? "0 0 18px rgba(99,102,241,0.45)"
+                      : "0 4px 14px rgba(0,0,0,0.5)",
+                    backdropFilter: "blur(10px)",
+                  }}
+                >
+                  <ArrowDown className="w-3 h-3" />
+                  {unreadCount > 0
+                    ? `${unreadCount} ${unreadCount === 1 ? "nová" : unreadCount < 5 ? "nové" : "nových"}`
+                    : "Dole"}
+                </motion.button>
+              )}
+            </AnimatePresence>
 
             {/* Input */}
             <div className="p-3 flex-shrink-0" style={{ borderTop: `1px solid ${D.indigoBorder}` }}>
