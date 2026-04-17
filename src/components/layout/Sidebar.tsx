@@ -11,6 +11,7 @@ import {
   Bot, Calendar, Mail, Phone, BarChart3, Zap,
   Lock, LogOut, ShieldAlert, Menu, X, Settings as SettingsIcon, LayoutDashboard,
 } from "lucide-react";
+import Avatar from "@/components/ui/Avatar";
 
 export interface SidebarUser {
   id?: string;
@@ -203,6 +204,33 @@ export default function Sidebar({ user, liveToggles }: SidebarProps) {
             >
               System Control
             </span>
+          </Link>
+        )}
+
+        {user && (
+          <Link
+            href="/settings"
+            onClick={() => { if (isMobile) setMobileOpen(false); }}
+            className="w-full flex items-center gap-2 px-2 py-2 rounded-2xl mb-2 transition-all duration-200"
+            style={{
+              background: "rgba(99,102,241,0.06)",
+              border: `1px solid ${D.indigoBorder}`,
+            }}
+          >
+            <Avatar name={user.name} email={user.email} size={28} />
+            <div className={`flex-1 min-w-0 ${isMobile ? "block" : "hidden md:block"}`}>
+              <div
+                className="text-[11px] font-semibold truncate"
+                style={{ color: D.text }}
+              >
+                {user.name || user.email || "Účet"}
+              </div>
+              {user.email && user.name && (
+                <div className="text-[10px] truncate" style={{ color: D.muted }}>
+                  {user.email}
+                </div>
+              )}
+            </div>
           </Link>
         )}
 

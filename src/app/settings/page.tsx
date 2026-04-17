@@ -4,14 +4,16 @@
 // Stub-level implementation: profile edit is live; other sections show "Čoskoro"
 // clearly (not a 404) so every navigation button lands on a real page.
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { toast } from "sonner";
 import {
   User, KeyRound, Bell, Sparkles, LogOut, Save, Loader2, Mail, Shield, Palette,
-  Brain, Thermometer, MessageSquare,
+  Brain, Thermometer, MessageSquare, Camera, Trash2, Download, AlertTriangle,
 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import { loadPrefs, savePrefs, type AiPrefs, type ResponseStyle } from "@/lib/aiPrefs";
+import Avatar, { useAvatar } from "@/components/ui/Avatar";
+import { setAvatarFromFile, clearAvatar } from "@/lib/avatar";
 
 const D = {
   indigo: "#6366f1",
@@ -101,6 +103,7 @@ export default function SettingsPage() {
             <Skeleton />
           ) : (
             <div className="space-y-3">
+              <AvatarField name={me?.name ?? null} email={me?.email ?? null} />
               <Field label="Meno">
                 <input
                   type="text"
@@ -175,6 +178,12 @@ export default function SettingsPage() {
 
         {/* ── Vzhľad ── */}
         <Section icon={Palette} title="Vzhľad" subtitle="Téma, farebný akcent, hustota" comingSoon />
+
+        {/* ── Export dát ── */}
+        <DataExportSection />
+
+        {/* ── Zmazať účet ── */}
+        <DeleteAccountSection email={me?.email ?? ""} />
 
         {/* ── Odhlásenie ── */}
         <div
@@ -413,6 +422,221 @@ function AiPrefsSection() {
         </button>
       </div>
     </Section>
+  );
+}
+
+// ── Avatar upload ──────────────────────────────────────────────
+function AvatarField({ name, email }: { name: string | null; email: string | null }) {
+  const current = useAvatar();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
+
+  const handleFile = async (file: File) => {
+    setBusy(true);
+    try {
+      await setAvatarFromFile(file);
+      toast.success("Avatar aktualizovaný");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Nahrávanie zlyhalo");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Field label="Fotka">
+      <div className="flex items-center gap-4">
+        <div className="relative">
+          <Avatar name={name} email={email} size={64} />
+          {busy && (
+            <div className="absolute inset-0 rounded-full flex items-center justify-center"
+              style={{ background: "rgba(0,0,0,0.5)" }}>
+              <Loader2 className="w-5 h-5 animate-spin text-white" />
+            </div>
+          )}
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <div className="flex gap-2">
+            <button
+              onClick={() => inputRef.current?.click()}
+              disabled={busy}
+              className="px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 disabled:opacity-50"
+              style={{ background: D.indigoDim, border: `1px solid ${D.indigoBorder}`, color: D.text }}
+            >
+              <Camera className="w-3.5 h-3.5" />
+              {current ? "Vymeniť" : "Nahrať"}
+            </button>
+            {current && (
+              <button
+                onClick={() => { clearAvatar(); toast.success("Avatar odstránený"); }}
+                disabled={busy}
+                className="px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 disabled:opacity-50"
+                style={{ background: "rgba(244,63,94,0.1)", border: "1px solid rgba(244,63,94,0.25)", color: "#fca5a5" }}
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                Zmazať
+              </button>
+            )}
+          </div>
+          <p className="text-[0.6rem]" style={{ color: D.mutedDark }}>
+            JPG / PNG, max 5 MB. Uložené v prehliadači.
+          </p>
+        </div>
+        <input
+          ref={inputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) handleFile(file);
+            e.target.value = ""; // allow re-selecting same file
+          }}
+        />
+      </div>
+    </Field>
+  );
+}
+
+// ── Data export (GDPR) ─────────────────────────────────────────
+function DataExportSection() {
+  const [busy, setBusy] = useState(false);
+
+  const handleExport = async () => {
+    setBusy(true);
+    try {
+      const res = await fetch("/api/user/export");
+      if (!res.ok) throw new Error("Export zlyhal");
+      const data = await res.json();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `unifyo-export-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast.success("Export stiahnutý");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Export zlyhal");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Section icon={Download} title="Export dát" subtitle="GDPR: stiahni si všetky svoje údaje ako JSON">
+      <p className="text-xs mb-3" style={{ color: D.muted }}>
+        Export obsahuje tvoj profil, kontakty, úlohy, konverzácie a AI pamäť.
+        Súbor je citlivý — uchovávaj ho v bezpečí.
+      </p>
+      <button
+        onClick={handleExport}
+        disabled={busy}
+        className="px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-2 disabled:opacity-50"
+        style={{ background: D.indigoDim, border: `1px solid ${D.indigoBorder}`, color: D.text }}
+      >
+        {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+        Stiahnuť moje údaje
+      </button>
+    </Section>
+  );
+}
+
+// ── Delete account ─────────────────────────────────────────────
+function DeleteAccountSection({ email }: { email: string }) {
+  const [confirm, setConfirm] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [open, setOpen] = useState(false);
+
+  const handleDelete = async () => {
+    if (confirm !== email) {
+      toast.error("Zadaj svoj email presne rovnako");
+      return;
+    }
+    setBusy(true);
+    try {
+      const res = await fetch("/api/user/delete", { method: "DELETE" });
+      if (res.ok) {
+        toast.success("Účet zmazaný. Zbohom!");
+        window.location.href = "/";
+      } else {
+        const data = await res.json().catch(() => ({}));
+        toast.error(data.error ?? "Mazanie zlyhalo");
+      }
+    } catch {
+      toast.error("Mazanie zlyhalo");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div
+      className="rounded-2xl p-5"
+      style={{
+        background: "rgba(244,63,94,0.05)",
+        border: "1px solid rgba(244,63,94,0.2)",
+      }}
+    >
+      <div className="flex items-start gap-3">
+        <div
+          className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+          style={{ background: "rgba(244,63,94,0.12)", border: "1px solid rgba(244,63,94,0.3)" }}
+        >
+          <AlertTriangle className="w-4 h-4" style={{ color: "#fca5a5" }} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <h3 className="text-sm font-semibold" style={{ color: "#fca5a5" }}>Zmazať účet</h3>
+          <p className="text-xs mt-0.5" style={{ color: D.muted }}>
+            Permanentne zmaže všetky tvoje údaje. Nedá sa vrátiť.
+          </p>
+          {!open ? (
+            <button
+              onClick={() => setOpen(true)}
+              className="mt-3 px-3 py-1.5 rounded-lg text-xs font-medium"
+              style={{ background: "rgba(244,63,94,0.12)", border: "1px solid rgba(244,63,94,0.3)", color: "#fca5a5" }}
+            >
+              Chcem zmazať účet
+            </button>
+          ) : (
+            <div className="mt-3 space-y-2">
+              <p className="text-xs" style={{ color: D.muted }}>
+                Pre potvrdenie napíš svoj email: <span className="font-mono" style={{ color: D.text }}>{email}</span>
+              </p>
+              <input
+                type="email"
+                value={confirm}
+                onChange={(e) => setConfirm(e.target.value)}
+                placeholder={email}
+                className="w-full px-3 py-2 rounded-lg text-sm outline-none"
+                style={{ background: "rgba(244,63,94,0.05)", border: "1px solid rgba(244,63,94,0.25)", color: D.text }}
+              />
+              <div className="flex gap-2">
+                <button
+                  onClick={() => { setOpen(false); setConfirm(""); }}
+                  disabled={busy}
+                  className="px-3 py-1.5 rounded-lg text-xs font-medium"
+                  style={{ background: D.indigoDim, border: `1px solid ${D.indigoBorder}`, color: D.text }}
+                >
+                  Zrušiť
+                </button>
+                <button
+                  onClick={handleDelete}
+                  disabled={busy || confirm !== email}
+                  className="px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 disabled:opacity-40"
+                  style={{ background: "#dc2626", color: "white" }}
+                >
+                  {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                  Permanentne zmazať
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
 
