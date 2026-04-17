@@ -10,7 +10,7 @@ import {
   maskActionCardBlocks,
   stripActionCardBlocks,
 } from "@/lib/extraction-engine";
-import { chatActions, msgId, type ChatMessage } from "@/lib/chatStore";
+import { chatActions, extractUserFacts, msgId, type ChatMessage } from "@/lib/chatStore";
 
 const { errorStates } = getSiteConfig().texts;
 
@@ -70,6 +70,16 @@ export async function sendChat(
   chatActions.addMessage(userMsg);
   chatActions.addMessage(thinkingMsg);
   chatActions.setLoading(true);
+
+  // Regex-scan the user's message for phone/email and update draft immediately.
+  // This keeps the sprievodca robust even when the LLM fails to echo the fact.
+  const facts = extractUserFacts(trimmed);
+  if (facts.phone || facts.email) {
+    chatActions.patchContact({
+      Telefón: facts.phone ?? "",
+      Email:   facts.email ?? "",
+    });
+  }
 
   // Ensure we have a conversation id (creates on first message).
   const convId = await ensureConversation(opts.conversationId, trimmed);

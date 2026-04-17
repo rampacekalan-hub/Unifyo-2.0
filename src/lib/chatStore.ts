@@ -32,12 +32,28 @@ interface StoreState {
 const EMPTY_DRAFT: GuidedDraft = { contact: {}, task: {} };
 
 // Normalise AI's task-title mistakes into a proper action title.
-//   "S Peter Novák"  → "Stretnutie: Peter Novák"
-//   "s Peter"        → "Stretnutie: Peter"
-//   "Peter Novák"    → "Stretnutie: Peter Novák" (bare Capitalised name)
+//   "S Peter Novák"                          → "Stretnutie: Peter Novák"
+//   "Peter Novák zajtra 14:00 Auparku ..."   → "Stretnutie: Peter Novák"  (trims prose)
+//   "s Peter"                                → "Stretnutie: Peter"
 function fixTaskTitle(raw: string): string {
-  const t = raw.trim();
+  let t = raw.trim();
   if (!t) return t;
+
+  // Cut off any AI prose that leaked into the Úloha field:
+  // stop at first sentence-ending punctuation or obvious trailing question-word.
+  const stopIdx = t.search(/[.?!\n]|\s(?:môžeš|mozes|prosím|prosim|kde|aký|aka|máš)/i);
+  if (stopIdx > 0) t = t.slice(0, stopIdx).trim();
+
+  // Hard cap length — titles longer than this are never intentional.
+  if (t.length > 60) t = t.slice(0, 60).replace(/\s+\S*$/, "").trim();
+
+  // "ActionNoun: Name Surname [extra prose/datetime/location…]" — keep only
+  // the action noun + up to 3 capitalised name tokens, drop everything else.
+  const prefixed = t.match(
+    /^((?:Stretnutie|Konzultácia|Telefonát|Hovor|Príprava|Úloha|Schôdzka)\s*:\s*[A-ZÁ-Ž][a-zá-ž]+(?:\s+[A-ZÁ-Ž][a-zá-ž]+){0,2})/
+  );
+  if (prefixed) return prefixed[1].trim();
+
   // Already starts with an action noun — leave untouched.
   if (/^(stretnutie|konzultácia|telefonát|hovor|príprava|úloha|schôdzka|meeting)/i.test(t)) {
     return t;
@@ -45,11 +61,27 @@ function fixTaskTitle(raw: string): string {
   // "S [Name]" / "s [Name]" leading preposition.
   const prep = t.match(/^[sS]\s+(.+)$/);
   if (prep) return `Stretnutie: ${prep[1].trim()}`;
-  // Bare capitalised name (First Last) → default to Stretnutie.
-  if (/^[A-ZÁ-Ž][a-zá-ž]+(?:\s+[A-ZÁ-Ž][a-zá-ž]+){0,2}$/.test(t)) {
-    return `Stretnutie: ${t}`;
+  // Bare capitalised name (First Last …) → default to Stretnutie.
+  if (/^[A-ZÁ-Ž][a-zá-ž]+(?:\s+[A-ZÁ-Ž][a-zá-ž]+){0,3}/.test(t)) {
+    const nameOnly = t.match(/^([A-ZÁ-Ž][a-zá-ž]+(?:\s+[A-ZÁ-Ž][a-zá-ž]+){0,2})/);
+    return `Stretnutie: ${(nameOnly?.[1] ?? t).trim()}`;
   }
   return t;
+}
+
+// Scan the user's raw message for phone/email and auto-fill the draft — this
+// makes the sprievodca robust even when the LLM fails to extract contact data.
+export function extractUserFacts(text: string): { phone?: string; email?: string } {
+  const phoneMatch = text.match(/(?:\+?\d[\d\s\u00a0]{7,15}\d)/);
+  const emailMatch = text.match(/[\w.+-]+@[\w-]+\.[\w.-]+/);
+  const out: { phone?: string; email?: string } = {};
+  if (phoneMatch) {
+    const cleaned = phoneMatch[0].replace(/\s+/g, " ").trim();
+    // Only treat as phone if it has ≥9 digits.
+    if ((cleaned.match(/\d/g) ?? []).length >= 9) out.phone = cleaned;
+  }
+  if (emailMatch) out.email = emailMatch[0];
+  return out;
 }
 
 const INITIAL: StoreState = {
@@ -176,6 +208,29 @@ export const chatActions = {
   },
   clearDraft() {
     state = { ...state, draft: null };
+    emit();
+  },
+  // Patch contact fields directly (e.g. from regex-scanned user message).
+  patchContact(patch: Partial<Record<string, string>>) {
+    const base: GuidedDraft = state.draft ?? {
+      contact: { ...EMPTY_DRAFT.contact },
+      task:    { ...EMPTY_DRAFT.task },
+    };
+    let touched = false;
+    const nextContact = { ...base.contact };
+    for (const [k, v] of Object.entries(patch)) {
+      const val = String(v ?? "").trim();
+      if (!val) continue;
+      if (nextContact[k] !== val) {
+        nextContact[k] = val;
+        touched = true;
+      }
+    }
+    if (!touched) return;
+    state = {
+      ...state,
+      draft: { contact: nextContact, task: { ...base.task } },
+    };
     emit();
   },
   newConversation() {
