@@ -6,6 +6,8 @@ import NeuralBackground from "@/components/ui/NeuralBackground";
 import FloatingAIWidget from "@/components/ui/FloatingAIWidget";
 import CommandPalette from "@/components/ui/CommandPalette";
 import UsageChip from "@/components/ui/UsageChip";
+import ShortcutsModal from "@/components/ui/ShortcutsModal";
+import OnboardingTour from "@/components/onboarding/OnboardingTour";
 import Sidebar, { type SidebarUser } from "@/components/layout/Sidebar";
 
 interface AppLayoutProps {
@@ -99,6 +101,8 @@ export default function AppLayout({ children, subtitle, user }: AppLayoutProps) 
 
         <FloatingAIWidget />
         <CommandPalette />
+        <ShortcutsModal />
+        <OnboardingTour />
       </main>
     </div>
   );

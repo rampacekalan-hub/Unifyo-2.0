@@ -8,6 +8,7 @@ import {
   CalendarDays, Search, LayoutGrid, Rows3,
 } from "lucide-react";
 import { toast } from "sonner";
+import { confirmWithUndo } from "@/lib/undoable";
 import AppLayout from "@/components/layout/AppLayout";
 import EmptyIllustration from "@/components/ui/EmptyIllustration";
 
@@ -230,21 +231,23 @@ function CalendarPageInner() {
   };
 
   async function handleDelete(id: string) {
-    if (!confirm("Naozaj zmazať úlohu?")) return;
-    try {
-      const res = await fetch("/api/calendar/tasks", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id }),
-      });
-      if (res.ok) {
-        toast.success("Úloha zmazaná");
-        if (selectedTask?.id === id) setSelectedTask(null);
-        loadTasks();
-      }
-    } catch {
-      toast.error("Nepodarilo sa zmazať");
-    }
+    const snapshot = tasks;
+    const wasSelected = selectedTask?.id === id;
+    setTasks((prev) => prev.filter((t) => t.id !== id));
+    if (wasSelected) setSelectedTask(null);
+
+    confirmWithUndo({
+      message: "Úloha zmazaná",
+      commit: async () => {
+        const res = await fetch("/api/calendar/tasks", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id }),
+        });
+        if (!res.ok) throw new Error("Delete failed");
+      },
+      onUndo: () => setTasks(snapshot),
+    });
   }
 
   const upcoming = useMemo(() => {

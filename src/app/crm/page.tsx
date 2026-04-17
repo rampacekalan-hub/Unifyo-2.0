@@ -8,6 +8,7 @@ import {
   Users, Calendar, Mail, Search, Plus, Phone, Briefcase, X, Trash2, Loader2, Check,
 } from "lucide-react";
 import { toast } from "sonner";
+import { confirmWithUndo } from "@/lib/undoable";
 import AppLayout from "@/components/layout/AppLayout";
 import EmptyIllustration from "@/components/ui/EmptyIllustration";
 
@@ -176,23 +177,29 @@ function CRMPageInner() {
     }
   }
 
-  // Delete contact
+  // Delete contact — optimistic UI + 5s undo window.
   async function handleDelete(id: string) {
-    if (!confirm("Naozaj zmazať tento kontakt?")) return;
-    try {
-      const res = await fetch("/api/crm/contacts", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id }),
-      });
-      if (res.ok) {
-        toast.success("Kontakt zmazaný");
-        if (selectedContact?.id === id) setSelectedContact(null);
-        loadContacts(searchQuery);
-      }
-    } catch {
-      toast.error("Nepodarilo sa zmazať");
-    }
+    const snapshot = contacts;
+    const wasSelected = selectedContact?.id === id;
+    // Optimistic: hide immediately from the list.
+    setContacts((prev) => prev.filter((c) => c.id !== id));
+    if (wasSelected) setSelectedContact(null);
+
+    confirmWithUndo({
+      message: "Kontakt zmazaný",
+      commit: async () => {
+        const res = await fetch("/api/crm/contacts", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id }),
+        });
+        if (!res.ok) throw new Error("Delete failed");
+      },
+      onUndo: () => {
+        // Restore previous list so order is preserved.
+        setContacts(snapshot);
+      },
+    });
   }
 
   function initials(name: string): string {
