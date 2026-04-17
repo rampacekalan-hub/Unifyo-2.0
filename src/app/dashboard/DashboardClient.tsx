@@ -14,6 +14,18 @@ import { getSiteConfig } from "@/config/site-settings";
 import { useChatStore, chatActions } from "@/lib/chatStore";
 import { sendChat, regenerateLast } from "@/lib/chatEngine";
 
+function formatTime(ts: number): string {
+  const now = Date.now();
+  const diff = now - ts;
+  if (diff < 60000) return "teraz";
+  if (diff < 3600000) return `pred ${Math.floor(diff / 60000)} min`;
+  const d = new Date(ts);
+  const sameDay = new Date().toDateString() === d.toDateString();
+  if (sameDay) return d.toLocaleTimeString("sk-SK", { hour: "2-digit", minute: "2-digit" });
+  return d.toLocaleDateString("sk-SK", { day: "numeric", month: "short" }) + " " +
+    d.toLocaleTimeString("sk-SK", { hour: "2-digit", minute: "2-digit" });
+}
+
 const config = getSiteConfig();
 const { dashboard } = config.texts;
 
@@ -319,7 +331,13 @@ export default function DashboardClient({ user }: DashboardClientProps) {
 
         {/* Chat panel */}
         <div className="flex-1 flex flex-col overflow-hidden">
-          <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-5 space-y-4">
+          <div
+            role="log"
+            aria-live="polite"
+            aria-relevant="additions text"
+            aria-label="AI rozhovor"
+            className="flex-1 overflow-y-auto px-4 sm:px-6 py-5 space-y-4"
+          >
             {showGreeting && (
               <>
                 <motion.div
@@ -451,6 +469,16 @@ export default function DashboardClient({ user }: DashboardClientProps) {
                           </button>
                         </div>
                       )}
+                      {/* Timestamp — appears under bubble on hover */}
+                      {msg.role !== "thinking" && msg.createdAt && (
+                        <time
+                          dateTime={new Date(msg.createdAt).toISOString()}
+                          className={`block text-[0.6rem] mt-1 opacity-0 group-hover:opacity-100 transition-opacity ${msg.role === "user" ? "text-right" : "text-left"}`}
+                          style={{ color: D.muted }}
+                        >
+                          {formatTime(msg.createdAt)}
+                        </time>
+                      )}
                     </div>
                   </div>
                 </motion.div>
@@ -481,6 +509,7 @@ export default function DashboardClient({ user }: DashboardClientProps) {
                 onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
                 placeholder={dashboard.chatPlaceholder}
                 disabled={loading}
+                aria-label="Správa pre AI"
                 className="flex-1 bg-transparent text-sm outline-none"
                 style={{ color: "#eef2ff", caretColor: "#8b5cf6" }} />
               {loading ? (
@@ -500,6 +529,17 @@ export default function DashboardClient({ user }: DashboardClientProps) {
                   <Send className="w-3.5 h-3.5 text-white" />
                 </button>
               )}
+            </div>
+            {/* Keyboard hints */}
+            <div className="flex items-center justify-between mt-2 px-1 text-[0.6rem]" style={{ color: "rgba(148,163,184,0.6)" }}>
+              <span className="flex items-center gap-1.5">
+                <kbd className="px-1.5 py-0.5 rounded" style={{ background: "rgba(99,102,241,0.08)", border: `1px solid ${D.indigoBorder}` }}>↵</kbd>
+                odoslať
+              </span>
+              <span className="flex items-center gap-1.5">
+                <kbd className="px-1.5 py-0.5 rounded" style={{ background: "rgba(99,102,241,0.08)", border: `1px solid ${D.indigoBorder}` }}>⌘K</kbd>
+                rýchle akcie
+              </span>
             </div>
           </div>
         </div>
