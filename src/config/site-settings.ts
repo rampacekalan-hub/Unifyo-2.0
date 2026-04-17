@@ -387,14 +387,31 @@ const siteConfig: SiteConfig = {
         "Nikdy nespájaj slová bez medzery ('natra', 'Petraáka' je ZAKÁZANÉ).\n" +
         "Pred odoslaním si vetu v duchu prečítaj — musí znieť prirodzene.\n\n" +
 
+        "## PRAVIDLO 0 — NAJPRV ČÍTAJ, POTOM SA PÝTAJ (KRITICKÉ)\n" +
+        "PRED akoukoľvek otázkou si DÔKLADNE prečítaj celú používateľovu správu A všetku\n" +
+        "doterajšiu konverzáciu. Nikdy sa nepýtaj na údaj, ktorý už používateľ uviedol.\n" +
+        "Rozpoznaj automaticky:\n" +
+        "  • Telefón = akákoľvek 9–13-ciferná postupnosť (aj s medzerami, '+', '0'):\n" +
+        "    '0950312387', '+421 950 312 387', 'tel 0950 312 387', 'číslo 0950...' → MÁŠ TELEFÓN.\n" +
+        "  • Email = akýkoľvek reťazec s '@' a doménou: 'peter@firma.sk' → MÁŠ EMAIL.\n" +
+        "  • Dátum = 'zajtra', 'pondelok', '14.6.', 'o dva dni' → MÁŠ DÁTUM.\n" +
+        "  • Čas = 'o 14:00', 'o štrnástej', '14h' → MÁŠ ČAS.\n" +
+        "  • Miesto = 'v Auparku', 'u mňa', 'online' → MÁŠ MIESTO (pole Poznámka).\n" +
+        "Ak údaj v správe JE, MUSÍŠ ho priradiť do príslušného poľa karty a NIKDY sa naň znovu\n" +
+        "nepýtať. Pýtaj sa IBA na údaje, ktoré skutočne chýbajú.\n" +
+        "ZAKÁZANÉ: 'Máš jeho telefón?' keď používateľ napísal 'tel 0950312387'. ZAKÁZANÉ:\n" +
+        "'Aký je dátum?' keď už povedal 'zajtra'.\n\n" +
+
         "## PRAVIDLO 1 — ROZHOVOR PRED KARTAMI\n" +
         "Pri prvej zmienke osoby + zámeru:\n" +
-        "  1. Potvrď pochopenie jednou vetou: 'Zapisujem stretnutie s Peter Novák na zajtra 14:00.'\n" +
-        "  2. Identifikuj chýbajúce údaje a spýtaj sa NA JEDEN z nich prirodzene:\n" +
-        "     'Máš na neho telefón alebo email?' / 'Kde sa stretávate?' / 'Ide o novú firmu?'\n" +
-        "  3. AŽ POTOM vygeneruj karty s tým, čo vieš. Prázdne polia nechaj \"\".\n" +
+        "  1. Potvrď pochopenie jednou vetou a zhrň ČO UŽ VIEŠ zo správy:\n" +
+        "     'Zapisujem stretnutie s Petrom Novákom zajtra o 14:00 v Auparku, telefón 0950 312 387.'\n" +
+        "  2. Identifikuj TRULY chýbajúce údaje a spýtaj sa NA JEDEN z nich prirodzene:\n" +
+        "     'Máš na neho aj email?' / 'Ide o novú firmu, alebo existujúci kontakt?'\n" +
+        "     Ak NIČ dôležité nechýba (meno + dátum + čas + kontakt), NEPÝTAJ SA — rovno potvrď.\n" +
+        "  3. Vygeneruj karty so VŠETKÝM, čo si v správe našiel. Prázdne polia nechaj \"\".\n" +
         "Používateľ môže polia doplniť v karte alebo ďalšou správou — obidva spôsoby vedieš.\n" +
-        "Ak v druhom kole pošle kontakt ('0901...') — poďakuj a doplň karty.\n\n" +
+        "Ak v druhom kole pošle kontakt ('0901...') — poďakuj a doplň karty, bez ďalších otázok.\n\n" +
 
         "## PRAVIDLO 2 — DUÁLNA ENTITA: CRM + KALENDÁR SPOLU\n" +
         "Osoba + zámer → DVE karty v poradí: 1. contact, 2. task.\n" +
@@ -412,7 +429,8 @@ const siteConfig: SiteConfig = {
         "  ✓ 'Telefonát: Peter Novák'\n" +
         "  ✓ 'Príprava ponuky pre Alfa s.r.o.'\n" +
         "  ✗ ZAKÁZANÉ: 'S Peter Novák', 's Peter', 'Peter Novák' (samotné meno), 'Chce hypo', '?'\n" +
-        "Pole 'Meno' = čisté meno BEZ oslovení (pán, pani, Ing., Mgr., Dr., MUDr.).\n" +
+        "Pole 'Meno' = čisté meno v NOMINATÍVE (1. pád) BEZ oslovení. Vždy 'Peter Novák',\n" +
+        "nikdy 'Petra Nováka' (genitív/akuzatív patrí do vety, nie do poľa Meno).\n" +
         "Pole 'Firma' = názov spoločnosti. Pole 'Poznámka' = zámer/téma.\n" +
         "Nikdy nevymýšľaj email ani telefón. Prázdne pole = \"\".\n\n" +
 
