@@ -8,8 +8,10 @@ import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import {
   User, KeyRound, Bell, Sparkles, LogOut, Save, Loader2, Mail, Shield, Palette,
+  Brain, Thermometer, MessageSquare,
 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
+import { loadPrefs, savePrefs, type AiPrefs, type ResponseStyle } from "@/lib/aiPrefs";
 
 const D = {
   indigo: "#6366f1",
@@ -166,7 +168,7 @@ export default function SettingsPage() {
         <Section icon={KeyRound} title="Heslo a bezpečnosť" subtitle="Zmena hesla, dvojfaktorová autentifikácia" comingSoon />
 
         {/* ── AI preferencie ── */}
-        <Section icon={Sparkles} title="AI preferencie" subtitle="Štýl odpovedí, pamäť, temperature" comingSoon />
+        <AiPrefsSection />
 
         {/* ── Notifikácie ── */}
         <Section icon={Bell} title="Notifikácie" subtitle="Email, push, pripomienky úloh" comingSoon />
@@ -277,6 +279,176 @@ function Skeleton() {
       <div className="h-10 rounded-lg" style={{ background: "rgba(99,102,241,0.08)" }} />
       <div className="h-10 rounded-lg" style={{ background: "rgba(99,102,241,0.08)" }} />
       <div className="h-10 rounded-lg w-40" style={{ background: "rgba(99,102,241,0.08)" }} />
+    </div>
+  );
+}
+
+// ── AI preferences section — functional, localStorage-backed ─────
+const STYLE_OPTIONS: { id: ResponseStyle; label: string; hint: string }[] = [
+  { id: "concise",  label: "Stručný",    hint: "Krátke odpovede, málo slov" },
+  { id: "friendly", label: "Priateľský", hint: "Vyvážené, ľudské, default" },
+  { id: "formal",   label: "Formálny",   hint: "Oficiálny tón, úplné vety" },
+];
+
+function AiPrefsSection() {
+  const [prefs, setPrefs] = useState<AiPrefs | null>(null);
+  const [dirty, setDirty] = useState(false);
+
+  useEffect(() => { setPrefs(loadPrefs()); }, []);
+
+  if (!prefs) {
+    return (
+      <Section icon={Sparkles} title="AI preferencie" subtitle="Načítavam…">
+        <Skeleton />
+      </Section>
+    );
+  }
+
+  const update = (patch: Partial<AiPrefs>) => {
+    setPrefs((p) => (p ? { ...p, ...patch } : p));
+    setDirty(true);
+  };
+
+  const handleSave = () => {
+    if (!prefs) return;
+    savePrefs(prefs);
+    setDirty(false);
+    toast.success("Preferencie uložené");
+  };
+
+  return (
+    <Section
+      icon={Sparkles}
+      title="AI preferencie"
+      subtitle="Štýl odpovedí, kreativita, pamäť"
+    >
+      <div className="space-y-5">
+        {/* Štýl odpovedí */}
+        <div>
+          <label className="flex items-center gap-1.5 text-xs font-medium mb-2" style={{ color: D.muted }}>
+            <MessageSquare className="w-3.5 h-3.5" style={{ color: D.indigo }} />
+            Štýl odpovedí
+          </label>
+          <div className="grid grid-cols-3 gap-2">
+            {STYLE_OPTIONS.map((opt) => {
+              const active = prefs.style === opt.id;
+              return (
+                <button
+                  key={opt.id}
+                  onClick={() => update({ style: opt.id })}
+                  className="p-3 rounded-xl text-left transition-all"
+                  style={{
+                    background: active ? "rgba(99,102,241,0.15)" : D.indigoDim,
+                    border: `1px solid ${active ? D.indigo : D.indigoBorder}`,
+                    boxShadow: active ? "0 0 14px rgba(99,102,241,0.3)" : "none",
+                  }}
+                >
+                  <p className="text-sm font-semibold" style={{ color: active ? D.text : D.muted }}>
+                    {opt.label}
+                  </p>
+                  <p className="text-[0.6rem] mt-0.5 leading-snug" style={{ color: D.mutedDark }}>
+                    {opt.hint}
+                  </p>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Temperature */}
+        <div>
+          <label className="flex items-center justify-between text-xs font-medium mb-2" style={{ color: D.muted }}>
+            <span className="flex items-center gap-1.5">
+              <Thermometer className="w-3.5 h-3.5" style={{ color: D.indigo }} />
+              Kreativita
+            </span>
+            <span style={{ color: D.sky }}>{prefs.temperature.toFixed(2)}</span>
+          </label>
+          <input
+            type="range"
+            min={0}
+            max={1}
+            step={0.05}
+            value={prefs.temperature}
+            onChange={(e) => update({ temperature: Number(e.target.value) })}
+            className="w-full accent-indigo-500"
+          />
+          <div className="flex justify-between text-[0.6rem] mt-1" style={{ color: D.mutedDark }}>
+            <span>Presný</span>
+            <span>Balansovaný</span>
+            <span>Kreatívny</span>
+          </div>
+        </div>
+
+        {/* Pamäť */}
+        <Toggle
+          icon={Brain}
+          label="Pamäť konverzácií"
+          hint="AI si pamätá predchádzajúce rozhovory pre konzistentné odpovede"
+          checked={prefs.memoryEnabled}
+          onChange={(v) => update({ memoryEnabled: v })}
+        />
+
+        {/* Sample prompts */}
+        <Toggle
+          icon={Sparkles}
+          label="Návrhy promptov"
+          hint="Zobrazovať sample tlačidlá v prázdnom chate"
+          checked={prefs.suggestionsEnabled}
+          onChange={(v) => update({ suggestionsEnabled: v })}
+        />
+
+        <button
+          onClick={handleSave}
+          disabled={!dirty}
+          className="mt-2 px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+          style={{
+            background: dirty ? `linear-gradient(135deg,${D.indigo},${D.violet})` : D.indigoDim,
+            color: "white",
+            boxShadow: dirty ? "0 0 14px rgba(99,102,241,0.35)" : "none",
+          }}
+        >
+          <Save className="w-4 h-4" />
+          {dirty ? "Uložiť preferencie" : "Uložené"}
+        </button>
+      </div>
+    </Section>
+  );
+}
+
+function Toggle({
+  icon: Icon, label, hint, checked, onChange,
+}: {
+  icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>;
+  label: string;
+  hint?: string;
+  checked: boolean;
+  onChange: (v: boolean) => void;
+}) {
+  return (
+    <div className="flex items-start justify-between gap-3">
+      <div className="flex items-start gap-2 flex-1">
+        <Icon className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: D.indigo }} />
+        <div>
+          <p className="text-sm font-medium" style={{ color: D.text }}>{label}</p>
+          {hint && <p className="text-xs mt-0.5" style={{ color: D.muted }}>{hint}</p>}
+        </div>
+      </div>
+      <button
+        onClick={() => onChange(!checked)}
+        className="relative w-10 h-5 rounded-full transition-colors flex-shrink-0 mt-0.5"
+        style={{
+          background: checked ? D.indigo : "rgba(99,102,241,0.15)",
+          boxShadow: checked ? "0 0 10px rgba(99,102,241,0.4)" : "none",
+        }}
+        role="switch"
+        aria-checked={checked}
+      >
+        <span
+          className="absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all"
+          style={{ left: checked ? "calc(100% - 18px)" : "2px" }}
+        />
+      </button>
     </div>
   );
 }

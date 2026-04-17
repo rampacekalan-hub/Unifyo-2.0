@@ -172,6 +172,10 @@ export const chatActions = {
     };
     emit();
   },
+  removeMessage(id: string) {
+    state = { ...state, messages: state.messages.filter((m) => m.id !== id) };
+    emit();
+  },
   setLoading(loading: boolean) {
     state = { ...state, loading };
     emit();

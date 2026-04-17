@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import NeuralBackground from "@/components/ui/NeuralBackground";
 import FloatingAIWidget from "@/components/ui/FloatingAIWidget";
 import CommandPalette from "@/components/ui/CommandPalette";
+import UsageChip from "@/components/ui/UsageChip";
 import Sidebar, { type SidebarUser } from "@/components/layout/Sidebar";
 
 interface AppLayoutProps {
@@ -91,6 +92,7 @@ export default function AppLayout({ children, subtitle, user }: AppLayoutProps) 
               </span>
             </h1>
           </div>
+          <UsageChip />
         </header>
 
         <div className="flex-1 overflow-auto">{children}</div>

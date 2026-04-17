@@ -6,11 +6,11 @@
 import { useState, useRef, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Bot, Send, X, Loader2, Sparkles, Square, Copy } from "lucide-react";
+import { Bot, Send, X, Loader2, Sparkles, Square, Copy, RefreshCw } from "lucide-react";
 import GuidedCard, { type GuidedDraft } from "@/components/ui/GuidedCard";
 import ChatHistory from "@/components/ui/ChatHistory";
 import { chatActions, useChatStore } from "@/lib/chatStore";
-import { sendChat } from "@/lib/chatEngine";
+import { sendChat, regenerateLast } from "@/lib/chatEngine";
 import { toast } from "sonner";
 
 type AIModule = "dashboard" | "calendar" | "email" | "crm" | "calls";
@@ -76,6 +76,13 @@ export default function FloatingAIWidget() {
   const streamingId = loading
     ? [...messages].reverse().find((m) => m.role === "ai" || m.role === "thinking")?.id
     : undefined;
+  const lastAiId = !loading
+    ? [...messages].reverse().find((m) => m.role === "ai" || m.role === "error")?.id
+    : undefined;
+  const handleRegenerate = async () => {
+    if (loading) return;
+    await regenerateLast({ module, conversationId, messages });
+  };
 
   const handleDraftConfirm = async () => {
     if (!draft) return;
@@ -296,15 +303,28 @@ export default function FloatingAIWidget() {
                         )}
                       </div>
                       {msg.role === "ai" && msg.content && msg.id !== streamingId && (
-                        <button
-                          onClick={() => handleCopy(msg.content)}
-                          className="absolute -right-1 top-0.5 opacity-0 group-hover:opacity-100 p-1 rounded-md transition-opacity"
-                          style={{ background: "rgba(99,102,241,0.14)", border: `1px solid ${D.indigoBorder}` }}
-                          aria-label="Kopírovať"
-                          title="Kopírovať"
-                        >
-                          <Copy className="w-3 h-3" style={{ color: D.muted }} />
-                        </button>
+                        <div className="absolute -right-1 top-0.5 opacity-0 group-hover:opacity-100 flex gap-1 transition-opacity">
+                          {msg.id === lastAiId && (
+                            <button
+                              onClick={handleRegenerate}
+                              className="p-1 rounded-md"
+                              style={{ background: "rgba(99,102,241,0.14)", border: `1px solid ${D.indigoBorder}` }}
+                              aria-label="Regenerovať"
+                              title="Regenerovať"
+                            >
+                              <RefreshCw className="w-3 h-3" style={{ color: D.muted }} />
+                            </button>
+                          )}
+                          <button
+                            onClick={() => handleCopy(msg.content)}
+                            className="p-1 rounded-md"
+                            style={{ background: "rgba(99,102,241,0.14)", border: `1px solid ${D.indigoBorder}` }}
+                            aria-label="Kopírovať"
+                            title="Kopírovať"
+                          >
+                            <Copy className="w-3 h-3" style={{ color: D.muted }} />
+                          </button>
+                        </div>
                       )}
                     </div>
                   </div>

@@ -47,9 +47,11 @@ async function persistMessage(conversationId: string | null, role: ChatMessage["
   } catch { /* fire-and-forget */ }
 }
 
+type ChatModule = "dashboard" | "calendar" | "email" | "crm" | "calls";
+
 export async function sendChat(
   text: string,
-  opts: { module: "dashboard" | "calendar" | "email" | "crm" | "calls"; conversationId: string | null },
+  opts: { module: ChatModule; conversationId: string | null; skipUserMsg?: boolean; replacePlaceholderId?: string },
 ): Promise<void> {
   const trimmed = text.trim();
   if (!trimmed) return;
@@ -60,15 +62,14 @@ export async function sendChat(
     content: trimmed,
     createdAt: Date.now(),
   };
-  const thinkingMsg: ChatMessage = {
-    id: msgId(),
-    role: "thinking",
-    content: "",
-    createdAt: Date.now(),
-  };
+  // Re-use existing placeholder (regenerate) or create a fresh thinking bubble.
+  const thinkingMsg: ChatMessage = opts.replacePlaceholderId
+    ? { id: opts.replacePlaceholderId, role: "thinking", content: "", createdAt: Date.now() }
+    : { id: msgId(), role: "thinking", content: "", createdAt: Date.now() };
 
-  chatActions.addMessage(userMsg);
-  chatActions.addMessage(thinkingMsg);
+  if (!opts.skipUserMsg) chatActions.addMessage(userMsg);
+  if (!opts.replacePlaceholderId) chatActions.addMessage(thinkingMsg);
+  else chatActions.patchMessage(thinkingMsg.id, { role: "thinking", content: "" });
   chatActions.setLoading(true);
 
   // Regex-scan the user's message for phone/email and update draft immediately.
@@ -198,4 +199,41 @@ export async function sendChat(
     chatActions.setAbortController(null);
     chatActions.setLoading(false);
   }
+}
+
+// Regenerate — rerun the last user prompt and REPLACE the last AI message.
+// Uses the existing streaming pipeline so cards/draft still get populated.
+export async function regenerateLast(opts: {
+  module: ChatModule;
+  conversationId: string | null;
+  messages: ChatMessage[];
+}): Promise<void> {
+  // Find the last user message (search from end).
+  let lastUserIdx = -1;
+  for (let i = opts.messages.length - 1; i >= 0; i--) {
+    if (opts.messages[i].role === "user") { lastUserIdx = i; break; }
+  }
+  if (lastUserIdx === -1) return;
+
+  // Find the LAST ai/error/thinking message AFTER that user message — that's
+  // what we're regenerating. If there's nothing after it, nothing to regen.
+  let lastAiId: string | null = null;
+  for (let i = opts.messages.length - 1; i > lastUserIdx; i--) {
+    const m = opts.messages[i];
+    if (m.role === "ai" || m.role === "error" || m.role === "thinking") {
+      lastAiId = m.id;
+      break;
+    }
+  }
+  if (!lastAiId) return;
+
+  const userText = opts.messages[lastUserIdx].content;
+  // Reuse existing bubble as the streaming target — cleaner UX than
+  // delete+create (no flicker, preserves scroll position).
+  await sendChat(userText, {
+    module: opts.module,
+    conversationId: opts.conversationId,
+    skipUserMsg: true,
+    replacePlaceholderId: lastAiId,
+  });
 }

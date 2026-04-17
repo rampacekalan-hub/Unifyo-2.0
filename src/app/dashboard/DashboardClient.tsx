@@ -3,15 +3,16 @@
 import { useRef, useEffect, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
-import { Bot, Send, Loader2, AlertTriangle, X, Check, Square, Copy, Sparkles } from "lucide-react";
+import { Bot, Send, Loader2, AlertTriangle, X, Check, Square, Copy, Sparkles, RefreshCw } from "lucide-react";
 import NeuralBackground from "@/components/ui/NeuralBackground";
 import Sidebar from "@/components/layout/Sidebar";
 import GuidedCard, { type GuidedDraft } from "@/components/ui/GuidedCard";
 import ChatHistory from "@/components/ui/ChatHistory";
+import UsageChip from "@/components/ui/UsageChip";
 import CommandPalette from "@/components/ui/CommandPalette";
 import { getSiteConfig } from "@/config/site-settings";
 import { useChatStore, chatActions } from "@/lib/chatStore";
-import { sendChat } from "@/lib/chatEngine";
+import { sendChat, regenerateLast } from "@/lib/chatEngine";
 
 const config = getSiteConfig();
 const { dashboard } = config.texts;
@@ -110,6 +111,16 @@ export default function DashboardClient({ user }: DashboardClientProps) {
   const streamingId = loading
     ? [...messages].reverse().find((m) => m.role === "ai" || m.role === "thinking")?.id
     : undefined;
+
+  // ID of the last AI message — only this one shows the Regenerate button.
+  const lastAiId = !loading
+    ? [...messages].reverse().find((m) => m.role === "ai" || m.role === "error")?.id
+    : undefined;
+
+  const handleRegenerate = async () => {
+    if (loading) return;
+    await regenerateLast({ module: "dashboard", conversationId, messages });
+  };
 
   const handleCopy = async (text: string) => {
     try {
@@ -300,7 +311,10 @@ export default function DashboardClient({ user }: DashboardClientProps) {
               </span>
             </h1>
           </div>
-          <ChatHistory />
+          <div className="flex items-center gap-2">
+            <UsageChip />
+            <ChatHistory />
+          </div>
         </header>
 
         {/* Chat panel */}
@@ -412,17 +426,30 @@ export default function DashboardClient({ user }: DashboardClientProps) {
                           </>
                         )}
                       </div>
-                      {/* Copy button — shown on hover for AI messages with content */}
+                      {/* Hover actions — copy + regenerate (last AI only) */}
                       {msg.role === "ai" && msg.content && msg.id !== streamingId && (
-                        <button
-                          onClick={() => handleCopy(msg.content)}
-                          className="absolute -right-1 top-1 opacity-0 group-hover:opacity-100 p-1 rounded-md transition-opacity"
-                          style={{ background: "rgba(99,102,241,0.12)", border: `1px solid ${D.indigoBorder}` }}
-                          aria-label="Kopírovať"
-                          title="Kopírovať správu"
-                        >
-                          <Copy className="w-3 h-3" style={{ color: D.muted }} />
-                        </button>
+                        <div className="absolute -right-1 top-1 opacity-0 group-hover:opacity-100 flex gap-1 transition-opacity">
+                          {msg.id === lastAiId && (
+                            <button
+                              onClick={handleRegenerate}
+                              className="p-1 rounded-md"
+                              style={{ background: "rgba(99,102,241,0.12)", border: `1px solid ${D.indigoBorder}` }}
+                              aria-label="Regenerovať"
+                              title="Regenerovať odpoveď"
+                            >
+                              <RefreshCw className="w-3 h-3" style={{ color: D.muted }} />
+                            </button>
+                          )}
+                          <button
+                            onClick={() => handleCopy(msg.content)}
+                            className="p-1 rounded-md"
+                            style={{ background: "rgba(99,102,241,0.12)", border: `1px solid ${D.indigoBorder}` }}
+                            aria-label="Kopírovať"
+                            title="Kopírovať správu"
+                          >
+                            <Copy className="w-3 h-3" style={{ color: D.muted }} />
+                          </button>
+                        </div>
                       )}
                     </div>
                   </div>
