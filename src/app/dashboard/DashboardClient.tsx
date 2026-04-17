@@ -3,7 +3,7 @@
 import { useRef, useEffect, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
-import { Bot, Send, Loader2, AlertTriangle, X, Check, Square } from "lucide-react";
+import { Bot, Send, Loader2, AlertTriangle, X, Check, Square, Copy, Sparkles } from "lucide-react";
 import NeuralBackground from "@/components/ui/NeuralBackground";
 import Sidebar from "@/components/layout/Sidebar";
 import GuidedCard, { type GuidedDraft } from "@/components/ui/GuidedCard";
@@ -37,6 +37,14 @@ const D = {
   text:         "#eef2ff",
   muted:        "#6b7280",
 };
+
+// ── Sample prompts on empty chat ──────────────────────────────
+const SAMPLE_PROMPTS: Array<{ icon: string; text: string; prompt: string }> = [
+  { icon: "👤", text: "Pridaj kontakt",       prompt: "Pridaj kontakt Peter Novák, telefón 0950 312 387, záujem o hypotéku" },
+  { icon: "📅", text: "Naplánuj stretnutie",  prompt: "Naplánuj stretnutie s Petrom Novákom zajtra o 14:00 v kancelárii" },
+  { icon: "✉️", text: "Navrhni email",        prompt: "Navrhni follow-up email pre klienta po stretnutí o hypotéke" },
+  { icon: "📋", text: "Zhrň môj deň",          prompt: "Čo mám dnes naplánované? Zhrň moje úlohy a stretnutia." },
+];
 
 // ── Neural Thinking Indicator ─────────────────────────────────
 function SmartThinkingUI() {
@@ -96,6 +104,25 @@ export default function DashboardClient({ user }: DashboardClientProps) {
   const { messages, draft, loading, conversationId } = useChatStore();
   const [input, setInput] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
+
+  // ID of the currently-streaming AI message — the last ai/thinking one while loading.
+  const streamingId = loading
+    ? [...messages].reverse().find((m) => m.role === "ai" || m.role === "thinking")?.id
+    : undefined;
+
+  const handleCopy = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success("Skopírované");
+    } catch {
+      toast.error("Kopírovanie zlyhalo");
+    }
+  };
+
+  const handleSampleClick = async (prompt: string) => {
+    if (loading) return;
+    await sendChat(prompt, { module: "dashboard", conversationId });
+  };
 
   // ── Live toggles from admin store ────────────────────────────
   const [liveToggles, setLiveToggles] = useState<Record<string, boolean> | null>(null);
@@ -279,20 +306,56 @@ export default function DashboardClient({ user }: DashboardClientProps) {
         <div className="flex-1 flex flex-col overflow-hidden">
           <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-5 space-y-4">
             {showGreeting && (
-              <motion.div
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="flex justify-start"
-              >
-                <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 mr-2.5 mt-0.5"
-                  style={{ background: "linear-gradient(135deg,#7c3aed,#4f46e5)", boxShadow: "0 0 10px rgba(124,58,237,0.3)" }}>
-                  <Bot className="w-3.5 h-3.5 text-white" />
+              <>
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="flex justify-start"
+                >
+                  <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 mr-2.5 mt-0.5"
+                    style={{ background: "linear-gradient(135deg,#7c3aed,#4f46e5)", boxShadow: "0 0 10px rgba(124,58,237,0.3)" }}>
+                    <Bot className="w-3.5 h-3.5 text-white" />
+                  </div>
+                  <div className="max-w-[75%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed"
+                    style={{ background: "rgba(139,92,246,0.07)", border: "1px solid rgba(139,92,246,0.15)", color: "#c4b5fd" }}>
+                    {dashboard.aiReady}
+                  </div>
+                </motion.div>
+
+                {/* Sample prompt chips — visible only on empty chat */}
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.15 }}
+                  className="flex flex-wrap gap-2 ml-10 mt-2 max-w-[75%]"
+                >
+                  {SAMPLE_PROMPTS.map((s) => (
+                    <button
+                      key={s.text}
+                      onClick={() => handleSampleClick(s.prompt)}
+                      disabled={loading}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs transition-all disabled:opacity-40"
+                      style={{
+                        background: "rgba(99,102,241,0.06)",
+                        border: `1px solid ${D.indigoBorder}`,
+                        color: D.text,
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(99,102,241,0.14)")}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(99,102,241,0.06)")}
+                    >
+                      <span>{s.icon}</span>
+                      <span>{s.text}</span>
+                    </button>
+                  ))}
+                </motion.div>
+
+                <div className="flex items-center gap-1.5 ml-10 mt-1 opacity-60">
+                  <Sparkles className="w-3 h-3" style={{ color: D.violet }} />
+                  <span className="text-[0.65rem]" style={{ color: D.muted }}>
+                    alebo napíš vlastnú správu nižšie
+                  </span>
                 </div>
-                <div className="max-w-[75%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed"
-                  style={{ background: "rgba(139,92,246,0.07)", border: "1px solid rgba(139,92,246,0.15)", color: "#c4b5fd" }}>
-                  {dashboard.aiReady}
-                </div>
-              </motion.div>
+              </>
             )}
 
             <AnimatePresence initial={false}>
@@ -320,18 +383,46 @@ export default function DashboardClient({ user }: DashboardClientProps) {
                         }
                       </div>
                     )}
-                    <div className="max-w-[75%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap"
-                      style={msg.role === "user"
-                        ? { background: "linear-gradient(135deg,rgba(124,58,237,0.3),rgba(79,70,229,0.3))", border: "1px solid rgba(124,58,237,0.3)", color: "#eef2ff" }
-                        : msg.role === "error"
-                        ? { background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", color: "#fca5a5" }
-                        : msg.role === "integration"
-                        ? { background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.2)", color: "#6ee7b7" }
-                        : msg.role === "thinking"
-                        ? { background: "transparent", border: "none" }
-                        : { background: "rgba(139,92,246,0.07)", border: "1px solid rgba(139,92,246,0.15)", color: "#c4b5fd" }
-                      }>
-                      {msg.role === "thinking" ? <SmartThinkingUI /> : msg.content}
+                    <div className="group relative max-w-[75%]">
+                      <div className="rounded-2xl px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap"
+                        style={msg.role === "user"
+                          ? { background: "linear-gradient(135deg,rgba(124,58,237,0.3),rgba(79,70,229,0.3))", border: "1px solid rgba(124,58,237,0.3)", color: "#eef2ff" }
+                          : msg.role === "error"
+                          ? { background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", color: "#fca5a5" }
+                          : msg.role === "integration"
+                          ? { background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.2)", color: "#6ee7b7" }
+                          : msg.role === "thinking"
+                          ? { background: "transparent", border: "none" }
+                          : { background: "rgba(139,92,246,0.07)", border: "1px solid rgba(139,92,246,0.15)", color: "#c4b5fd" }
+                        }>
+                        {msg.role === "thinking" ? (
+                          <SmartThinkingUI />
+                        ) : (
+                          <>
+                            {msg.content}
+                            {msg.id === streamingId && msg.role === "ai" && (
+                              <motion.span
+                                className="inline-block w-1.5 h-3.5 ml-0.5 -mb-0.5 rounded-sm"
+                                style={{ background: "#c4b5fd" }}
+                                animate={{ opacity: [1, 0.2, 1] }}
+                                transition={{ duration: 0.9, repeat: Infinity, ease: "easeInOut" }}
+                              />
+                            )}
+                          </>
+                        )}
+                      </div>
+                      {/* Copy button — shown on hover for AI messages with content */}
+                      {msg.role === "ai" && msg.content && msg.id !== streamingId && (
+                        <button
+                          onClick={() => handleCopy(msg.content)}
+                          className="absolute -right-1 top-1 opacity-0 group-hover:opacity-100 p-1 rounded-md transition-opacity"
+                          style={{ background: "rgba(99,102,241,0.12)", border: `1px solid ${D.indigoBorder}` }}
+                          aria-label="Kopírovať"
+                          title="Kopírovať správu"
+                        >
+                          <Copy className="w-3 h-3" style={{ color: D.muted }} />
+                        </button>
+                      )}
                     </div>
                   </div>
                 </motion.div>

@@ -6,7 +6,7 @@
 import { useState, useRef, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Bot, Send, X, Loader2, Sparkles, Square } from "lucide-react";
+import { Bot, Send, X, Loader2, Sparkles, Square, Copy } from "lucide-react";
 import GuidedCard, { type GuidedDraft } from "@/components/ui/GuidedCard";
 import ChatHistory from "@/components/ui/ChatHistory";
 import { chatActions, useChatStore } from "@/lib/chatStore";
@@ -14,6 +14,12 @@ import { sendChat } from "@/lib/chatEngine";
 import { toast } from "sonner";
 
 type AIModule = "dashboard" | "calendar" | "email" | "crm" | "calls";
+
+const SAMPLE_PROMPTS: Array<{ icon: string; label: string; prompt: string }> = [
+  { icon: "👤", label: "Pridaj kontakt",       prompt: "Pridaj kontakt Peter Novák, tel 0950 312 387, záujem o hypotéku" },
+  { icon: "📅", label: "Naplánuj stretnutie",  prompt: "Naplánuj stretnutie s Petrom Novákom zajtra o 14:00" },
+  { icon: "📋", label: "Zhrň môj deň",          prompt: "Čo mám dnes naplánované?" },
+];
 
 function detectModule(pathname: string): AIModule {
   if (pathname.startsWith("/calendar")) return "calendar";
@@ -51,6 +57,25 @@ export default function FloatingAIWidget() {
     setInput("");
     await sendChat(text, { module, conversationId });
   };
+
+  const handleSample = async (prompt: string) => {
+    if (loading) return;
+    await sendChat(prompt, { module, conversationId });
+  };
+
+  const handleCopy = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success("Skopírované");
+    } catch {
+      toast.error("Kopírovanie zlyhalo");
+    }
+  };
+
+  // Currently streaming ai/thinking message — last one while loading.
+  const streamingId = loading
+    ? [...messages].reverse().find((m) => m.role === "ai" || m.role === "thinking")?.id
+    : undefined;
 
   const handleDraftConfirm = async () => {
     if (!draft) return;
@@ -197,11 +222,33 @@ export default function FloatingAIWidget() {
             {/* Messages */}
             <div className="flex-1 overflow-y-auto p-4 space-y-3 min-h-0">
               {messages.length === 0 && (
-                <div className="text-center py-8">
-                  <Sparkles className="w-10 h-10 mx-auto mb-2" style={{ color: D.indigo }} />
-                  <p className="text-sm" style={{ color: D.muted }}>
-                    Som s tebou na každej stránke.<br />Ako ti môžem pomôcť?
-                  </p>
+                <div className="py-4">
+                  <div className="text-center mb-4">
+                    <Sparkles className="w-10 h-10 mx-auto mb-2" style={{ color: D.indigo }} />
+                    <p className="text-sm" style={{ color: D.muted }}>
+                      Som s tebou na každej stránke.<br />Skús niečo z týchto:
+                    </p>
+                  </div>
+                  <div className="flex flex-col gap-1.5 px-2">
+                    {SAMPLE_PROMPTS.map((s) => (
+                      <button
+                        key={s.label}
+                        onClick={() => handleSample(s.prompt)}
+                        disabled={loading}
+                        className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs text-left transition-colors disabled:opacity-40"
+                        style={{
+                          background: "rgba(99,102,241,0.06)",
+                          border: `1px solid ${D.indigoBorder}`,
+                          color: D.text,
+                        }}
+                        onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(99,102,241,0.14)")}
+                        onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(99,102,241,0.06)")}
+                      >
+                        <span>{s.icon}</span>
+                        <span>{s.label}</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
 
@@ -216,25 +263,48 @@ export default function FloatingAIWidget() {
                         <Bot className="w-3 h-3 text-white" />
                       </div>
                     )}
-                    <div
-                      className="max-w-[80%] rounded-2xl px-3 py-2 text-sm whitespace-pre-wrap"
-                      style={
-                        msg.role === "user"
-                          ? { background: "linear-gradient(135deg,rgba(124,58,237,0.3),rgba(79,70,229,0.3))", border: "1px solid rgba(124,58,237,0.3)", color: D.text }
-                          : msg.role === "thinking"
-                          ? { background: "transparent" }
-                          : msg.role === "error"
-                          ? { background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.22)", color: "#fca5a5" }
-                          : { background: "rgba(139,92,246,0.1)", border: "1px solid rgba(139,92,246,0.2)", color: "#c4b5fd" }
-                      }
-                    >
-                      {msg.role === "thinking" ? (
-                        <div className="flex items-center gap-2">
-                          <Loader2 className="w-4 h-4 animate-spin" style={{ color: D.indigo }} />
-                          <span className="text-xs" style={{ color: D.muted }}>Premýšľam…</span>
-                        </div>
-                      ) : (
-                        msg.content
+                    <div className="group relative max-w-[80%]">
+                      <div
+                        className="rounded-2xl px-3 py-2 text-sm whitespace-pre-wrap"
+                        style={
+                          msg.role === "user"
+                            ? { background: "linear-gradient(135deg,rgba(124,58,237,0.3),rgba(79,70,229,0.3))", border: "1px solid rgba(124,58,237,0.3)", color: D.text }
+                            : msg.role === "thinking"
+                            ? { background: "transparent" }
+                            : msg.role === "error"
+                            ? { background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.22)", color: "#fca5a5" }
+                            : { background: "rgba(139,92,246,0.1)", border: "1px solid rgba(139,92,246,0.2)", color: "#c4b5fd" }
+                        }
+                      >
+                        {msg.role === "thinking" ? (
+                          <div className="flex items-center gap-2">
+                            <Loader2 className="w-4 h-4 animate-spin" style={{ color: D.indigo }} />
+                            <span className="text-xs" style={{ color: D.muted }}>Premýšľam…</span>
+                          </div>
+                        ) : (
+                          <>
+                            {msg.content}
+                            {msg.id === streamingId && msg.role === "ai" && (
+                              <motion.span
+                                className="inline-block w-1.5 h-3 ml-0.5 -mb-0.5 rounded-sm"
+                                style={{ background: "#c4b5fd" }}
+                                animate={{ opacity: [1, 0.2, 1] }}
+                                transition={{ duration: 0.9, repeat: Infinity, ease: "easeInOut" }}
+                              />
+                            )}
+                          </>
+                        )}
+                      </div>
+                      {msg.role === "ai" && msg.content && msg.id !== streamingId && (
+                        <button
+                          onClick={() => handleCopy(msg.content)}
+                          className="absolute -right-1 top-0.5 opacity-0 group-hover:opacity-100 p-1 rounded-md transition-opacity"
+                          style={{ background: "rgba(99,102,241,0.14)", border: `1px solid ${D.indigoBorder}` }}
+                          aria-label="Kopírovať"
+                          title="Kopírovať"
+                        >
+                          <Copy className="w-3 h-3" style={{ color: D.muted }} />
+                        </button>
                       )}
                     </div>
                   </div>
