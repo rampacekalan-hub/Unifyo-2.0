@@ -151,7 +151,7 @@ export default function FloatingAIWidget() {
       {/* Floating button */}
       <motion.button
         onClick={() => setIsOpen((o) => !o)}
-        className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-2xl flex items-center justify-center shadow-2xl"
+        className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 w-14 h-14 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center shadow-2xl active:scale-95 transition-transform"
         style={{
           background: "linear-gradient(135deg,#6366f1,#8b5cf6)",
           boxShadow: "0 0 30px rgba(99,102,241,0.5)",
@@ -184,7 +184,8 @@ export default function FloatingAIWidget() {
             initial={{ opacity: 0, y: 20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            className="fixed bottom-24 right-6 z-50 w-[400px] max-h-[640px] rounded-2xl flex flex-col overflow-hidden"
+            className="fixed z-50 rounded-2xl flex flex-col overflow-hidden
+              inset-2 sm:inset-auto sm:bottom-24 sm:right-6 sm:w-[400px] sm:max-h-[640px]"
             style={{
               background: "rgba(8,10,22,0.97)",
               border: `1px solid ${D.indigoBorder}`,

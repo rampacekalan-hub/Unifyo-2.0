@@ -9,7 +9,7 @@ import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Bot, Calendar, Mail, Phone, BarChart3, Zap,
-  Lock, LogOut, ShieldAlert, Menu, X, Settings as SettingsIcon,
+  Lock, LogOut, ShieldAlert, Menu, X, Settings as SettingsIcon, LayoutDashboard,
 } from "lucide-react";
 
 export interface SidebarUser {
@@ -55,6 +55,7 @@ interface ModuleDef {
 }
 
 const MODULES: ModuleDef[] = [
+  { id: "overview",  label: "Prehľad",    href: "/dashboard-overview", icon: LayoutDashboard },
   { id: "dashboard", label: "AI Chat",    href: "/dashboard", icon: Bot },
   { id: "crm",       label: "CRM",        href: "/crm",       icon: BarChart3, pro: true },
   { id: "calendar",  label: "Kalendár",   href: "/calendar",  icon: Calendar },

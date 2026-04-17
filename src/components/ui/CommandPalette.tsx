@@ -140,7 +140,8 @@ export default function CommandPalette() {
 
   // ── Build items ──
   const staticItems: CmdItem[] = useMemo(() => [
-    { id: "nav:dashboard", label: "Prejsť na Dashboard",  icon: LayoutDashboard, group: "Navigácia", onSelect: () => { router.push("/dashboard"); close(); } },
+    { id: "nav:overview",  label: "Prejsť na Prehľad",     icon: LayoutDashboard, group: "Navigácia", onSelect: () => { router.push("/dashboard-overview"); close(); } },
+    { id: "nav:dashboard", label: "Prejsť do AI Chatu",    icon: LayoutDashboard, group: "Navigácia", onSelect: () => { router.push("/dashboard"); close(); } },
     { id: "nav:crm",       label: "Prejsť do CRM",         icon: Users,           group: "Navigácia", onSelect: () => { router.push("/crm"); close(); } },
     { id: "nav:calendar",  label: "Prejsť do Kalendára",   icon: CalendarDays,    group: "Navigácia", onSelect: () => { router.push("/calendar"); close(); } },
     { id: "nav:email",     label: "Prejsť do Emailov",     icon: Mail,            group: "Navigácia", onSelect: () => { router.push("/email"); close(); } },
