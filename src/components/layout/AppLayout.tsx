@@ -9,6 +9,7 @@ import UsageChip from "@/components/ui/UsageChip";
 import ShortcutsModal from "@/components/ui/ShortcutsModal";
 import OnboardingTour from "@/components/onboarding/OnboardingTour";
 import Sidebar, { type SidebarUser } from "@/components/layout/Sidebar";
+import MobileBottomNav from "@/components/layout/MobileBottomNav";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -97,13 +98,16 @@ export default function AppLayout({ children, subtitle, user }: AppLayoutProps) 
           <UsageChip />
         </header>
 
-        <div className="flex-1 overflow-auto">{children}</div>
+        <div className="flex-1 overflow-auto pb-[72px] md:pb-0">{children}</div>
 
         <FloatingAIWidget />
         <CommandPalette />
         <ShortcutsModal />
         <OnboardingTour />
       </main>
+
+      {/* Mobile-only bottom nav — overlays main on small screens */}
+      <MobileBottomNav />
     </div>
   );
 }

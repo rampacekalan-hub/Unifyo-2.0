@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { confirmWithUndo } from "@/lib/undoable";
+import SwipeableRow from "@/components/ui/SwipeableRow";
 import AppLayout from "@/components/layout/AppLayout";
 import EmptyIllustration from "@/components/ui/EmptyIllustration";
 
@@ -317,8 +318,12 @@ function CRMPageInner() {
               // Show checkbox permanently once any are selected — avoids mixed UX.
               const anySelected = selected.size > 0;
               return (
-                <motion.div
+                <SwipeableRow
                   key={contact.id}
+                  onAction={() => handleDelete(contact.id)}
+                  className="rounded-xl"
+                >
+                <motion.div
                   onClick={(e) => {
                     // Shift/Ctrl/Cmd click always toggles selection instead of opening.
                     if (anySelected || e.shiftKey || e.metaKey || e.ctrlKey) {
@@ -367,6 +372,7 @@ function CRMPageInner() {
                     </div>
                   </div>
                 </motion.div>
+                </SwipeableRow>
               );
             })}
           </div>
