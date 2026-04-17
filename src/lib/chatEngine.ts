@@ -11,6 +11,7 @@ import {
   stripActionCardBlocks,
 } from "@/lib/extraction-engine";
 import { chatActions, extractUserFacts, msgId, type ChatMessage } from "@/lib/chatStore";
+import { loadPrefs } from "@/lib/aiPrefs";
 
 const { errorStates } = getSiteConfig().texts;
 
@@ -91,10 +92,19 @@ export async function sendChat(
   chatActions.setAbortController(abortController);
 
   try {
+    const prefs = loadPrefs();
     const res = await fetch("/api/ai/stream", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message: trimmed, module: opts.module }),
+      body: JSON.stringify({
+        message: trimmed,
+        module: opts.module,
+        prefs: {
+          style: prefs.style,
+          temperature: prefs.temperature,
+          memoryEnabled: prefs.memoryEnabled,
+        },
+      }),
       signal: abortController.signal,
     });
 

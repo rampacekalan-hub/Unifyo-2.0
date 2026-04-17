@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import {
@@ -37,6 +38,14 @@ const D = {
 };
 
 export default function CRMPage() {
+  return (
+    <Suspense fallback={null}>
+      <CRMPageInner />
+    </Suspense>
+  );
+}
+
+function CRMPageInner() {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -71,6 +80,26 @@ export default function CRMPage() {
     const t = setTimeout(() => { loadContacts(searchQuery); }, 300);
     return () => clearTimeout(t);
   }, [searchQuery, loadContacts]);
+
+  // URL param handlers — ?new=1 opens add modal, ?focus=<id> selects contact
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  useEffect(() => {
+    if (!searchParams) return;
+    if (searchParams.get("new") === "1") {
+      setShowModal(true);
+      router.replace("/crm");
+    }
+  }, [searchParams, router]);
+  useEffect(() => {
+    const focusId = searchParams?.get("focus");
+    if (!focusId || contacts.length === 0) return;
+    const c = contacts.find((x) => x.id === focusId);
+    if (c) {
+      setSelectedContact(c);
+      router.replace("/crm");
+    }
+  }, [searchParams, contacts, router]);
 
   // Add contact
   async function handleAdd() {

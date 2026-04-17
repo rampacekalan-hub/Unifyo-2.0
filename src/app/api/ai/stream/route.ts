@@ -14,7 +14,18 @@ const schema = z.object({
   message: z.string().min(1).max(2000),
   module: z.enum(["dashboard", "calendar", "email", "crm", "calls"]).default("dashboard"),
   sessionId: z.string().optional(),
+  prefs: z.object({
+    style: z.enum(["concise", "friendly", "formal"]).default("friendly"),
+    temperature: z.number().min(0).max(1).default(0.6),
+    memoryEnabled: z.boolean().default(true),
+  }).optional(),
 });
+
+const STYLE_INSTRUCTIONS: Record<"concise" | "friendly" | "formal", string> = {
+  concise:  "ŠTÝL: Odpovedaj stručne, v krátkych vetách. Maximálne 2–3 vety, žiadne zbytočné zdvorilosti ani vysvetľovanie. Príď rovno k veci.",
+  friendly: "ŠTÝL: Odpovedaj priateľsky, ľudsky a vyvážene — ako skúsený asistent. Môžeš použiť emoji, ale s mierou.",
+  formal:   "ŠTÝL: Odpovedaj formálne a profesionálne, v úplných vetách. Vykanie, žiadne emoji, žiadne hovorové skratky.",
+};
 
 export async function POST(req: NextRequest) {
   const limited = rateLimit(req, config.security.rateLimit.ai, "ai-stream");
@@ -30,7 +41,7 @@ export async function POST(req: NextRequest) {
   const parsed = schema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
 
-  const { message, module, sessionId } = parsed.data;
+  const { message, module, sessionId, prefs } = parsed.data;
 
   const user = await prisma.user.findUnique({ where: { id: session.userId }, select: { membershipTier: true } });
   if (!user) return NextResponse.json({ error: "Session expired" }, { status: 401 });
@@ -44,9 +55,10 @@ export async function POST(req: NextRequest) {
 
   const ctx = { userId: session.userId, sessionId: sessionId ?? `${session.userId}-${Date.now()}`, module, tier };
 
-  // Load context
-  const memories = await retrieveContext(ctx);
-  await storeMemory(ctx, "user", message);
+  // Load context — skip memory retrieval if user disabled it in preferences.
+  const memoryEnabled = prefs?.memoryEnabled ?? true;
+  const memories = memoryEnabled ? await retrieveContext(ctx) : [];
+  if (memoryEnabled) await storeMemory(ctx, "user", message);
 
   const memContext = memories.length > 0 ? (memories[0].context as "personal" | "work") : "work";
   const [globalPolicies, userPolicies] = await Promise.all([getActivePolicies(memContext), getUserPolicies(ctx.userId)]);
@@ -55,12 +67,15 @@ export async function POST(req: NextRequest) {
   const userPolicyLines = userPolicies.map(p => `[USER PREF: ${p.name}] ${p.rule}`).join("\n");
   const ctxLines = memories.map(m => `[${m.role === "assistant" ? "AI" : "User"}] ${m.content}`).join("\n");
 
+  const styleInstr = prefs ? STYLE_INSTRUCTIONS[prefs.style] : "";
+
   const systemPrompt = [
     policyLines,
     userPolicyLines,
     "Si Personal Neural OS pre život a prácu. Si diskrétny, empatický a zameraný na výsledky.",
     config.ai.systemPrompts.base,
     config.ai.systemPrompts[module] ?? "",
+    styleInstr,
     memories.length > 0 ? `\n--- Kontext ---\n${ctxLines}\n--- Koniec kontextu ---` : "",
   ].filter(Boolean).join("\n\n");
 
@@ -75,7 +90,7 @@ export async function POST(req: NextRequest) {
     body: JSON.stringify({
       model: config.ai.defaultModel,
       max_tokens: config.ai.maxTokens,
-      temperature: config.ai.temperature,
+      temperature: prefs?.temperature ?? config.ai.temperature,
       stream: true,
       messages: [
         { role: "system", content: systemPrompt },
@@ -139,13 +154,14 @@ export async function POST(req: NextRequest) {
         // Flush anything left after stream end.
         if (buffer.trim()) processLine(buffer);
       } finally {
-        // After stream: store memory + log + increment
+        // After stream: store memory (if enabled) + log + increment
         if (fullContent) {
-          Promise.all([
-            storeMemory(ctx, "assistant", fullContent),
+          const tasks: Promise<unknown>[] = [
             incrementDailyUsage(session.userId),
             prisma.aiRequest.create({ data: { userId: session.userId, module, tokens: 0 } }),
-          ]).catch(e => console.error("[AI_STREAM] post-stream DB error:", e));
+          ];
+          if (memoryEnabled) tasks.push(storeMemory(ctx, "assistant", fullContent));
+          Promise.all(tasks).catch(e => console.error("[AI_STREAM] post-stream DB error:", e));
           // Final done signal with usage
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({ done: true, used: used + 1, limit })}\n\n`));
         }

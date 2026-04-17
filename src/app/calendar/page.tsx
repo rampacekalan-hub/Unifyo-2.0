@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, Suspense } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ChevronLeft, ChevronRight, Plus, Clock, X, Trash2, Check, Loader2,
@@ -42,6 +43,14 @@ function norm(s: string) {
 }
 
 export default function CalendarPage() {
+  return (
+    <Suspense fallback={null}>
+      <CalendarPageInner />
+    </Suspense>
+  );
+}
+
+function CalendarPageInner() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
@@ -77,6 +86,26 @@ export default function CalendarPage() {
   }, []);
 
   useEffect(() => { loadTasks(); }, [loadTasks]);
+
+  // URL param handlers — ?new=1 opens add modal, ?focus=<id> selects task
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  useEffect(() => {
+    if (!searchParams) return;
+    if (searchParams.get("new") === "1") {
+      setShowModal(true);
+      router.replace("/calendar");
+    }
+  }, [searchParams, router]);
+  useEffect(() => {
+    const focusId = searchParams?.get("focus");
+    if (!focusId || tasks.length === 0) return;
+    const t = tasks.find((x) => x.id === focusId);
+    if (t) {
+      setSelectedTask(t);
+      router.replace("/calendar");
+    }
+  }, [searchParams, tasks, router]);
 
   const firstDay = new Date(year, month, 1).getDay();
   const startingDay = firstDay === 0 ? 6 : firstDay - 1;
