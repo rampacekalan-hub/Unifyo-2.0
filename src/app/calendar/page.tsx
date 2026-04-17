@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ChevronLeft, ChevronRight, Plus, Clock, X, Trash2, Check, Loader2,
-  CalendarDays,
+  CalendarDays, Search,
 } from "lucide-react";
 import { toast } from "sonner";
 import AppLayout from "@/components/layout/AppLayout";
@@ -37,6 +37,9 @@ const MONTHS = [
 
 function pad(n: number) { return String(n).padStart(2, "0"); }
 function toISO(y: number, m: number, d: number) { return `${y}-${pad(m + 1)}-${pad(d)}`; }
+function norm(s: string) {
+  return s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+}
 
 export default function CalendarPage() {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -45,6 +48,7 @@ export default function CalendarPage() {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -78,10 +82,18 @@ export default function CalendarPage() {
   const startingDay = firstDay === 0 ? 6 : firstDay - 1;
   const daysInMonth = new Date(year, month + 1, 0).getDate();
 
+  const filteredTasks = useMemo(() => {
+    const q = norm(searchQuery.trim());
+    if (!q) return tasks;
+    return tasks.filter((t) =>
+      norm(t.title).includes(q) || norm(t.description ?? "").includes(q)
+    );
+  }, [tasks, searchQuery]);
+
   const getTasksForDay = useCallback((day: number): Task[] => {
     const iso = toISO(year, month, day);
-    return tasks.filter((t) => t.date === iso).sort((a, b) => (a.time ?? "").localeCompare(b.time ?? ""));
-  }, [tasks, year, month]);
+    return filteredTasks.filter((t) => t.date === iso).sort((a, b) => (a.time ?? "").localeCompare(b.time ?? ""));
+  }, [filteredTasks, year, month]);
 
   async function handleAdd() {
     if (!form.title.trim()) {
@@ -153,11 +165,11 @@ export default function CalendarPage() {
 
   const upcoming = useMemo(() => {
     const todayISO = toISO(today.getFullYear(), today.getMonth(), today.getDate());
-    return tasks
+    return filteredTasks
       .filter((t) => t.date >= todayISO && !t.done)
       .sort((a, b) => (a.date + (a.time ?? "")).localeCompare(b.date + (b.time ?? "")))
       .slice(0, 5);
-  }, [tasks, today]);
+  }, [filteredTasks, today]);
 
   return (
     <AppLayout title="Kalendár">
@@ -184,14 +196,34 @@ export default function CalendarPage() {
                 <ChevronRight className="w-5 h-5" style={{ color: D.text }} />
               </button>
             </div>
-            <button
-              onClick={() => setShowModal(true)}
-              className="px-3 md:px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-medium"
-              style={{ background: D.indigo, color: "white" }}
-            >
-              <Plus className="w-4 h-4" />
-              <span className="hidden sm:inline">Nová úloha</span>
-            </button>
+            <div className="flex items-center gap-2">
+              <div className="relative hidden md:block">
+                <Search
+                  className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none"
+                  style={{ color: D.muted }}
+                />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Hľadať úlohy..."
+                  className="pl-8 pr-3 py-2 rounded-xl text-sm outline-none w-48 lg:w-56"
+                  style={{
+                    background: D.indigoDim,
+                    border: `1px solid ${D.indigoBorder}`,
+                    color: D.text,
+                  }}
+                />
+              </div>
+              <button
+                onClick={() => setShowModal(true)}
+                className="px-3 md:px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-medium"
+                style={{ background: D.indigo, color: "white" }}
+              >
+                <Plus className="w-4 h-4" />
+                <span className="hidden sm:inline">Nová úloha</span>
+              </button>
+            </div>
           </div>
 
           <div className="grid grid-cols-7 gap-1 mb-2">

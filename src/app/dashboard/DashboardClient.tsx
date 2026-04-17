@@ -8,6 +8,7 @@ import NeuralBackground from "@/components/ui/NeuralBackground";
 import Sidebar from "@/components/layout/Sidebar";
 import GuidedCard, { type GuidedDraft } from "@/components/ui/GuidedCard";
 import ChatHistory from "@/components/ui/ChatHistory";
+import CommandPalette from "@/components/ui/CommandPalette";
 import { getSiteConfig } from "@/config/site-settings";
 import { useChatStore, chatActions } from "@/lib/chatStore";
 import { sendChat } from "@/lib/chatEngine";
@@ -476,6 +477,8 @@ export default function DashboardClient({ user }: DashboardClientProps) {
           </div>
         </div>
       </div>
+
+      <CommandPalette />
     </div>
   );
 }

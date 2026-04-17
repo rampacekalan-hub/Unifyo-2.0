@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import NeuralBackground from "@/components/ui/NeuralBackground";
 import FloatingAIWidget from "@/components/ui/FloatingAIWidget";
+import CommandPalette from "@/components/ui/CommandPalette";
 import Sidebar, { type SidebarUser } from "@/components/layout/Sidebar";
 
 interface AppLayoutProps {
@@ -95,6 +96,7 @@ export default function AppLayout({ children, subtitle, user }: AppLayoutProps) 
         <div className="flex-1 overflow-auto">{children}</div>
 
         <FloatingAIWidget />
+        <CommandPalette />
       </main>
     </div>
   );
