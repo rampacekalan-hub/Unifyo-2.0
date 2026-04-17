@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
     // Nájdi usera
     const user = await prisma.user.findUnique({
       where: { email },
-      select: { id: true, email: true, name: true, role: true, membershipTier: true, password: true },
+      select: { id: true, email: true, name: true, role: true, membershipTier: true, password: true, tokenVersion: true },
     });
 
     // Konštantný čas — ochrana pred timing attack
@@ -40,25 +40,45 @@ export async function POST(req: NextRequest) {
       user?.password ?? dummyHash
     );
 
+    // Audit: log failed attempt (if we know the user) before bailing.
+    const ip =
+      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      req.headers.get("x-real-ip") ||
+      null;
+    const ua = req.headers.get("user-agent") || null;
+
     if (!user || !passwordMatch) {
+      if (user) {
+        try {
+          await prisma.loginEvent.create({
+            data: { userId: user.id, ip, userAgent: ua, success: false },
+          });
+        } catch (e) { console.error("[LOGIN audit]", e); }
+      }
       return NextResponse.json(
         { error: "Nesprávny e-mail alebo heslo" },
         { status: 401 }
       );
     }
 
-    // Aktualizuj lastActiveAt
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { lastActiveAt: new Date() },
-    });
+    // Aktualizuj lastActiveAt + zaloguj úspešný login
+    await Promise.all([
+      prisma.user.update({
+        where: { id: user.id },
+        data: { lastActiveAt: new Date() },
+      }),
+      prisma.loginEvent.create({
+        data: { userId: user.id, ip, userAgent: ua, success: true },
+      }).catch((e) => console.error("[LOGIN audit]", e)),
+    ]);
 
-    // Nastavenie session
+    // Nastavenie session — zahrň tokenVersion pre "Odhlásiť všade".
     await setSessionCookie({
       userId: user.id,
       email: user.email,
       role: user.role,
       membershipTier: user.membershipTier,
+      tv: user.tokenVersion,
     });
 
     return NextResponse.json({

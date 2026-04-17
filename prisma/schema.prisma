@@ -40,6 +40,10 @@ model User {
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
   lastActiveAt   DateTime?
+  // Monotonically incremented to invalidate all JWTs ("Odhlásiť všade").
+  // Every issued token embeds the current value; requireAuth rejects
+  // mismatched tokens. Zero means "never rotated".
+  tokenVersion   Int            @default(0)
 
   aiRequests    AiRequest[]
   dailyUsage    DailyUsage[]
@@ -48,6 +52,20 @@ model User {
   calendarTasks CalendarTask[]
   conversations Conversation[]
   userPolicies  UserPolicy[]
+  loginEvents   LoginEvent[]
+}
+
+// ── Login events (user-visible audit of auth activity) ───────────
+model LoginEvent {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ip        String?
+  userAgent String?
+  success   Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
 }
 
 // ── AI requesty (audit / usage) ──────────────────────────────────

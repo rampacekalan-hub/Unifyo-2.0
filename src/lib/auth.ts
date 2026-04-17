@@ -31,6 +31,10 @@ export interface SessionPayload {
   email: string;
   role: UserRole;
   membershipTier: SessionTier;
+  // Snapshot of User.tokenVersion at issue time. requireAuth rejects the
+  // token when this no longer matches the current DB value — enables
+  // "Odhlásiť všade". Omit in legacy tokens issued before the feature.
+  tv?: number;
 }
 
 // ── Vytvorenie JWT tokenu ─────────────────────────────────────
@@ -53,6 +57,7 @@ export async function verifyToken(token: string): Promise<SessionPayload | null>
       email: p.email,
       role: p.role,
       membershipTier: p.membershipTier ?? "BASIC",
+      tv: typeof p.tv === "number" ? p.tv : undefined,
     };
   } catch {
     return null;
@@ -109,6 +114,26 @@ export async function requireAuth(req: NextRequest): Promise<RequireAuthResult> 
       session: null,
       response: NextResponse.json({ error: "Neplatná session" }, { status: 401 }),
     };
+  }
+  // Token-version gate for "Odhlásiť všade". Lazy-import prisma to avoid
+  // pulling DB client into edge middleware contexts that import this file.
+  if (typeof session.tv === "number") {
+    try {
+      const { prisma } = await import("@/lib/prisma");
+      const u = await prisma.user.findUnique({
+        where: { id: session.userId },
+        select: { tokenVersion: true },
+      });
+      if (!u || u.tokenVersion !== session.tv) {
+        return {
+          session: null,
+          response: NextResponse.json({ error: "Session bola odhlásená" }, { status: 401 }),
+        };
+      }
+    } catch (e) {
+      console.error("[requireAuth] tokenVersion check failed:", e);
+      // Fail open on transient DB error — JWT signature already verified.
+    }
   }
   return { session, response: null };
 }

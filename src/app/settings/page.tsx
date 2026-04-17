@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import {
   User, KeyRound, Bell, Sparkles, LogOut, Save, Loader2, Mail, Shield, Palette,
   Brain, Thermometer, MessageSquare, Camera, Trash2, Download, AlertTriangle,
+  Monitor, Smartphone, Globe, CheckCircle2, XCircle,
 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import { loadPrefs, savePrefs, type AiPrefs, type ResponseStyle } from "@/lib/aiPrefs";
@@ -178,6 +179,9 @@ export default function SettingsPage() {
 
         {/* ── Vzhľad ── */}
         <Section icon={Palette} title="Vzhľad" subtitle="Téma, farebný akcent, hustota" comingSoon />
+
+        {/* ── Prihlásenia & bezpečnosť ── */}
+        <SessionsSection />
 
         {/* ── Export dát ── */}
         <DataExportSection />
@@ -672,6 +676,200 @@ function Toggle({
           className="absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all"
           style={{ left: checked ? "calc(100% - 18px)" : "2px" }}
         />
+      </button>
+    </div>
+  );
+}
+
+// ── Sessions & audit ───────────────────────────────────────────────
+interface LoginEventRow {
+  id: string;
+  ip: string | null;
+  userAgent: string | null;
+  success: boolean;
+  createdAt: string;
+}
+
+function formatUA(ua: string | null): { device: "desktop" | "mobile" | "unknown"; label: string } {
+  if (!ua) return { device: "unknown", label: "Neznáme zariadenie" };
+  const s = ua.toLowerCase();
+  const mobile = /iphone|android|mobile|ipad/.test(s);
+  let browser = "Browser";
+  if (s.includes("firefox")) browser = "Firefox";
+  else if (s.includes("edg/")) browser = "Edge";
+  else if (s.includes("chrome")) browser = "Chrome";
+  else if (s.includes("safari")) browser = "Safari";
+  let os = "";
+  if (s.includes("mac os")) os = "macOS";
+  else if (s.includes("windows")) os = "Windows";
+  else if (s.includes("android")) os = "Android";
+  else if (s.includes("iphone") || s.includes("ipad") || s.includes("ios")) os = "iOS";
+  else if (s.includes("linux")) os = "Linux";
+  return { device: mobile ? "mobile" : "desktop", label: `${browser}${os ? ` · ${os}` : ""}` };
+}
+
+function SessionsSection() {
+  const [events, setEvents] = useState<LoginEventRow[] | null>(null);
+  const [current, setCurrent] = useState<{ userAgent: string | null; ip: string | null } | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [loggingOut, setLoggingOut] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const res = await fetch("/api/user/sessions");
+        if (!alive) return;
+        if (res.ok) {
+          const data = await res.json();
+          setEvents(data.events ?? []);
+          setCurrent(data.current ?? null);
+        }
+      } catch {
+        if (alive) toast.error("Nepodarilo sa načítať prihlásenia");
+      } finally {
+        if (alive) setLoading(false);
+      }
+    })();
+    return () => { alive = false; };
+  }, []);
+
+  async function handleLogoutAll() {
+    if (!confirm("Odhlásiť sa zo všetkých zariadení? Budeš sa musieť znova prihlásiť aj tu.")) return;
+    setLoggingOut(true);
+    try {
+      const res = await fetch("/api/user/sessions/logout-all", { method: "POST" });
+      if (!res.ok) throw new Error();
+      toast.success("Odhlásené zo všetkých zariadení");
+      window.location.href = "/login";
+    } catch {
+      toast.error("Odhlásenie zlyhalo");
+      setLoggingOut(false);
+    }
+  }
+
+  const currentUA = formatUA(current?.userAgent ?? null);
+
+  return (
+    <div
+      className="rounded-2xl p-5"
+      style={{
+        background: "rgba(99,102,241,0.04)",
+        border: `1px solid rgba(99,102,241,0.22)`,
+      }}
+    >
+      <div className="flex items-start gap-3 mb-4">
+        <div
+          className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+          style={{ background: "rgba(99,102,241,0.12)" }}
+        >
+          <Shield className="w-4 h-4" style={{ color: D.indigo }} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <h3 className="text-sm font-bold" style={{ color: D.text }}>
+            Prihlásenia & bezpečnosť
+          </h3>
+          <p className="text-xs mt-0.5" style={{ color: D.muted }}>
+            Audit prístupov k účtu a možnosť odhlásiť všetky zariadenia
+          </p>
+        </div>
+      </div>
+
+      {/* Current device */}
+      <div
+        className="rounded-xl p-3 mb-3 flex items-center gap-3"
+        style={{
+          background: "rgba(16,185,129,0.06)",
+          border: "1px solid rgba(16,185,129,0.22)",
+        }}
+      >
+        {currentUA.device === "mobile"
+          ? <Smartphone className="w-4 h-4 flex-shrink-0" style={{ color: "#10b981" }} />
+          : <Monitor className="w-4 h-4 flex-shrink-0" style={{ color: "#10b981" }} />}
+        <div className="flex-1 min-w-0">
+          <div className="text-xs font-semibold" style={{ color: D.text }}>
+            Toto zariadenie · {currentUA.label}
+          </div>
+          {current?.ip && (
+            <div className="text-[10px]" style={{ color: D.muted }}>IP {current.ip}</div>
+          )}
+        </div>
+        <span
+          className="text-[9px] font-bold px-2 py-0.5 rounded-full tracking-wider uppercase"
+          style={{
+            background: "rgba(16,185,129,0.15)",
+            color: "#10b981",
+            border: "1px solid rgba(16,185,129,0.35)",
+          }}
+        >
+          aktívne
+        </span>
+      </div>
+
+      {/* Recent login events */}
+      <div className="mb-3">
+        <div
+          className="text-[10px] font-bold uppercase tracking-widest mb-2"
+          style={{ color: D.mutedDark }}
+        >
+          Nedávne prihlásenia
+        </div>
+        {loading ? (
+          <div className="text-xs py-3" style={{ color: D.muted }}>
+            <Loader2 className="w-3 h-3 animate-spin inline mr-2" />
+            Načítavam…
+          </div>
+        ) : events && events.length > 0 ? (
+          <ul className="space-y-1.5 max-h-60 overflow-y-auto pr-1">
+            {events.map((ev) => {
+              const ua = formatUA(ev.userAgent);
+              return (
+                <li
+                  key={ev.id}
+                  className="flex items-center gap-2 py-1.5 px-2 rounded-lg"
+                  style={{ background: "rgba(99,102,241,0.04)" }}
+                >
+                  {ev.success
+                    ? <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0" style={{ color: "#10b981" }} />
+                    : <XCircle className="w-3.5 h-3.5 flex-shrink-0" style={{ color: "#ef4444" }} />}
+                  <Globe className="w-3 h-3 flex-shrink-0" style={{ color: D.mutedDark }} />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[11px] truncate" style={{ color: D.text }}>
+                      {ua.label}
+                      {ev.ip && <span style={{ color: D.mutedDark }}> · {ev.ip}</span>}
+                    </div>
+                  </div>
+                  <div className="text-[10px] flex-shrink-0" style={{ color: D.muted }}>
+                    {new Date(ev.createdAt).toLocaleString("sk-SK", {
+                      day: "2-digit", month: "2-digit", year: "numeric",
+                      hour: "2-digit", minute: "2-digit",
+                    })}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        ) : (
+          <div className="text-xs py-3" style={{ color: D.muted }}>
+            Žiadne záznamy.
+          </div>
+        )}
+      </div>
+
+      <button
+        onClick={handleLogoutAll}
+        disabled={loggingOut}
+        className="w-full px-4 py-2.5 rounded-xl text-xs font-semibold transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+        style={{
+          background: "rgba(244,63,94,0.08)",
+          border: "1px solid rgba(244,63,94,0.3)",
+          color: "#f43f5e",
+        }}
+      >
+        {loggingOut
+          ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          : <LogOut className="w-3.5 h-3.5" />}
+        Odhlásiť zo všetkých zariadení
       </button>
     </div>
   );

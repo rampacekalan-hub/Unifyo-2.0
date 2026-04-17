@@ -51,12 +51,13 @@ export async function POST(req: NextRequest) {
       select: { id: true, email: true, name: true, role: true, membershipTier: true },
     });
 
-    // Nastavenie session
+    // Nastavenie session — new users start at tokenVersion 0.
     await setSessionCookie({
       userId: user.id,
       email: user.email,
       role: user.role,
       membershipTier: user.membershipTier,
+      tv: 0,
     });
 
     return NextResponse.json({ ok: true, user: { id: user.id, email: user.email, name: user.name } });
