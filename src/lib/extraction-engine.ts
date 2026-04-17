@@ -70,12 +70,14 @@ export function stripActionCardBlocks(text: string): string {
   out = out.replace(/[ \t]+/g, " ");
 
   // Trim trailing junk that AI sometimes appends after closing fence:
-  // stray digits (".0"), lone braces, dangling dots, backticks.
-  out = out.replace(/[\s.`}{\[\]0-9]+$/u, (tail) => {
-    // Keep a real sentence-ending period, drop anything else.
-    const hasLetter = /[A-Za-zÁ-ž]/.test(out.slice(0, out.length - tail.length).slice(-1));
-    return hasLetter && /\.$/.test(tail.replace(/[^.]/g, "")) ? "." : "";
-  });
+  // digits after sentence-ending punctuation ("stretávate?0" → "stretávate?"),
+  // lone digits ("karty 0" → "karty"), orphan braces/backticks.
+  out = out.replace(/([.?!])\s*\d+\s*$/u, "$1");
+  out = out.replace(/\s*\d+\s*$/u, (m) => (/[.?!]/.test(m) ? m : ""));
+  out = out.replace(/\s*[`}{\[\]]+\s*$/u, "");
+
+  // Replace literal placeholders AI sometimes echoes — "[NAME]", "[MENO]", "[EMAIL]".
+  out = out.replace(/\[(?:NAME|MENO|EMAIL|TEL|TELEFON|TELEFÓN|FIRMA|DATUM|DÁTUM|CAS|ČAS)\]/gi, "").replace(/ {2,}/g, " ");
 
   return out.trim();
 }

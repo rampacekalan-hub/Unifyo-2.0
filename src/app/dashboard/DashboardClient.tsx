@@ -1,84 +1,44 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useRef, useEffect, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
-import {
-  Bot, Calendar, Mail, BarChart3, Phone, Zap,
-  Send, Loader2, AlertTriangle, X, Check,
-} from "lucide-react";
+import { Bot, Send, Loader2, AlertTriangle, X, Check } from "lucide-react";
 import NeuralBackground from "@/components/ui/NeuralBackground";
 import Sidebar from "@/components/layout/Sidebar";
-import ActionCardUI from "@/components/ui/ActionCard";
-import {
-  extractActionCards,
-  maskActionCardBlocks,
-  stripActionCardBlocks,
-} from "@/lib/extraction-engine";
-import type { ActionCard } from "@/lib/extraction-engine";
+import GuidedCard, { type GuidedDraft } from "@/components/ui/GuidedCard";
+import ChatHistory from "@/components/ui/ChatHistory";
 import { getSiteConfig } from "@/config/site-settings";
+import { useChatStore, chatActions } from "@/lib/chatStore";
+import { sendChat } from "@/lib/chatEngine";
 
 const config = getSiteConfig();
-const { errorStates, dashboard } = config.texts;
+const { dashboard } = config.texts;
 
-interface ChatMessage {
-  id: string;
-  role: "user" | "ai" | "error" | "integration" | "thinking";
-  content: string;
-  tokens?: number;
-  integrationMeta?: { label: string; color: string; name: string };
-  detectedEntities?: { person?: boolean; date?: boolean; intent?: boolean };
-  cards?: ActionCard[];
+interface DashboardClientProps {
+  user: {
+    id: string;
+    email: string;
+    name: string | null;
+    plan: string;
+    credits?: number;
+    role: string;
+  };
 }
 
-function msgId() {
-  return Math.random().toString(36).slice(2, 10);
-}
+// ── Indigo-first palette ─────────────────────────────────────
+const D = {
+  indigo:       "#6366f1",
+  indigoDim:    "rgba(99,102,241,0.10)",
+  indigoBorder: "rgba(99,102,241,0.20)",
+  indigoGlow:   "rgba(99,102,241,0.28)",
+  violet:       "#8b5cf6",
+  sky:          "#38bdf8",
+  text:         "#eef2ff",
+  muted:        "#6b7280",
+};
 
-// ── Persist an action card to the correct backend ─────────────────
-function todayISO(): string {
-  return new Date().toISOString().split("T")[0];
-}
-
-async function persistCard(
-  card: ActionCard,
-  edited: Record<string, string>,
-): Promise<boolean> {
-  try {
-    if (card.targetModule === "crm") {
-      const res = await fetch("/api/crm/contacts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: edited["Meno"] || "Nový kontakt",
-          email: edited["Email"] || undefined,
-          phone: edited["Telefón"] || undefined,
-          company: edited["Firma"] || undefined,
-        }),
-      });
-      return res.ok;
-    }
-    if (card.targetModule === "calendar") {
-      const date = edited["Dátum"] || todayISO();
-      const res = await fetch("/api/calendar/tasks", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: edited["Úloha"] || "Nová úloha",
-          date,
-          time: edited["Čas"] || undefined,
-          description: edited["Poznámka"] || undefined,
-        }),
-      });
-      return res.ok;
-    }
-    return false;
-  } catch {
-    return false;
-  }
-}
-
-// ── Neural Thinking Indicator — identity-aligned indigo shimmer ──
+// ── Neural Thinking Indicator ─────────────────────────────────
 function SmartThinkingUI() {
   return (
     <div
@@ -131,58 +91,10 @@ function SmartThinkingUI() {
   );
 }
 
-interface DashboardClientProps {
-  user: {
-    id: string;
-    email: string;
-    name: string | null;
-    plan: string;
-    credits?: number;
-    role: string;
-  };
-}
-
-const MODULE_META: Record<string, { icon: React.ElementType; label: string }> = {
-  dashboard:         { icon: Bot,       label: "AI Chat" },
-  calendar:          { icon: Calendar,  label: "Kalendár" },
-  email:             { icon: Mail,      label: "Email" },
-  crm:               { icon: BarChart3, label: "CRM" },
-  calls:             { icon: Phone,     label: "Hovory" },
-  analytics:         { icon: Zap,       label: "Analytika" },
-  automationBuilder: { icon: Zap,       label: "Automation" },
-};
-
-// ── Indigo-first palette ─────────────────────────────────────
-const D = {
-  indigo:       "#6366f1",
-  indigoDim:    "rgba(99,102,241,0.10)",
-  indigoBorder: "rgba(99,102,241,0.20)",
-  indigoGlow:   "rgba(99,102,241,0.28)",
-  violet:       "#8b5cf6",
-  violetDim:    "rgba(139,92,246,0.10)",
-  violetBorder: "rgba(139,92,246,0.22)",
-  sky:          "#38bdf8",
-  text:         "#eef2ff",
-  muted:        "#6b7280",
-  mutedDark:    "#374151",
-};
-
-const GLASS: React.CSSProperties = {
-  background: "rgba(10,12,24,0.65)",
-  border: `1px solid ${D.indigoBorder}`,
-  backdropFilter: "blur(28px)",
-  WebkitBackdropFilter: "blur(28px)",
-};
-
 export default function DashboardClient({ user }: DashboardClientProps) {
   const displayName = user.name ?? user.email.split("@")[0];
-  const [credits, setCredits] = useState(user.credits ?? 0);
-  const [activeModule, setActiveModule] = useState("dashboard");
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    { id: msgId(), role: "ai", content: dashboard.aiReady },
-  ]);
+  const { messages, draft, loading, conversationId } = useChatStore();
   const [input, setInput] = useState("");
-  const [loading, setLoading] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   // ── Live toggles from admin store ────────────────────────────
@@ -194,16 +106,16 @@ export default function DashboardClient({ user }: DashboardClientProps) {
   useEffect(() => {
     const es = new EventSource("/api/events");
     es.addEventListener("init", (e) => {
-      const d = JSON.parse(e.data);
+      const d = JSON.parse((e as MessageEvent).data);
       if (d.toggles) setLiveToggles(d.toggles);
       if (d.broadcast) setBroadcast(d.broadcast);
     });
     es.addEventListener("toggles", (e) => {
-      const d = JSON.parse(e.data);
+      const d = JSON.parse((e as MessageEvent).data);
       if (d.toggles) setLiveToggles(d.toggles);
     });
     es.addEventListener("broadcast", (e) => {
-      const d = JSON.parse(e.data);
+      const d = JSON.parse((e as MessageEvent).data);
       setBroadcast(d);
     });
     es.addEventListener("broadcast_clear", () => {
@@ -214,177 +126,80 @@ export default function DashboardClient({ user }: DashboardClientProps) {
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messages, draft]);
 
-  const allModules = Object.values(config.modules).filter((m) => m.path).map((m) => ({
-    ...m,
-    enabled: liveToggles ? (liveToggles[m.id] ?? m.enabled) : m.enabled,
-  }));
-
-  // ── Dismiss a card from a message ──────────────────────────────
-  const handleDismissCard = useCallback((messageId: string, cardId: string) => {
-    setMessages((prev) =>
-      prev.map((m) =>
-        m.id === messageId
-          ? { ...m, cards: m.cards?.filter((c) => c.id !== cardId) }
-          : m,
-      ),
-    );
-  }, []);
-
-  // ── Confirm card + persist to backend ──────────────────────────
-  const handleConfirmCard = useCallback(
-    async (messageId: string, card: ActionCard, edited: Record<string, string>) => {
-      const ok = await persistCard(card, edited);
-      if (ok) {
-        toast.success(
-          card.targetModule === "crm"
-            ? "Kontakt uložený do CRM"
-            : "Úloha pridaná do Kalendára",
-        );
-        handleDismissCard(messageId, card.id);
-      } else {
-        toast.error("Nepodarilo sa uložiť. Skúste znova.");
-      }
-    },
-    [handleDismissCard],
-  );
-
-  // ── Streaming AI Handler ─────────────────────────────────────
-  async function handleSend() {
+  // ── Send wrapper ────────────────────────────────────────────
+  const handleSend = useCallback(async () => {
     const text = input.trim();
     if (!text || loading) return;
-
     setInput("");
+    await sendChat(text, { module: "dashboard", conversationId });
+  }, [input, loading, conversationId]);
 
-    const userId = msgId();
-    const aiId = msgId();
+  // ── Guided draft: save both entities ────────────────────────
+  const handleDraftConfirm = useCallback(async () => {
+    if (!draft) return;
+    const promises: Promise<Response>[] = [];
+    const hasContact = Object.values(draft.contact).some((v) => v && v.trim());
+    const hasTask    = Object.values(draft.task).some((v) => v && v.trim());
 
-    setMessages((prev) => [
-      ...prev,
-      { id: userId, role: "user", content: text },
-      { id: aiId, role: "thinking", content: "" },
-    ]);
-    setLoading(true);
-
-    try {
-      const res = await fetch("/api/ai/stream", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text, module: activeModule }),
-      });
-
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        const errMsg =
-          res.status === 429 ? errorStates.rateLimited :
-          res.status === 402 ? errorStates.noCredits :
-          res.status === 401 ? errorStates.sessionExpired :
-          res.status >= 500  ? errorStates.aiUnavailable :
-          (data.error ?? errorStates.aiUnavailable);
-
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.id === aiId ? { ...m, role: "error", content: errMsg } : m,
-          ),
-        );
-        setLoading(false);
-        return;
-      }
-
-      const reader = res.body?.getReader();
-      const decoder = new TextDecoder();
-      let fullContent = "";
-      let tokensUsed = 0;
-      let isDone = false;
-
-      if (!reader) {
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.id === aiId ? { ...m, role: "error", content: errorStates.aiUnavailable } : m,
-          ),
-        );
-        setLoading(false);
-        return;
-      }
-
-      while (!isDone) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        const chunk = decoder.decode(value, { stream: true });
-        const lines = chunk.split("\n").filter(l => l.trim());
-
-        for (const line of lines) {
-          if (!line.startsWith("data: ")) continue;
-          const data = line.slice(6).trim();
-          if (data === "[DONE]") { isDone = true; continue; }
-
-          try {
-            const parsed = JSON.parse(data);
-            if (parsed.delta) {
-              fullContent += parsed.delta;
-              // MASK action-card JSON during streaming — user vidí iba čistý text
-              const displayText = maskActionCardBlocks(fullContent);
-              setMessages((prev) =>
-                prev.map((m) =>
-                  m.id === aiId ? { ...m, role: "ai", content: displayText } : m,
-                ),
-              );
-            }
-            if (parsed.done) {
-              isDone = true;
-              if (parsed.tokens) tokensUsed = parsed.tokens;
-              if (parsed.creditsRemaining !== undefined) {
-                setCredits(parsed.creditsRemaining);
-              }
-            }
-          } catch {
-            /* skip malformed SSE chunks */
-          }
-        }
-      }
-
-      // Stream finished — EXTRACT cards, STRIP JSON blocks from display text
-      // Pass BOTH user prompt + AI response so regex fallback can recover
-      // names/dates when AI emits malformed JSON.
-      const extractionInput = `${text}\n---\n${fullContent}`;
-      const cards = extractActionCards(extractionInput);
-      const cleanText = stripActionCardBlocks(fullContent).trim();
-
-      setMessages((prev) =>
-        prev.map((m) =>
-          m.id === aiId
-            ? {
-                ...m,
-                role: "ai",
-                content: cleanText || (cards.length > 0
-                  ? "Pripravil som pre teba karty na potvrdenie:"
-                  : "Rozumiem, spracoval som tvoju požiadavku."),
-                tokens: tokensUsed,
-                cards: cards.length > 0 ? cards : undefined,
-              }
-            : m,
-        ),
+    if (hasContact) {
+      promises.push(
+        fetch("/api/crm/contacts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: draft.contact["Meno"] || "Nový kontakt",
+            email: draft.contact["Email"] || undefined,
+            phone: draft.contact["Telefón"] || undefined,
+            company: draft.contact["Firma"] || undefined,
+          }),
+        }),
       );
-    } catch {
-      setMessages((prev) =>
-        prev.map((m) =>
-          m.id === aiId ? { ...m, role: "error", content: errorStates.networkError } : m,
-        ),
-      );
-    } finally {
-      setLoading(false);
     }
-  }
+    if (hasTask) {
+      const date = draft.task["Dátum"] || new Date().toISOString().split("T")[0];
+      promises.push(
+        fetch("/api/calendar/tasks", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: draft.task["Úloha"] || "Nová úloha",
+            date,
+            time: draft.task["Čas"] || undefined,
+            description: draft.task["Poznámka"] || undefined,
+          }),
+        }),
+      );
+    }
+    try {
+      const results = await Promise.all(promises);
+      const allOk = results.every((r) => r.ok);
+      if (allOk) {
+        toast.success(
+          hasContact && hasTask ? "Kontakt aj termín uložené."
+          : hasContact ? "Kontakt uložený do CRM."
+          : "Termín pridaný do Kalendára.",
+        );
+        chatActions.clearDraft();
+      } else {
+        toast.error("Niektorá časť sa neuložila.");
+      }
+    } catch {
+      toast.error("Ukladanie zlyhalo.");
+    }
+  }, [draft]);
 
-  // Legacy sendMessage function (alias for compatibility)
-  async function sendMessage() {
-    return handleSend();
-  }
+  const handleDraftChange = useCallback((next: GuidedDraft) => {
+    chatActions.setDraft(next);
+  }, []);
 
-  const creditsColor = credits > 20 ? "#10b981" : credits > 5 ? "#f59e0b" : "#ef4444";
-  const creditsPercent = Math.min(100, (credits / Math.max(user.credits ?? 1, 1)) * 100);
+  const handleDraftDismiss = useCallback(() => {
+    chatActions.clearDraft();
+  }, []);
+
+  // Empty-state greeting (not persisted, just visual)
+  const showGreeting = messages.length === 0;
 
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: "#05070f", color: "#eef2ff" }}>
@@ -396,7 +211,7 @@ export default function DashboardClient({ user }: DashboardClientProps) {
       {/* ── MAIN ── */}
       <div className="flex-1 flex flex-col h-full overflow-hidden z-10">
 
-        {/* Broadcast banner — elegant slide-down */}
+        {/* Broadcast banner */}
         <AnimatePresence>
           {broadcast && (
             <motion.div
@@ -449,120 +264,109 @@ export default function DashboardClient({ user }: DashboardClientProps) {
               </span>
             </h1>
           </div>
-          {/* Plan and credits removed */}
+          <ChatHistory />
         </header>
 
-        {/* Chat panel (dashboard only) */}
-        {activeModule === "dashboard" ? (
-          <div className="flex-1 flex flex-col overflow-hidden">
-            <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-5 space-y-4">
-              <AnimatePresence initial={false}>
-                {messages.map((msg) => (
-                  <motion.div key={msg.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.25 }}>
-                    <div className={"flex " + (msg.role === "user" ? "justify-end" : "justify-start")}>
-                      {msg.role !== "user" && (
-                        <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 mr-2.5 mt-0.5"
-                          style={msg.role === "error"
-                            ? { background: "rgba(239,68,68,0.15)", border: "1px solid rgba(239,68,68,0.3)" }
-                            : msg.role === "integration"
-                            ? { background: "rgba(16,185,129,0.15)", border: "1px solid rgba(16,185,129,0.3)" }
-                            : msg.role === "thinking"
-                            ? { background: "rgba(99,102,241,0.2)", border: "1px solid rgba(99,102,241,0.3)" }
-                            : { background: "linear-gradient(135deg,#7c3aed,#4f46e5)", boxShadow: "0 0 10px rgba(124,58,237,0.3)" }
-                          }>
-                          {msg.role === "error"
-                            ? <AlertTriangle className="w-3.5 h-3.5" style={{ color: "#f87171" }} />
-                            : msg.role === "integration"
-                            ? <Check className="w-3.5 h-3.5 text-emerald-400" />
-                            : msg.role === "thinking"
-                            ? <Bot className="w-3.5 h-3.5 text-indigo-300" />
-                            : <Bot className="w-3.5 h-3.5 text-white" />
-                          }
-                        </div>
-                      )}
-                      <div className="max-w-[75%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed"
-                        style={msg.role === "user"
-                          ? { background: "linear-gradient(135deg,rgba(124,58,237,0.3),rgba(79,70,229,0.3))", border: "1px solid rgba(124,58,237,0.3)", color: "#eef2ff" }
-                          : msg.role === "error"
-                          ? { background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", color: "#fca5a5" }
-                          : msg.role === "integration"
-                          ? { background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.2)", color: "#6ee7b7" }
-                          : msg.role === "thinking"
-                          ? { background: "transparent", border: "none" }
-                          : { background: "rgba(139,92,246,0.07)", border: "1px solid rgba(139,92,246,0.15)", color: "#c4b5fd" }
-                        }>
-                        {msg.role === "thinking" ? (
-                          <SmartThinkingUI />
-                        ) : (
-                          <>
-                            {msg.content}
-                            {msg.tokens && msg.tokens > 0 && (
-                              <span className="block mt-1 text-[0.62rem]" style={{ color: "#334155" }}>{msg.tokens} tokenov</span>
-                            )}
-                          </>
-                        )}
-                      </div>
-                    </div>
+        {/* Chat panel */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-5 space-y-4">
+            {showGreeting && (
+              <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex justify-start"
+              >
+                <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 mr-2.5 mt-0.5"
+                  style={{ background: "linear-gradient(135deg,#7c3aed,#4f46e5)", boxShadow: "0 0 10px rgba(124,58,237,0.3)" }}>
+                  <Bot className="w-3.5 h-3.5 text-white" />
+                </div>
+                <div className="max-w-[75%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed"
+                  style={{ background: "rgba(139,92,246,0.07)", border: "1px solid rgba(139,92,246,0.15)", color: "#c4b5fd" }}>
+                  {dashboard.aiReady}
+                </div>
+              </motion.div>
+            )}
 
-                    {/* Action cards — rendered below AI bubble */}
-                    {msg.cards && msg.cards.length > 0 && (
-                      <div className="mt-3 ml-10 space-y-2 max-w-[75%]">
-                        {msg.cards.map((card) => (
-                          <ActionCardUI
-                            key={card.id}
-                            card={card}
-                            onConfirm={(c, edited) => handleConfirmCard(msg.id, c, edited)}
-                            onDismiss={(id) => handleDismissCard(msg.id, id)}
-                          />
-                        ))}
+            <AnimatePresence initial={false}>
+              {messages.map((msg) => (
+                <motion.div key={msg.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.25 }}>
+                  <div className={"flex " + (msg.role === "user" ? "justify-end" : "justify-start")}>
+                    {msg.role !== "user" && (
+                      <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 mr-2.5 mt-0.5"
+                        style={msg.role === "error"
+                          ? { background: "rgba(239,68,68,0.15)", border: "1px solid rgba(239,68,68,0.3)" }
+                          : msg.role === "integration"
+                          ? { background: "rgba(16,185,129,0.15)", border: "1px solid rgba(16,185,129,0.3)" }
+                          : msg.role === "thinking"
+                          ? { background: "rgba(99,102,241,0.2)", border: "1px solid rgba(99,102,241,0.3)" }
+                          : { background: "linear-gradient(135deg,#7c3aed,#4f46e5)", boxShadow: "0 0 10px rgba(124,58,237,0.3)" }
+                        }>
+                        {msg.role === "error"
+                          ? <AlertTriangle className="w-3.5 h-3.5" style={{ color: "#f87171" }} />
+                          : msg.role === "integration"
+                          ? <Check className="w-3.5 h-3.5 text-emerald-400" />
+                          : msg.role === "thinking"
+                          ? <Bot className="w-3.5 h-3.5 text-indigo-300" />
+                          : <Bot className="w-3.5 h-3.5 text-white" />
+                        }
                       </div>
                     )}
-                  </motion.div>
-                ))}
-
-
-                {loading && !messages.some(m => m.role === "thinking") && (
-                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex justify-start">
-                    <div className="w-7 h-7 rounded-lg flex items-center justify-center mr-2.5"
-                      style={{ background: "linear-gradient(135deg,#7c3aed,#4f46e5)" }}>
-                      <Bot className="w-3.5 h-3.5 text-white" />
+                    <div className="max-w-[75%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap"
+                      style={msg.role === "user"
+                        ? { background: "linear-gradient(135deg,rgba(124,58,237,0.3),rgba(79,70,229,0.3))", border: "1px solid rgba(124,58,237,0.3)", color: "#eef2ff" }
+                        : msg.role === "error"
+                        ? { background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", color: "#fca5a5" }
+                        : msg.role === "integration"
+                        ? { background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.2)", color: "#6ee7b7" }
+                        : msg.role === "thinking"
+                        ? { background: "transparent", border: "none" }
+                        : { background: "rgba(139,92,246,0.07)", border: "1px solid rgba(139,92,246,0.15)", color: "#c4b5fd" }
+                      }>
+                      {msg.role === "thinking" ? <SmartThinkingUI /> : msg.content}
                     </div>
-                    <div className="rounded-2xl px-4 py-3 flex items-center gap-1.5"
-                      style={{ background: "rgba(139,92,246,0.07)", border: "1px solid rgba(139,92,246,0.15)" }}>
-                      {[0, 1, 2].map((d) => (
-                        <motion.span key={d} className="w-1.5 h-1.5 rounded-full" style={{ background: "#7c3aed" }}
-                          animate={{ opacity: [0.3, 1, 0.3] }} transition={{ duration: 1.2, repeat: Infinity, delay: d * 0.2 }} />
-                      ))}
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-              <div ref={bottomRef} />
-            </div>
+                  </div>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+            <div ref={bottomRef} />
+          </div>
 
-            {/* Input bar */}
-            <div className="px-4 sm:px-6 pb-5 pt-3 flex-shrink-0" style={{ borderTop: `1px solid ${D.indigoBorder}` }}>
-              <div className="flex items-center gap-2 rounded-2xl px-4 py-3"
-                style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${D.indigoBorder}` }}>
-                <input value={input} onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && sendMessage()}
-                  placeholder={dashboard.chatPlaceholder}
-                  disabled={loading}
-                  className="flex-1 bg-transparent text-sm outline-none"
-                  style={{ color: "#eef2ff", caretColor: "#8b5cf6" }} />
-                <button onClick={sendMessage} disabled={loading || !input.trim()}
-                  className="w-8 h-8 rounded-2xl flex items-center justify-center transition-all duration-200 flex-shrink-0 disabled:opacity-40"
-                  style={{ background: `linear-gradient(135deg,${D.indigo},#4f46e5)`, boxShadow: `0 0 14px ${D.indigoGlow}` }}>
-                  {loading
-                    ? <Loader2 className="w-3.5 h-3.5 text-white animate-spin" />
-                    : <Send className="w-3.5 h-3.5 text-white" />
-                  }
-                </button>
+          {/* Guided draft — sticky above input */}
+          <AnimatePresence>
+            {draft && (
+              <div className="px-4 sm:px-6 pb-2 pt-1 flex-shrink-0">
+                <GuidedCard
+                  draft={draft}
+                  onChange={handleDraftChange}
+                  onConfirm={handleDraftConfirm}
+                  onDismiss={handleDraftDismiss}
+                />
               </div>
+            )}
+          </AnimatePresence>
+
+          {/* Input bar */}
+          <div className="px-4 sm:px-6 pb-5 pt-3 flex-shrink-0" style={{ borderTop: `1px solid ${D.indigoBorder}` }}>
+            <div className="flex items-center gap-2 rounded-2xl px-4 py-3"
+              style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${D.indigoBorder}` }}>
+              <input value={input} onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
+                placeholder={dashboard.chatPlaceholder}
+                disabled={loading}
+                className="flex-1 bg-transparent text-sm outline-none"
+                style={{ color: "#eef2ff", caretColor: "#8b5cf6" }} />
+              <button onClick={handleSend} disabled={loading || !input.trim()}
+                className="w-8 h-8 rounded-2xl flex items-center justify-center transition-all duration-200 flex-shrink-0 disabled:opacity-40"
+                style={{ background: `linear-gradient(135deg,${D.indigo},#4f46e5)`, boxShadow: `0 0 14px ${D.indigoGlow}` }}>
+                {loading
+                  ? <Loader2 className="w-3.5 h-3.5 text-white animate-spin" />
+                  : <Send className="w-3.5 h-3.5 text-white" />
+                }
+              </button>
             </div>
           </div>
-        ) : null}
+        </div>
       </div>
     </div>
   );

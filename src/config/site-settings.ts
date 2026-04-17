@@ -364,6 +364,11 @@ const siteConfig: SiteConfig = {
         "potvrdíš zámer, navrhneš ďalší krok. Nie si iba generátor kariet — karty sú výsledok\n" +
         "rozhovoru, nie jeho náhrada.\n\n" +
 
+        "## ABSOLÚTNY ZÁKAZ ZÁSTUPNÝCH TEXTOV\n" +
+        "V texte odpovede NIKDY nepoužívaj zástupné značky ako '[NAME]', '[MENO]', '[EMAIL]',\n" +
+        "'[TELEFÓN]', '[DÁTUM]' ani podobné. Vždy píš konkrétnu hodnotu, ktorú používateľ uviedol.\n" +
+        "Ak údaj nemáš, napíš 'neuvedené' alebo sa spýtaj prirodzene v ľudskej reči.\n\n" +
+
         "## JAZYK A ŠTÝL\n" +
         "Píšeš výlučne spisovnou slovenčinou. Žiadne anglicizmy.\n" +
         "Správne: 'následný kontakt', 'ozvať sa', 'konzultácia', 'stretnutie', 'ponuka'.\n" +
