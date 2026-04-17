@@ -78,51 +78,55 @@ async function persistCard(
   }
 }
 
-// Compact Smart Thinking UI - Eye Icon + Neural Pulse
-interface SmartThinkingUIProps {
-  detectedEntities?: { person?: boolean; date?: boolean; intent?: boolean };
-}
-
-function SmartThinkingUI({ detectedEntities }: SmartThinkingUIProps) {
+// ── Neural Thinking Indicator — identity-aligned indigo shimmer ──
+function SmartThinkingUI() {
   return (
-    <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-indigo-500/30 bg-indigo-500/10 backdrop-blur-sm">
-      {/* Pulsing Eye Icon */}
-      <motion.div
-        animate={{
-          scale: [1, 1.1, 1],
-          opacity: [0.6, 1, 0.6],
-        }}
-        transition={{
-          duration: 2,
-          repeat: Infinity,
-          ease: "easeInOut",
-        }}
-      >
-        <svg className="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-        </svg>
-      </motion.div>
-
-      {/* Neural Pulse Dots */}
-      <span className="flex gap-0.5">
+    <div
+      className="inline-flex items-center gap-2.5 px-3.5 py-2 rounded-2xl"
+      style={{
+        background: "rgba(99,102,241,0.08)",
+        border: "1px solid rgba(99,102,241,0.22)",
+        boxShadow: "0 0 14px rgba(99,102,241,0.15)",
+      }}
+    >
+      <span className="flex gap-1" aria-hidden>
         {[0, 1, 2].map((i) => (
           <motion.span
             key={i}
-            className="w-1 h-1 rounded-full bg-indigo-400"
+            className="w-1.5 h-1.5 rounded-full"
+            style={{ background: "#8b5cf6" }}
             animate={{
-              scale: [1, 1.3, 1],
-              opacity: [0.3, 0.8, 0.3],
+              y: [0, -3, 0],
+              opacity: [0.35, 1, 0.35],
+              boxShadow: [
+                "0 0 0px rgba(139,92,246,0.0)",
+                "0 0 8px rgba(139,92,246,0.7)",
+                "0 0 0px rgba(139,92,246,0.0)",
+              ],
             }}
             transition={{
-              duration: 1,
+              duration: 1.4,
               repeat: Infinity,
-              delay: i * 0.2,
+              delay: i * 0.18,
               ease: "easeInOut",
             }}
           />
         ))}
       </span>
+      <motion.span
+        className="text-[0.7rem] font-medium tracking-wide"
+        animate={{ opacity: [0.55, 1, 0.55] }}
+        transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
+        style={{
+          background: "linear-gradient(90deg,#a78bfa,#38bdf8,#a78bfa)",
+          backgroundSize: "200% 100%",
+          WebkitBackgroundClip: "text",
+          WebkitTextFillColor: "transparent",
+          backgroundClip: "text",
+        }}
+      >
+        Premýšľam…
+      </motion.span>
     </div>
   );
 }
@@ -489,7 +493,7 @@ export default function DashboardClient({ user }: DashboardClientProps) {
                           : { background: "rgba(139,92,246,0.07)", border: "1px solid rgba(139,92,246,0.15)", color: "#c4b5fd" }
                         }>
                         {msg.role === "thinking" ? (
-                          <SmartThinkingUI detectedEntities={msg.detectedEntities} />
+                          <SmartThinkingUI />
                         ) : (
                           <>
                             {msg.content}

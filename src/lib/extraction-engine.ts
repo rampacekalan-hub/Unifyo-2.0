@@ -45,14 +45,14 @@ function debugExtraction(text: string, result: { name: string; note: string; cla
 // ═════════════════════════════════════════════════════════════════
 export function stripActionCardBlocks(text: string): string {
   let out = text;
-  
+
   const aggressiveBlockPattern = /(?:```|\{)[\s\S]*?"type"[\s\S]*?(?:```|\})/gi;
   out = out.replace(aggressiveBlockPattern, "");
   out = out.replace(/```[\s\S]*?(?:action|card|type)[\s\S]*?```/gi, "");
   out = out.replace(/```[\s\S]*$/gi, "");
   out = out.replace(/\s*[-\w]*card\s*\}/gi, "");
   out = out.replace(/\s*\}\s*\}/g, "");
-  
+
   const lines = out.split("\n");
   const clean: string[] = [];
   for (const line of lines) {
@@ -62,13 +62,21 @@ export function stripActionCardBlocks(text: string): string {
     clean.push(line);
   }
   out = clean.join("\n");
-  
+
   out = out.replace(/\{\s*\}/g, "");
   out = out.replace(/```/g, "");
   out = out.replace(/action-card/gi, "");
   out = out.replace(/\n{3,}/g, "\n\n");
   out = out.replace(/[ \t]+/g, " ");
-  
+
+  // Trim trailing junk that AI sometimes appends after closing fence:
+  // stray digits (".0"), lone braces, dangling dots, backticks.
+  out = out.replace(/[\s.`}{\[\]0-9]+$/u, (tail) => {
+    // Keep a real sentence-ending period, drop anything else.
+    const hasLetter = /[A-Za-zÁ-ž]/.test(out.slice(0, out.length - tail.length).slice(-1));
+    return hasLetter && /\.$/.test(tail.replace(/[^.]/g, "")) ? "." : "";
+  });
+
   return out.trim();
 }
 
