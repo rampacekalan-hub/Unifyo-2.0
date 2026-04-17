@@ -210,7 +210,10 @@ export default function FloatingAIWidget() {
       }
 
       // Stream done — extract action cards, clean display text
-      const cards = extractActionCards(fullContent);
+      // Pass user prompt + AI response so regex fallback can recover
+      // names/dates when AI emits malformed JSON.
+      const extractionInput = `${userMsg}\n---\n${fullContent}`;
+      const cards = extractActionCards(extractionInput);
       const cleanText = stripActionCardBlocks(fullContent).trim();
 
       setMessages((prev) =>

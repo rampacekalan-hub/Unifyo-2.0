@@ -61,10 +61,13 @@ export default function EmailPage() {
 
   return (
     <AppLayout title="Email">
-      <div className="flex h-full p-6 gap-6">
-        {/* Sidebar */}
-        <div className="w-[200px] flex flex-col gap-1">
-          <button className="flex items-center gap-3 px-4 py-3 rounded-xl mb-3 text-sm font-medium" style={{ background: D.indigo, color: "white" }}>
+      <div className="flex flex-col md:flex-row h-full p-4 md:p-6 gap-4 md:gap-6">
+        {/* Folders — row on mobile, column on desktop */}
+        <div className="flex md:flex-col md:w-[200px] gap-1 overflow-x-auto md:overflow-x-visible flex-shrink-0">
+          <button
+            className="hidden md:flex items-center gap-3 px-4 py-3 rounded-xl mb-3 text-sm font-medium flex-shrink-0"
+            style={{ background: D.indigo, color: "white" }}
+          >
             <Plus className="w-4 h-4" />
             Nový email
           </button>
@@ -75,7 +78,7 @@ export default function EmailPage() {
               <button
                 key={folder.id}
                 onClick={() => { setSelectedFolder(folder.id as Email["folder"]); setSelectedEmail(null); }}
-                className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition-all"
+                className="flex items-center gap-2 md:gap-3 px-3 md:px-4 py-2.5 rounded-xl text-sm transition-all flex-shrink-0"
                 style={{
                   background: selectedFolder === folder.id ? "rgba(99,102,241,0.15)" : "transparent",
                   border: selectedFolder === folder.id ? `1px solid ${D.indigoBorder}` : "1px solid transparent",
@@ -83,7 +86,7 @@ export default function EmailPage() {
                 }}
               >
                 <Icon className="w-4 h-4" />
-                <span className="flex-1 text-left">{folder.label}</span>
+                <span className="text-left">{folder.label}</span>
                 {count > 0 && (
                   <span className="px-2 py-0.5 rounded-full text-[10px] font-medium" style={{ background: D.rose, color: "white" }}>
                     {count}
@@ -94,8 +97,11 @@ export default function EmailPage() {
           })}
         </div>
 
-        {/* Email list */}
-        <div className="flex-1 flex flex-col max-w-[450px]" style={{ borderRight: `1px solid ${D.indigoBorder}` }}>
+        {/* Email list — hidden on mobile when an email is selected */}
+        <div
+          className={`${selectedEmail ? "hidden md:flex" : "flex"} flex-1 flex-col md:max-w-[450px]`}
+          style={{ borderRight: `1px solid ${D.indigoBorder}` }}
+        >
           <div className="p-4" style={{ borderBottom: `1px solid ${D.indigoBorder}` }}>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: D.muted }} />
@@ -145,10 +151,21 @@ export default function EmailPage() {
         </div>
 
         {/* Email detail */}
-        <div className="flex-1 rounded-2xl p-6" style={{ background: "rgba(99,102,241,0.03)", border: `1px solid ${D.indigoBorder}` }}>
+        <div
+          className={`${selectedEmail ? "flex" : "hidden md:flex"} flex-1 flex-col rounded-2xl p-4 md:p-6`}
+          style={{ background: "rgba(99,102,241,0.03)", border: `1px solid ${D.indigoBorder}` }}
+        >
           {selectedEmail ? (
             <div className="h-full flex flex-col">
               <div className="flex items-center gap-2 mb-6">
+                <button
+                  onClick={() => setSelectedEmail(null)}
+                  className="md:hidden p-2 rounded-lg"
+                  style={{ background: D.indigoDim }}
+                  aria-label="Späť"
+                >
+                  <span style={{ color: D.text }}>←</span>
+                </button>
                 <button className="p-2 rounded-lg" style={{ background: D.indigoDim }}>
                   <Reply className="w-4 h-4" style={{ color: D.text }} />
                 </button>

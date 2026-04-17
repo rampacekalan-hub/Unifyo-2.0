@@ -1,24 +1,81 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { toast } from "sonner";
 import {
   Bot, Calendar, Mail, BarChart3, Phone, Zap,
-  Send, Loader2, AlertTriangle, ChevronRight, X, Check,
+  Send, Loader2, AlertTriangle, X, Check,
 } from "lucide-react";
 import NeuralBackground from "@/components/ui/NeuralBackground";
 import Sidebar from "@/components/layout/Sidebar";
+import ActionCardUI from "@/components/ui/ActionCard";
+import {
+  extractActionCards,
+  maskActionCardBlocks,
+  stripActionCardBlocks,
+} from "@/lib/extraction-engine";
+import type { ActionCard } from "@/lib/extraction-engine";
 import { getSiteConfig } from "@/config/site-settings";
 
 const config = getSiteConfig();
 const { errorStates, dashboard } = config.texts;
 
 interface ChatMessage {
+  id: string;
   role: "user" | "ai" | "error" | "integration" | "thinking";
   content: string;
   tokens?: number;
   integrationMeta?: { label: string; color: string; name: string };
   detectedEntities?: { person?: boolean; date?: boolean; intent?: boolean };
+  cards?: ActionCard[];
+}
+
+function msgId() {
+  return Math.random().toString(36).slice(2, 10);
+}
+
+// ── Persist an action card to the correct backend ─────────────────
+function todayISO(): string {
+  return new Date().toISOString().split("T")[0];
+}
+
+async function persistCard(
+  card: ActionCard,
+  edited: Record<string, string>,
+): Promise<boolean> {
+  try {
+    if (card.targetModule === "crm") {
+      const res = await fetch("/api/crm/contacts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: edited["Meno"] || "Nový kontakt",
+          email: edited["Email"] || undefined,
+          phone: edited["Telefón"] || undefined,
+          company: edited["Firma"] || undefined,
+        }),
+      });
+      return res.ok;
+    }
+    if (card.targetModule === "calendar") {
+      const date = edited["Dátum"] || todayISO();
+      const res = await fetch("/api/calendar/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: edited["Úloha"] || "Nová úloha",
+          date,
+          time: edited["Čas"] || undefined,
+          description: edited["Poznámka"] || undefined,
+        }),
+      });
+      return res.ok;
+    }
+    return false;
+  } catch {
+    return false;
+  }
 }
 
 // Compact Smart Thinking UI - Eye Icon + Neural Pulse
@@ -118,7 +175,7 @@ export default function DashboardClient({ user }: DashboardClientProps) {
   const [credits, setCredits] = useState(user.credits ?? 0);
   const [activeModule, setActiveModule] = useState("dashboard");
   const [messages, setMessages] = useState<ChatMessage[]>([
-    { role: "ai", content: dashboard.aiReady },
+    { id: msgId(), role: "ai", content: dashboard.aiReady },
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -160,17 +217,51 @@ export default function DashboardClient({ user }: DashboardClientProps) {
     enabled: liveToggles ? (liveToggles[m.id] ?? m.enabled) : m.enabled,
   }));
 
+  // ── Dismiss a card from a message ──────────────────────────────
+  const handleDismissCard = useCallback((messageId: string, cardId: string) => {
+    setMessages((prev) =>
+      prev.map((m) =>
+        m.id === messageId
+          ? { ...m, cards: m.cards?.filter((c) => c.id !== cardId) }
+          : m,
+      ),
+    );
+  }, []);
+
+  // ── Confirm card + persist to backend ──────────────────────────
+  const handleConfirmCard = useCallback(
+    async (messageId: string, card: ActionCard, edited: Record<string, string>) => {
+      const ok = await persistCard(card, edited);
+      if (ok) {
+        toast.success(
+          card.targetModule === "crm"
+            ? "Kontakt uložený do CRM"
+            : "Úloha pridaná do Kalendára",
+        );
+        handleDismissCard(messageId, card.id);
+      } else {
+        toast.error("Nepodarilo sa uložiť. Skúste znova.");
+      }
+    },
+    [handleDismissCard],
+  );
+
   // ── Streaming AI Handler ─────────────────────────────────────
   async function handleSend() {
     const text = input.trim();
     if (!text || loading) return;
-    
+
     setInput("");
-    setMessages((prev) => [...prev, { role: "user", content: text }]);
+
+    const userId = msgId();
+    const aiId = msgId();
+
+    setMessages((prev) => [
+      ...prev,
+      { id: userId, role: "user", content: text },
+      { id: aiId, role: "thinking", content: "" },
+    ]);
     setLoading(true);
-    
-    // Add thinking message
-    setMessages((prev) => [...prev, { role: "thinking", content: "" }]);
 
     try {
       const res = await fetch("/api/ai/stream", {
@@ -180,15 +271,19 @@ export default function DashboardClient({ user }: DashboardClientProps) {
       });
 
       if (!res.ok) {
-        const data = await res.json();
+        const data = await res.json().catch(() => ({}));
         const errMsg =
           res.status === 429 ? errorStates.rateLimited :
           res.status === 402 ? errorStates.noCredits :
           res.status === 401 ? errorStates.sessionExpired :
           res.status >= 500  ? errorStates.aiUnavailable :
           (data.error ?? errorStates.aiUnavailable);
-        
-        setMessages((prev) => prev.filter(m => m.role !== "thinking").concat({ role: "error", content: errMsg }));
+
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === aiId ? { ...m, role: "error", content: errMsg } : m,
+          ),
+        );
         setLoading(false);
         return;
       }
@@ -200,7 +295,11 @@ export default function DashboardClient({ user }: DashboardClientProps) {
       let isDone = false;
 
       if (!reader) {
-        setMessages((prev) => prev.filter(m => m.role !== "thinking").concat({ role: "error", content: errorStates.aiUnavailable }));
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === aiId ? { ...m, role: "error", content: errorStates.aiUnavailable } : m,
+          ),
+        );
         setLoading(false);
         return;
       }
@@ -208,28 +307,27 @@ export default function DashboardClient({ user }: DashboardClientProps) {
       while (!isDone) {
         const { done, value } = await reader.read();
         if (done) break;
-        
+
         const chunk = decoder.decode(value, { stream: true });
         const lines = chunk.split("\n").filter(l => l.trim());
-        
+
         for (const line of lines) {
           if (!line.startsWith("data: ")) continue;
-          
           const data = line.slice(6).trim();
-          if (data === "[DONE]") {
-            isDone = true;
-            continue;
-          }
-          
+          if (data === "[DONE]") { isDone = true; continue; }
+
           try {
             const parsed = JSON.parse(data);
-            
-            // Handle streaming delta content
             if (parsed.delta) {
               fullContent += parsed.delta;
+              // MASK action-card JSON during streaming — user vidí iba čistý text
+              const displayText = maskActionCardBlocks(fullContent);
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m.id === aiId ? { ...m, role: "ai", content: displayText } : m,
+                ),
+              );
             }
-            
-            // Handle final metadata
             if (parsed.done) {
               isDone = true;
               if (parsed.tokens) tokensUsed = parsed.tokens;
@@ -238,44 +336,38 @@ export default function DashboardClient({ user }: DashboardClientProps) {
               }
             }
           } catch {
-            // Ignore parse errors for malformed chunks
+            /* skip malformed SSE chunks */
           }
-        }
-
-        // Detect entities during streaming for Smart Thinking UI
-        const hasPerson = /\b[A-Z][a-z]+\s+[A-Z][a-z]+\b/.test(fullContent) || 
-                         /(?:Ing\.?|Mgr\.?|Dr\.?|pán|pani)\s+[A-Z]/.test(fullContent) ||
-                         fullContent.toLowerCase().includes("klient");
-        const hasDate = /\d{1,2}[./]\d{1,2}[./]\d{2,4}|\b(?:zajtra|dnes|pondelok|utorok|streda|štvrtok|piatok)\b/i.test(fullContent);
-        const hasIntent = /\b(?:hypot[eé]k|sch[oó]dzk|stretnut|konzult[aá]ci|záujem|chce|riešiť)\b/i.test(fullContent);
-
-        // Update thinking message with detected entities
-        if (hasPerson || hasDate || hasIntent) {
-          setMessages((prev) => {
-            const withoutThinking = prev.filter(m => m.role !== "thinking");
-            return [...withoutThinking, { 
-              role: "thinking", 
-              content: "",
-              detectedEntities: { person: hasPerson, date: hasDate, intent: hasIntent }
-            }];
-          });
         }
       }
 
-      // Clean content for display
-      const cleanContent = fullContent.trim();
+      // Stream finished — EXTRACT cards, STRIP JSON blocks from display text
+      // Pass BOTH user prompt + AI response so regex fallback can recover
+      // names/dates when AI emits malformed JSON.
+      const extractionInput = `${text}\n---\n${fullContent}`;
+      const cards = extractActionCards(extractionInput);
+      const cleanText = stripActionCardBlocks(fullContent).trim();
 
-      // Replace thinking with final message
-      setMessages((prev) => 
-        prev.filter(m => m.role !== "thinking").concat({ 
-          role: "ai", 
-          content: cleanContent || "Rozumiem, spracoval som vašu požiadavku.",
-          tokens: tokensUsed 
-        })
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === aiId
+            ? {
+                ...m,
+                role: "ai",
+                content: cleanText || (cards.length > 0
+                  ? "Pripravil som pre teba karty na potvrdenie:"
+                  : "Rozumiem, spracoval som tvoju požiadavku."),
+                tokens: tokensUsed,
+                cards: cards.length > 0 ? cards : undefined,
+              }
+            : m,
+        ),
       );
     } catch {
-      setMessages((prev) => 
-        prev.filter(m => m.role !== "thinking").concat({ role: "error", content: errorStates.networkError })
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === aiId ? { ...m, role: "error", content: errorStates.networkError } : m,
+        ),
       );
     } finally {
       setLoading(false);
@@ -340,7 +432,7 @@ export default function DashboardClient({ user }: DashboardClientProps) {
         </AnimatePresence>
 
         {/* Topbar */}
-        <header className="h-16 flex items-center justify-between px-6 flex-shrink-0"
+        <header className="h-16 flex items-center justify-between pl-16 md:pl-6 pr-4 md:pr-6 flex-shrink-0"
           style={{ borderBottom: `1px solid ${D.indigoBorder}`, background: "rgba(5,7,15,0.55)", backdropFilter: "blur(24px)" }}>
           <div>
             <p className="text-[0.6rem] font-medium tracking-widest uppercase" style={{ color: "#10b981" }}>
@@ -361,52 +453,67 @@ export default function DashboardClient({ user }: DashboardClientProps) {
           <div className="flex-1 flex flex-col overflow-hidden">
             <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-5 space-y-4">
               <AnimatePresence initial={false}>
-                {messages.map((msg, i) => (
-                  <motion.div key={i} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.25 }}
-                    className={"flex " + (msg.role === "user" ? "justify-end" : "justify-start")}>
-                    {msg.role !== "user" && (
-                      <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 mr-2.5 mt-0.5"
-                        style={msg.role === "error"
-                          ? { background: "rgba(239,68,68,0.15)", border: "1px solid rgba(239,68,68,0.3)" }
+                {messages.map((msg) => (
+                  <motion.div key={msg.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.25 }}>
+                    <div className={"flex " + (msg.role === "user" ? "justify-end" : "justify-start")}>
+                      {msg.role !== "user" && (
+                        <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 mr-2.5 mt-0.5"
+                          style={msg.role === "error"
+                            ? { background: "rgba(239,68,68,0.15)", border: "1px solid rgba(239,68,68,0.3)" }
+                            : msg.role === "integration"
+                            ? { background: "rgba(16,185,129,0.15)", border: "1px solid rgba(16,185,129,0.3)" }
+                            : msg.role === "thinking"
+                            ? { background: "rgba(99,102,241,0.2)", border: "1px solid rgba(99,102,241,0.3)" }
+                            : { background: "linear-gradient(135deg,#7c3aed,#4f46e5)", boxShadow: "0 0 10px rgba(124,58,237,0.3)" }
+                          }>
+                          {msg.role === "error"
+                            ? <AlertTriangle className="w-3.5 h-3.5" style={{ color: "#f87171" }} />
+                            : msg.role === "integration"
+                            ? <Check className="w-3.5 h-3.5 text-emerald-400" />
+                            : msg.role === "thinking"
+                            ? <Bot className="w-3.5 h-3.5 text-indigo-300" />
+                            : <Bot className="w-3.5 h-3.5 text-white" />
+                          }
+                        </div>
+                      )}
+                      <div className="max-w-[75%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed"
+                        style={msg.role === "user"
+                          ? { background: "linear-gradient(135deg,rgba(124,58,237,0.3),rgba(79,70,229,0.3))", border: "1px solid rgba(124,58,237,0.3)", color: "#eef2ff" }
+                          : msg.role === "error"
+                          ? { background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", color: "#fca5a5" }
                           : msg.role === "integration"
-                          ? { background: "rgba(16,185,129,0.15)", border: "1px solid rgba(16,185,129,0.3)" }
+                          ? { background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.2)", color: "#6ee7b7" }
                           : msg.role === "thinking"
-                          ? { background: "rgba(99,102,241,0.2)", border: "1px solid rgba(99,102,241,0.3)" }
-                          : { background: "linear-gradient(135deg,#7c3aed,#4f46e5)", boxShadow: "0 0 10px rgba(124,58,237,0.3)" }
+                          ? { background: "transparent", border: "none" }
+                          : { background: "rgba(139,92,246,0.07)", border: "1px solid rgba(139,92,246,0.15)", color: "#c4b5fd" }
                         }>
-                        {msg.role === "error"
-                          ? <AlertTriangle className="w-3.5 h-3.5" style={{ color: "#f87171" }} />
-                          : msg.role === "integration"
-                          ? <Check className="w-3.5 h-3.5 text-emerald-400" />
-                          : msg.role === "thinking"
-                          ? <Bot className="w-3.5 h-3.5 text-indigo-300" />
-                          : <Bot className="w-3.5 h-3.5 text-white" />
-                        }
+                        {msg.role === "thinking" ? (
+                          <SmartThinkingUI detectedEntities={msg.detectedEntities} />
+                        ) : (
+                          <>
+                            {msg.content}
+                            {msg.tokens && msg.tokens > 0 && (
+                              <span className="block mt-1 text-[0.62rem]" style={{ color: "#334155" }}>{msg.tokens} tokenov</span>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Action cards — rendered below AI bubble */}
+                    {msg.cards && msg.cards.length > 0 && (
+                      <div className="mt-3 ml-10 space-y-2 max-w-[75%]">
+                        {msg.cards.map((card) => (
+                          <ActionCardUI
+                            key={card.id}
+                            card={card}
+                            onConfirm={(c, edited) => handleConfirmCard(msg.id, c, edited)}
+                            onDismiss={(id) => handleDismissCard(msg.id, id)}
+                          />
+                        ))}
                       </div>
                     )}
-                    <div className="max-w-[75%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed"
-                      style={msg.role === "user"
-                        ? { background: "linear-gradient(135deg,rgba(124,58,237,0.3),rgba(79,70,229,0.3))", border: "1px solid rgba(124,58,237,0.3)", color: "#eef2ff" }
-                        : msg.role === "error"
-                        ? { background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", color: "#fca5a5" }
-                        : msg.role === "integration"
-                        ? { background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.2)", color: "#6ee7b7" }
-                        : msg.role === "thinking"
-                        ? { background: "transparent", border: "none" }
-                        : { background: "rgba(139,92,246,0.07)", border: "1px solid rgba(139,92,246,0.15)", color: "#c4b5fd" }
-                      }>
-                      {msg.role === "thinking" ? (
-                        <SmartThinkingUI detectedEntities={msg.detectedEntities} />
-                      ) : (
-                        <>
-                          {msg.content}
-                          {msg.tokens && msg.tokens > 0 && (
-                            <span className="block mt-1 text-[0.62rem]" style={{ color: "#334155" }}>{msg.tokens} tokenov</span>
-                          )}
-                        </>
-                      )}
-                    </div>
                   </motion.div>
                 ))}
 

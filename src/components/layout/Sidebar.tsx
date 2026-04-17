@@ -1,14 +1,15 @@
 "use client";
 // src/components/layout/Sidebar.tsx
 // SINGLE SOURCE OF TRUTH sidebar — used across AppLayout + DashboardClient
-// Changes here reflect on every page automatically.
+// Desktop (>=768px): permanent narrow/wide sidebar. Mobile (<768px): hamburger drawer.
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Bot, Calendar, Mail, Phone, BarChart3, Zap,
-  Lock, LogOut, ShieldAlert,
+  Lock, LogOut, ShieldAlert, Menu, X,
 } from "lucide-react";
 
 export interface SidebarUser {
@@ -37,14 +38,13 @@ const D = {
 };
 
 const GLASS: React.CSSProperties = {
-  background: "rgba(10,12,24,0.65)",
+  background: "rgba(10,12,24,0.85)",
   backdropFilter: "blur(28px)",
   WebkitBackdropFilter: "blur(28px)",
   borderRight: `1px solid ${D.indigoBorder}`,
 };
 
 // ── Unified module list ───────────────────────────────────────────
-// Order mirrors DashboardClient sidebar. `enabled:false` = greyed out + lock.
 interface ModuleDef {
   id: string;
   label: string;
@@ -67,12 +67,11 @@ const MODULES: ModuleDef[] = [
 export default function Sidebar({ user, liveToggles }: SidebarProps) {
   const pathname = usePathname() ?? "";
   const isSuperAdmin = user?.role === "SUPERADMIN" || user?.role === "ADMIN";
+  const [mobileOpen, setMobileOpen] = useState(false);
 
-  return (
-    <aside
-      className="w-16 md:w-60 flex-shrink-0 flex flex-col h-full z-10"
-      style={GLASS}
-    >
+  // Inner nav content — rendered both in desktop aside and mobile drawer
+  const navContent = (isMobile: boolean) => (
+    <>
       {/* Logo */}
       <div
         className="h-16 flex items-center px-4 md:px-5 gap-3 flex-shrink-0"
@@ -87,9 +86,21 @@ export default function Sidebar({ user, liveToggles }: SidebarProps) {
         >
           <span className="text-white text-[11px] font-black">U</span>
         </div>
-        <span className="font-bold text-sm hidden md:block" style={{ color: D.text }}>
+        <span
+          className={`font-bold text-sm ${isMobile ? "block" : "hidden md:block"}`}
+          style={{ color: D.text }}
+        >
           Unifyo
         </span>
+        {isMobile && (
+          <button
+            onClick={() => setMobileOpen(false)}
+            className="ml-auto p-1.5 rounded-lg"
+            aria-label="Zavrieť menu"
+          >
+            <X className="w-5 h-5" style={{ color: D.muted }} />
+          </button>
+        )}
       </div>
 
       {/* Navigation */}
@@ -98,8 +109,7 @@ export default function Sidebar({ user, liveToggles }: SidebarProps) {
           const Icon = mod.icon;
           const liveEnabled =
             liveToggles && mod.id in liveToggles ? liveToggles[mod.id] : undefined;
-          const isDisabled =
-            mod.enabled === false || liveEnabled === false;
+          const isDisabled = mod.enabled === false || liveEnabled === false;
           const isActive =
             !isDisabled &&
             (pathname.startsWith(mod.href) ||
@@ -110,7 +120,8 @@ export default function Sidebar({ user, liveToggles }: SidebarProps) {
               key={mod.id}
               href={isDisabled ? "#" : mod.href}
               onClick={(e) => {
-                if (isDisabled) e.preventDefault();
+                if (isDisabled) { e.preventDefault(); return; }
+                if (isMobile) setMobileOpen(false);
               }}
               title={isDisabled ? "Čoskoro dostupné" : mod.label}
               className="w-full flex items-center gap-3 px-3 py-3 rounded-2xl mb-1.5 transition-all duration-200"
@@ -127,17 +138,20 @@ export default function Sidebar({ user, liveToggles }: SidebarProps) {
                 style={{ color: isActive ? D.indigo : D.muted }}
               />
               <span
-                className="text-xs font-medium hidden md:block flex-1 text-left"
+                className={`text-xs font-medium flex-1 text-left ${isMobile ? "block" : "hidden md:block"}`}
                 style={{ color: isActive ? D.text : D.muted }}
               >
                 {mod.label}
               </span>
               {isDisabled && (
-                <Lock className="w-3 h-3 ml-auto hidden md:block" style={{ color: D.mutedDark }} />
+                <Lock
+                  className={`w-3 h-3 ml-auto ${isMobile ? "block" : "hidden md:block"}`}
+                  style={{ color: D.mutedDark }}
+                />
               )}
               {mod.pro && !isDisabled && (
                 <span
-                  className="text-[0.6rem] px-1.5 py-0.5 rounded-full ml-auto hidden md:block"
+                  className={`text-[0.6rem] px-1.5 py-0.5 rounded-full ml-auto ${isMobile ? "block" : "hidden md:block"}`}
                   style={{
                     background: "rgba(245,158,11,0.1)",
                     color: "#f59e0b",
@@ -157,7 +171,6 @@ export default function Sidebar({ user, liveToggles }: SidebarProps) {
         className="p-4 flex-shrink-0"
         style={{ borderTop: `1px solid ${D.indigoBorder}` }}
       >
-        {/* SYSTEM CONTROL — only for admins */}
         {isSuperAdmin && (
           <Link
             href="/admin"
@@ -183,7 +196,7 @@ export default function Sidebar({ user, liveToggles }: SidebarProps) {
               style={{ filter: "drop-shadow(0 0 5px #ef4444)" }}
             />
             <span
-              className="text-xs font-bold hidden md:block relative z-10 tracking-widest uppercase"
+              className={`text-xs font-bold relative z-10 tracking-widest uppercase ${isMobile ? "block" : "hidden md:block"}`}
               style={{ color: "#f59e0b", letterSpacing: "0.08em" }}
             >
               System Control
@@ -191,7 +204,6 @@ export default function Sidebar({ user, liveToggles }: SidebarProps) {
           </Link>
         )}
 
-        {/* Logout */}
         <form action="/api/auth/logout" method="POST">
           <button
             type="submit"
@@ -207,10 +219,62 @@ export default function Sidebar({ user, liveToggles }: SidebarProps) {
             }}
           >
             <LogOut className="w-4 h-4 flex-shrink-0" />
-            <span className="text-xs hidden md:block">Odhlásiť</span>
+            <span className={`text-xs ${isMobile ? "block" : "hidden md:block"}`}>Odhlásiť</span>
           </button>
         </form>
       </div>
-    </aside>
+    </>
+  );
+
+  return (
+    <>
+      {/* Desktop sidebar (hidden <md) */}
+      <aside
+        className="hidden md:flex w-60 flex-shrink-0 flex-col h-full z-10"
+        style={GLASS}
+      >
+        {navContent(false)}
+      </aside>
+
+      {/* Mobile hamburger button (visible <md) — floats top-left */}
+      <button
+        onClick={() => setMobileOpen(true)}
+        className="md:hidden fixed top-3 left-3 z-40 p-2.5 rounded-xl"
+        style={{
+          background: "rgba(10,12,24,0.9)",
+          border: `1px solid ${D.indigoBorder}`,
+          backdropFilter: "blur(12px)",
+        }}
+        aria-label="Otvoriť menu"
+      >
+        <Menu className="w-5 h-5" style={{ color: D.text }} />
+      </button>
+
+      {/* Mobile drawer */}
+      <AnimatePresence>
+        {mobileOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setMobileOpen(false)}
+              className="md:hidden fixed inset-0 z-40"
+              style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}
+            />
+            <motion.aside
+              initial={{ x: -280 }}
+              animate={{ x: 0 }}
+              exit={{ x: -280 }}
+              transition={{ type: "tween", duration: 0.25 }}
+              className="md:hidden fixed top-0 left-0 h-full w-[260px] z-50 flex flex-col"
+              style={GLASS}
+            >
+              {navContent(true)}
+            </motion.aside>
+          </>
+        )}
+      </AnimatePresence>
+    </>
   );
 }

@@ -61,7 +61,7 @@ export default function AppLayout({ children, subtitle, user }: AppLayoutProps) 
       {/* Main content */}
       <main className="flex-1 flex flex-col z-10 overflow-hidden relative">
         <header
-          className="h-16 flex items-center justify-between px-6 flex-shrink-0"
+          className="h-16 flex items-center justify-between pl-16 md:pl-6 pr-4 md:pr-6 flex-shrink-0"
           style={{
             borderBottom: `1px solid ${D.indigoBorder}`,
             background: "rgba(5,7,15,0.55)",

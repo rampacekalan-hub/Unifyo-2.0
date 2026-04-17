@@ -495,6 +495,24 @@ function normalizeDate(text: string): { raw: string; normalized: string } {
 // ─────────────────────────────────────────────────────────────────
 // AI-BLOCK PARSER — parse ```action-card blocks
 // ─────────────────────────────────────────────────────────────────
+// Try to repair common AI malformations before JSON.parse:
+//  - Missing "type" key:      `{"":"contact",...}`      -> `{"type":"contact",...}`
+//  - Merged "fields"+first:   `{"fieldsÚloha":"x",...}` -> `{"fields":{"Úloha":"x",...}}`
+//  - Missing closing braces on trailing blocks
+function repairActionCardJson(raw: string): string {
+  let s = raw;
+  // 1) Missing "type" key → heuristic: first empty key with "contact"/"task"/"company" value
+  s = s.replace(/"":\s*"(contact|task|company|event)"/g, '"type":"$1"');
+  // 2) "fields" merged with first inner key: fieldsÚloha, fieldsMeno, fieldsFirma, fieldsEmail…
+  s = s.replace(/"fields([A-ZÁČŠŽÝÍÉÚÄÔŇ][a-záčšžýíéúäôňá-ž]+)"\s*:\s*"([^"]*)"/g,
+    (_match, firstKey: string, firstVal: string) => `"fields":{"${firstKey}":"${firstVal}"`);
+  // 3) Trailing unbalanced braces — count and add missing ones
+  const opens = (s.match(/\{/g) ?? []).length;
+  const closes = (s.match(/\}/g) ?? []).length;
+  if (opens > closes) s = s + "}".repeat(opens - closes);
+  return s;
+}
+
 function parseActionCardBlocks(text: string): ActionCard[] {
   const cards: ActionCard[] = [];
   const blockRe = /```action-card\s*([\s\S]*?)```/gi;
@@ -502,13 +520,18 @@ function parseActionCardBlocks(text: string): ActionCard[] {
   while ((m = blockRe.exec(text)) !== null) {
     const raw = m[1].trim();
     let parsed: { type?: string; fields?: Record<string, string> } | null = null;
-    try { parsed = JSON.parse(raw); } catch { continue; } // never show bad JSON
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      // Attempt repair pass — AI sometimes emits malformed keys during streaming
+      try { parsed = JSON.parse(repairActionCardJson(raw)); } catch { continue; }
+    }
     if (!parsed || typeof parsed !== "object") continue;
     const type = (
       parsed.type === "task" ? "task" :
       parsed.type === "company" ? "company" : "contact"
     ) as ActionCardType;
-    let fields = sanitiseFields(parsed.fields ?? {});
+    const fields = sanitiseFields(parsed.fields ?? {});
 
     // FORCE NAME EXTRACTION: "Vittek Test"
     // If Meno is empty for a contact card, FORCE strict extraction from raw text

@@ -400,8 +400,13 @@ const siteConfig: SiteConfig = {
         "Žiadne ďalšie návrhy ani otázky.\n\n" +
 
         "## PRAVIDLO 7 — ČISTOTA BLOKOV\n" +
-        "Bloky action-card NIKDY neuvádzaj v texte odpovede. Píš ich výhradne ako oddeleného kódu.\n" +
-        "JSON musí byť syntakticky validný. Prázdne pole = \"\". Nikdy null ani vynechané kľúče.\n\n" +
+        "Bloky action-card NIKDY neuvádzaj v texte odpovede. Píš ich výhradne ako oddelený kód.\n" +
+        "JSON musí byť syntakticky validný. Prázdne pole = \"\". Nikdy null ani vynechané kľúče.\n" +
+        "KĽÚČE SÚ PRESNÉ a nemenné:\n" +
+        "  contact → \"type\",\"fields\",\"Meno\",\"Email\",\"Telefón\",\"Firma\",\"Poznámka\"\n" +
+        "  task    → \"type\",\"fields\",\"Úloha\",\"Dátum\",\"Čas\",\"Poznámka\"\n" +
+        "Nikdy neskracuj (nie 'eno', 'Tel'), nikdy nespoj kľúče ('fieldsÚloha' je ZAKÁZANÉ).\n" +
+        "Každý blok otváraj `\"\"\"action-card` na vlastnom riadku a ukonči trojitým backtickom.\n\n" +
 
         "## FORMÁT ACTION CARD BLOKOV\n" +
         "```action-card\n" +
