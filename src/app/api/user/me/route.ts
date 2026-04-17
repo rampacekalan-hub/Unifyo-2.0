@@ -17,6 +17,7 @@ export async function GET(req: NextRequest) {
       name: true,
       role: true,
       membershipTier: true,
+      emailVerifiedAt: true,
     },
   });
 

@@ -8,6 +8,7 @@ import CommandPalette from "@/components/ui/CommandPalette";
 import UsageChip from "@/components/ui/UsageChip";
 import ShortcutsModal from "@/components/ui/ShortcutsModal";
 import OnboardingTour from "@/components/onboarding/OnboardingTour";
+import EmailVerifyBanner from "@/components/ui/EmailVerifyBanner";
 import Sidebar, { type SidebarUser } from "@/components/layout/Sidebar";
 import MobileBottomNav from "@/components/layout/MobileBottomNav";
 
@@ -97,6 +98,8 @@ export default function AppLayout({ children, subtitle, user }: AppLayoutProps) 
           </div>
           <UsageChip />
         </header>
+
+        <EmailVerifyBanner />
 
         <div className="flex-1 overflow-auto pb-[72px] md:pb-0">{children}</div>
 

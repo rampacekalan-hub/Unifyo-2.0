@@ -119,9 +119,18 @@ function LoginForm() {
 
             {/* Heslo */}
             <div>
-              <label className="block text-xs font-medium mb-1.5" style={{ color: B.textMuted }}>
-                Heslo
-              </label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-xs font-medium" style={{ color: B.textMuted }}>
+                  Heslo
+                </label>
+                <Link
+                  href="/forgot-password"
+                  className="text-[11px] font-medium transition-colors"
+                  style={{ color: B.violet }}
+                >
+                  Zabudli ste?
+                </Link>
+              </div>
               <div className="relative">
                 <input
                   type={showPass ? "text" : "password"}

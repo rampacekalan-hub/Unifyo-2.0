@@ -6,6 +6,8 @@ import { setSessionCookie } from "@/lib/auth";
 import { registerSchema } from "@/lib/validations";
 import { rateLimit } from "@/lib/rate-limit";
 import { getSiteConfig } from "@/config/site-settings";
+import { issueToken } from "@/lib/tokens";
+import { sendVerificationEmail } from "@/lib/email";
 
 const { security } = getSiteConfig();
 
@@ -59,6 +61,17 @@ export async function POST(req: NextRequest) {
       membershipTier: user.membershipTier,
       tv: 0,
     });
+
+    // Fire off verification email — don't block signup on Resend latency.
+    // Errors are logged; user can resend from Settings if it never arrived.
+    try {
+      const { raw } = await issueToken(user.id, "email_verify");
+      sendVerificationEmail(user.email, raw).catch((e) =>
+        console.error("[register] verify send failed:", e),
+      );
+    } catch (e) {
+      console.error("[register] verify token failed:", e);
+    }
 
     return NextResponse.json({ ok: true, user: { id: user.id, email: user.email, name: user.name } });
   } catch (err) {

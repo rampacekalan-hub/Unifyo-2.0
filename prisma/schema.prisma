@@ -44,6 +44,9 @@ model User {
   // Every issued token embeds the current value; requireAuth rejects
   // mismatched tokens. Zero means "never rotated".
   tokenVersion   Int            @default(0)
+  // Set when user clicks the verification link. Null means unverified;
+  // UI shows a banner and some actions (e.g. paid plans) are gated.
+  emailVerifiedAt DateTime?
 
   aiRequests    AiRequest[]
   dailyUsage    DailyUsage[]
@@ -53,6 +56,25 @@ model User {
   conversations Conversation[]
   userPolicies  UserPolicy[]
   loginEvents   LoginEvent[]
+  authTokens    AuthToken[]
+}
+
+// ── Auth tokens (password reset + email verification) ────────────
+// Unified table — purpose field distinguishes. We store SHA-256 hash of
+// the token, never the raw value, so a DB leak doesn't hand out working
+// reset links. Raw token only ever lives in the email body.
+model AuthToken {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  purpose   String    // "password_reset" | "email_verify"
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, purpose])
+  @@index([expiresAt])
 }
 
 // ── Login events (user-visible audit of auth activity) ───────────
