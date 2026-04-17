@@ -5,10 +5,11 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ChevronLeft, ChevronRight, Plus, Clock, X, Trash2, Check, Loader2,
-  CalendarDays, Search,
+  CalendarDays, Search, LayoutGrid, Rows3,
 } from "lucide-react";
 import { toast } from "sonner";
 import AppLayout from "@/components/layout/AppLayout";
+import EmptyIllustration from "@/components/ui/EmptyIllustration";
 
 interface Task {
   id: string;
@@ -38,9 +39,22 @@ const MONTHS = [
 
 function pad(n: number) { return String(n).padStart(2, "0"); }
 function toISO(y: number, m: number, d: number) { return `${y}-${pad(m + 1)}-${pad(d)}`; }
+function isoFromDate(d: Date) { return toISO(d.getFullYear(), d.getMonth(), d.getDate()); }
 function norm(s: string) {
   return s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 }
+
+// Get Monday of the week containing `d` (Europe/SK convention — week starts Monday).
+function startOfWeek(d: Date): Date {
+  const out = new Date(d);
+  const day = out.getDay();          // 0 = Sun, 1 = Mon, …, 6 = Sat
+  const diff = day === 0 ? -6 : 1 - day;
+  out.setDate(out.getDate() + diff);
+  out.setHours(0, 0, 0, 0);
+  return out;
+}
+
+type ViewMode = "month" | "week";
 
 export default function CalendarPage() {
   return (
@@ -58,6 +72,8 @@ function CalendarPageInner() {
   const [showModal, setShowModal] = useState(false);
   const [saving, setSaving] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [viewMode, setViewMode] = useState<ViewMode>("month");
+  const [dragOverIso, setDragOverIso] = useState<string | null>(null);
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -174,6 +190,45 @@ function CalendarPageInner() {
     }
   }
 
+  // Drag-n-drop reschedule: move task to a new date. Optimistic update + rollback on fail.
+  async function moveTaskToDate(taskId: string, newDate: string) {
+    const current = tasks.find((t) => t.id === taskId);
+    if (!current || current.date === newDate) return;
+    // Optimistic UI.
+    setTasks((prev) => prev.map((t) => t.id === taskId ? { ...t, date: newDate } : t));
+    try {
+      const res = await fetch("/api/calendar/tasks", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: taskId, date: newDate }),
+      });
+      if (!res.ok) throw new Error("patch failed");
+      toast.success(`Presunuté na ${newDate}`);
+    } catch {
+      // Rollback.
+      setTasks((prev) => prev.map((t) => t.id === taskId ? { ...t, date: current.date } : t));
+      toast.error("Presun zlyhal");
+    }
+  }
+
+  const handleDragStart = (e: React.DragEvent, taskId: string) => {
+    e.dataTransfer.setData("text/plain", taskId);
+    e.dataTransfer.effectAllowed = "move";
+  };
+
+  const handleDragOver = (e: React.DragEvent, iso: string) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    setDragOverIso(iso);
+  };
+
+  const handleDrop = (e: React.DragEvent, iso: string) => {
+    e.preventDefault();
+    const taskId = e.dataTransfer.getData("text/plain");
+    setDragOverIso(null);
+    if (taskId) moveTaskToDate(taskId, iso);
+  };
+
   async function handleDelete(id: string) {
     if (!confirm("Naozaj zmazať úlohu?")) return;
     try {
@@ -205,27 +260,83 @@ function CalendarPageInner() {
       <div className="flex flex-col lg:flex-row h-full p-4 md:p-6 gap-4 md:gap-6">
         {/* ── Calendar grid ── */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center justify-between mb-4 md:mb-6">
+          <div className="flex items-center justify-between mb-4 md:mb-6 flex-wrap gap-2">
             <div className="flex items-center gap-2 md:gap-4">
               <button
-                onClick={() => setCurrentDate(new Date(year, month - 1, 1))}
+                onClick={() => {
+                  if (viewMode === "month") setCurrentDate(new Date(year, month - 1, 1));
+                  else { const d = new Date(currentDate); d.setDate(d.getDate() - 7); setCurrentDate(d); }
+                }}
                 className="p-2 rounded-xl transition-colors"
                 style={{ background: D.indigoDim, border: `1px solid ${D.indigoBorder}` }}
+                aria-label="Predchádzajúci"
               >
                 <ChevronLeft className="w-5 h-5" style={{ color: D.text }} />
               </button>
               <h2 className="text-lg md:text-2xl font-bold" style={{ color: D.text }}>
-                {MONTHS[month]} {year}
+                {viewMode === "month"
+                  ? `${MONTHS[month]} ${year}`
+                  : (() => {
+                      const s = startOfWeek(currentDate);
+                      const e = new Date(s); e.setDate(e.getDate() + 6);
+                      const sameMonth = s.getMonth() === e.getMonth();
+                      return sameMonth
+                        ? `${s.getDate()}. – ${e.getDate()}. ${MONTHS[s.getMonth()]}`
+                        : `${s.getDate()}. ${MONTHS[s.getMonth()].slice(0,3)} – ${e.getDate()}. ${MONTHS[e.getMonth()].slice(0,3)}`;
+                    })()}
               </h2>
               <button
-                onClick={() => setCurrentDate(new Date(year, month + 1, 1))}
+                onClick={() => {
+                  if (viewMode === "month") setCurrentDate(new Date(year, month + 1, 1));
+                  else { const d = new Date(currentDate); d.setDate(d.getDate() + 7); setCurrentDate(d); }
+                }}
                 className="p-2 rounded-xl transition-colors"
                 style={{ background: D.indigoDim, border: `1px solid ${D.indigoBorder}` }}
+                aria-label="Nasledujúci"
               >
                 <ChevronRight className="w-5 h-5" style={{ color: D.text }} />
               </button>
+              <button
+                onClick={() => setCurrentDate(new Date())}
+                className="px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors hidden sm:inline-block"
+                style={{ background: D.indigoDim, border: `1px solid ${D.indigoBorder}`, color: D.muted }}
+              >
+                Dnes
+              </button>
             </div>
             <div className="flex items-center gap-2">
+              {/* View toggle */}
+              <div
+                className="flex items-center p-0.5 rounded-xl"
+                style={{ background: D.indigoDim, border: `1px solid ${D.indigoBorder}` }}
+              >
+                <button
+                  onClick={() => setViewMode("month")}
+                  className="px-2 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-all"
+                  style={{
+                    background: viewMode === "month" ? D.indigo : "transparent",
+                    color: viewMode === "month" ? "white" : D.muted,
+                  }}
+                  aria-pressed={viewMode === "month"}
+                  title="Mesiac"
+                >
+                  <LayoutGrid className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Mesiac</span>
+                </button>
+                <button
+                  onClick={() => setViewMode("week")}
+                  className="px-2 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-all"
+                  style={{
+                    background: viewMode === "week" ? D.indigo : "transparent",
+                    color: viewMode === "week" ? "white" : D.muted,
+                  }}
+                  aria-pressed={viewMode === "week"}
+                  title="Týždeň"
+                >
+                  <Rows3 className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Týždeň</span>
+                </button>
+              </div>
               <div className="relative hidden md:block">
                 <Search
                   className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none"
@@ -255,74 +366,179 @@ function CalendarPageInner() {
             </div>
           </div>
 
-          <div className="grid grid-cols-7 gap-1 mb-2">
-            {["Po", "Ut", "St", "Št", "Pi", "So", "Ne"].map((day) => (
-              <div key={day} className="text-center py-2 text-xs md:text-sm font-medium" style={{ color: D.muted }}>
-                {day}
-              </div>
-            ))}
-          </div>
-
-          <div className="grid grid-cols-7 gap-1">
-            {Array.from({ length: startingDay }).map((_, i) => (
-              <div
-                key={`empty-${i}`}
-                className="aspect-square rounded-lg md:rounded-xl"
-                style={{ background: "rgba(99,102,241,0.02)", border: `1px solid ${D.indigoBorder}` }}
-              />
-            ))}
-            {Array.from({ length: daysInMonth }).map((_, i) => {
-              const day = i + 1;
-              const dayTasks = getTasksForDay(day);
-              const isToday =
-                today.getDate() === day && today.getMonth() === month && today.getFullYear() === year;
-              return (
-                <motion.div
-                  key={day}
-                  className="aspect-square rounded-lg md:rounded-xl p-1 md:p-2 cursor-pointer relative overflow-hidden"
-                  style={{
-                    background: isToday ? "rgba(99,102,241,0.2)" : "rgba(99,102,241,0.05)",
-                    border: `1px solid ${isToday ? D.indigo : D.indigoBorder}`,
-                  }}
-                  whileHover={{ background: "rgba(99,102,241,0.1)" }}
-                  onClick={() => {
-                    if (dayTasks.length > 0) setSelectedTask(dayTasks[0]);
-                    else {
-                      setForm((f) => ({ ...f, date: toISO(year, month, day) }));
-                      setShowModal(true);
-                    }
-                  }}
-                >
-                  <span
-                    className="text-xs md:text-sm font-medium"
-                    style={{ color: isToday ? D.indigo : D.text }}
-                  >
+          {viewMode === "month" ? (
+            <>
+              <div className="grid grid-cols-7 gap-1 mb-2">
+                {["Po", "Ut", "St", "Št", "Pi", "So", "Ne"].map((day) => (
+                  <div key={day} className="text-center py-2 text-xs md:text-sm font-medium" style={{ color: D.muted }}>
                     {day}
-                  </span>
-                  <div className="mt-0.5 md:mt-1 space-y-0.5 md:space-y-1">
-                    {dayTasks.slice(0, 2).map((t) => (
+                  </div>
+                ))}
+              </div>
+
+              <div className="grid grid-cols-7 gap-1">
+                {Array.from({ length: startingDay }).map((_, i) => (
+                  <div
+                    key={`empty-${i}`}
+                    className="aspect-square rounded-lg md:rounded-xl"
+                    style={{ background: "rgba(99,102,241,0.02)", border: `1px solid ${D.indigoBorder}` }}
+                  />
+                ))}
+                {Array.from({ length: daysInMonth }).map((_, i) => {
+                  const day = i + 1;
+                  const iso = toISO(year, month, day);
+                  const dayTasks = getTasksForDay(day);
+                  const isToday =
+                    today.getDate() === day && today.getMonth() === month && today.getFullYear() === year;
+                  const isDragOver = dragOverIso === iso;
+                  return (
+                    <motion.div
+                      key={day}
+                      onDragOver={(e) => handleDragOver(e, iso)}
+                      onDragLeave={() => setDragOverIso((v) => v === iso ? null : v)}
+                      onDrop={(e) => handleDrop(e, iso)}
+                      className="aspect-square rounded-lg md:rounded-xl p-1 md:p-2 cursor-pointer relative overflow-hidden"
+                      style={{
+                        background: isDragOver
+                          ? "rgba(139,92,246,0.25)"
+                          : isToday ? "rgba(99,102,241,0.2)" : "rgba(99,102,241,0.05)",
+                        border: `1px solid ${isDragOver ? D.violet : isToday ? D.indigo : D.indigoBorder}`,
+                      }}
+                      whileHover={{ background: "rgba(99,102,241,0.1)" }}
+                      onClick={() => {
+                        if (dayTasks.length > 0) setSelectedTask(dayTasks[0]);
+                        else {
+                          setForm((f) => ({ ...f, date: iso }));
+                          setShowModal(true);
+                        }
+                      }}
+                    >
+                      <span
+                        className="text-xs md:text-sm font-medium"
+                        style={{ color: isToday ? D.indigo : D.text }}
+                      >
+                        {day}
+                      </span>
+                      <div className="mt-0.5 md:mt-1 space-y-0.5 md:space-y-1">
+                        {dayTasks.slice(0, 2).map((t) => (
+                          <div
+                            key={t.id}
+                            draggable
+                            onDragStart={(e) => { e.stopPropagation(); handleDragStart(e, t.id); }}
+                            onClick={(e) => { e.stopPropagation(); setSelectedTask(t); }}
+                            className="text-[9px] md:text-[10px] truncate px-1 py-0.5 rounded cursor-grab active:cursor-grabbing"
+                            style={{
+                              background: t.done ? "rgba(16,185,129,0.2)" : "rgba(99,102,241,0.25)",
+                              color: t.done ? D.emerald : "#a5b4fc",
+                              textDecoration: t.done ? "line-through" : "none",
+                            }}
+                            title={t.title}
+                          >
+                            {t.time ?? t.title}
+                          </div>
+                        ))}
+                        {dayTasks.length > 2 && (
+                          <div className="text-[9px] md:text-[10px]" style={{ color: D.muted }}>
+                            +{dayTasks.length - 2}
+                          </div>
+                        )}
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            </>
+          ) : (
+            // ── Week view ──────────────────────────────────────────
+            (() => {
+              const weekStart = startOfWeek(currentDate);
+              const days = Array.from({ length: 7 }).map((_, i) => {
+                const d = new Date(weekStart);
+                d.setDate(weekStart.getDate() + i);
+                return d;
+              });
+              const DAY_LABELS = ["Po", "Ut", "St", "Št", "Pi", "So", "Ne"];
+              return (
+                <div className="grid grid-cols-1 sm:grid-cols-7 gap-2">
+                  {days.map((d, i) => {
+                    const iso = isoFromDate(d);
+                    const dayTasks = filteredTasks
+                      .filter((t) => t.date === iso)
+                      .sort((a, b) => (a.time ?? "").localeCompare(b.time ?? ""));
+                    const isTodayCell = iso === isoFromDate(today);
+                    const isDragOver = dragOverIso === iso;
+                    return (
                       <div
-                        key={t.id}
-                        className="text-[9px] md:text-[10px] truncate px-1 py-0.5 rounded"
+                        key={iso}
+                        onDragOver={(e) => handleDragOver(e, iso)}
+                        onDragLeave={() => setDragOverIso((v) => v === iso ? null : v)}
+                        onDrop={(e) => handleDrop(e, iso)}
+                        className="rounded-xl p-2 min-h-[280px] flex flex-col"
                         style={{
-                          background: t.done ? "rgba(16,185,129,0.2)" : "rgba(99,102,241,0.25)",
-                          color: t.done ? D.emerald : "#a5b4fc",
-                          textDecoration: t.done ? "line-through" : "none",
+                          background: isDragOver
+                            ? "rgba(139,92,246,0.18)"
+                            : isTodayCell ? "rgba(99,102,241,0.14)" : "rgba(99,102,241,0.05)",
+                          border: `1px solid ${isDragOver ? D.violet : isTodayCell ? D.indigo : D.indigoBorder}`,
                         }}
                       >
-                        {t.time ?? t.title}
+                        <div className="flex items-baseline justify-between mb-2 pb-1.5"
+                          style={{ borderBottom: `1px solid ${D.indigoBorder}` }}>
+                          <span className="text-[0.65rem] font-medium uppercase tracking-wider" style={{ color: D.muted }}>
+                            {DAY_LABELS[i]}
+                          </span>
+                          <span
+                            className="text-sm font-bold"
+                            style={{ color: isTodayCell ? D.indigo : D.text }}
+                          >
+                            {d.getDate()}.
+                          </span>
+                        </div>
+                        <div className="flex-1 space-y-1.5 overflow-y-auto">
+                          {dayTasks.length === 0 ? (
+                            <button
+                              onClick={() => {
+                                setForm((f) => ({ ...f, date: iso }));
+                                setShowModal(true);
+                              }}
+                              className="w-full text-[0.65rem] py-2 rounded opacity-50 hover:opacity-100 transition-opacity"
+                              style={{ color: D.mutedDark, background: "transparent", border: `1px dashed ${D.indigoBorder}` }}
+                            >
+                              + pridať
+                            </button>
+                          ) : dayTasks.map((t) => (
+                            <div
+                              key={t.id}
+                              draggable
+                              onDragStart={(e) => handleDragStart(e, t.id)}
+                              onClick={() => setSelectedTask(t)}
+                              className="px-2 py-1.5 rounded-lg text-xs cursor-grab active:cursor-grabbing transition-all"
+                              style={{
+                                background: t.done ? "rgba(16,185,129,0.15)" : "rgba(99,102,241,0.2)",
+                                border: `1px solid ${t.done ? "rgba(16,185,129,0.3)" : D.indigoBorder}`,
+                                color: t.done ? D.emerald : "#c4b5fd",
+                              }}
+                            >
+                              {t.time && (
+                                <div className="text-[0.6rem] font-semibold mb-0.5" style={{ color: D.muted }}>
+                                  {t.time}
+                                </div>
+                              )}
+                              <div
+                                className="font-medium leading-tight"
+                                style={{ textDecoration: t.done ? "line-through" : "none" }}
+                              >
+                                {t.title}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                    ))}
-                    {dayTasks.length > 2 && (
-                      <div className="text-[9px] md:text-[10px]" style={{ color: D.muted }}>
-                        +{dayTasks.length - 2}
-                      </div>
-                    )}
-                  </div>
-                </motion.div>
+                    );
+                  })}
+                </div>
               );
-            })}
-          </div>
+            })()
+          )}
         </div>
 
         {/* ── Side panel: upcoming + detail ── */}
@@ -411,10 +627,12 @@ function CalendarPageInner() {
                 </button>
               </div>
             ) : (
-              <div className="text-center py-8">
-                <CalendarDays className="w-10 h-10 mx-auto mb-3" style={{ color: D.mutedDark }} />
-                <p className="text-xs" style={{ color: D.muted }}>Vyber úlohu alebo klikni na deň</p>
-              </div>
+              <EmptyIllustration
+                variant="calendar"
+                size={96}
+                title="Nič nie je vybrané"
+                hint="Klikni na deň alebo úlohu v zozname."
+              />
             )}
           </div>
         </div>

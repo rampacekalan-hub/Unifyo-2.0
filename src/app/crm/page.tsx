@@ -5,10 +5,11 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import {
-  Users, Calendar, Mail, Search, Plus, Phone, Briefcase, X, Trash2, Loader2,
+  Users, Calendar, Mail, Search, Plus, Phone, Briefcase, X, Trash2, Loader2, Check,
 } from "lucide-react";
 import { toast } from "sonner";
 import AppLayout from "@/components/layout/AppLayout";
+import EmptyIllustration from "@/components/ui/EmptyIllustration";
 
 interface CrmNote {
   id: string;
@@ -55,6 +56,21 @@ function CRMPageInner() {
 
   // New contact form
   const [form, setForm] = useState({ name: "", email: "", phone: "", company: "" });
+
+  // Bulk selection — Set of contact ids. When non-empty, action bar appears.
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+
+  const toggleSelect = useCallback((id: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const clearSelection = useCallback(() => setSelected(new Set()), []);
 
   // Load contacts
   const loadContacts = useCallback(async (q: string = "") => {
@@ -133,6 +149,33 @@ function CRMPageInner() {
     }
   }
 
+  // Bulk delete selected contacts. Uses the ids[] form of DELETE endpoint so
+  // the server handles it in one transaction.
+  async function handleBulkDelete() {
+    const ids = Array.from(selected);
+    if (ids.length === 0) return;
+    if (!confirm(`Naozaj zmazať ${ids.length} ${ids.length === 1 ? "kontakt" : ids.length < 5 ? "kontakty" : "kontaktov"}?`)) return;
+    setBulkDeleting(true);
+    try {
+      const res = await fetch("/api/crm/contacts", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids }),
+      });
+      if (res.ok) {
+        const data = await res.json().catch(() => ({}));
+        toast.success(`Zmazaných ${data.deleted ?? ids.length}`);
+        if (selectedContact && ids.includes(selectedContact.id)) setSelectedContact(null);
+        clearSelection();
+        loadContacts(searchQuery);
+      } else {
+        toast.error("Hromadné mazanie zlyhalo");
+      }
+    } finally {
+      setBulkDeleting(false);
+    }
+  }
+
   // Delete contact
   async function handleDelete(id: string) {
     if (!confirm("Naozaj zmazať tento kontakt?")) return;
@@ -161,6 +204,54 @@ function CRMPageInner() {
       <div className="flex flex-col md:flex-row h-full p-4 md:p-6 gap-4 md:gap-6">
         {/* ── Contact list ── */}
         <div className="w-full md:max-w-[420px] flex flex-col flex-shrink-0">
+          {/* Bulk action bar — shown when 1+ contact selected */}
+          <AnimatePresence>
+            {selected.size > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: -6, height: 0 }}
+                animate={{ opacity: 1, y: 0, height: "auto" }}
+                exit={{ opacity: 0, y: -6, height: 0 }}
+                transition={{ duration: 0.18 }}
+                className="overflow-hidden mb-3"
+              >
+                <div
+                  className="flex items-center justify-between gap-3 px-3 py-2 rounded-xl"
+                  style={{
+                    background: "linear-gradient(135deg,rgba(99,102,241,0.18),rgba(139,92,246,0.18))",
+                    border: "1px solid rgba(139,92,246,0.4)",
+                  }}
+                >
+                  <span className="text-xs font-medium" style={{ color: D.text }}>
+                    {selected.size} {selected.size === 1 ? "vybraný" : selected.size < 5 ? "vybrané" : "vybraných"}
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={clearSelection}
+                      disabled={bulkDeleting}
+                      className="px-2.5 py-1 rounded-lg text-xs font-medium disabled:opacity-50"
+                      style={{ background: "rgba(255,255,255,0.05)", color: D.muted }}
+                    >
+                      Zrušiť
+                    </button>
+                    <button
+                      onClick={handleBulkDelete}
+                      disabled={bulkDeleting}
+                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium disabled:opacity-50"
+                      style={{
+                        background: "rgba(239,68,68,0.18)",
+                        border: "1px solid rgba(239,68,68,0.35)",
+                        color: "#fca5a5",
+                      }}
+                    >
+                      {bulkDeleting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
+                      Zmazať
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           {/* Search + Add */}
           <div className="flex gap-2 md:gap-3 mb-4">
             <div className="flex-1 relative">
@@ -191,42 +282,86 @@ function CRMPageInner() {
                 <Loader2 className="w-5 h-5 animate-spin" style={{ color: D.muted }} />
               </div>
             ) : contacts.length === 0 ? (
-              <div className="text-center py-10">
-                <Users className="w-10 h-10 mx-auto mb-3" style={{ color: D.mutedDark }} />
-                <p className="text-sm" style={{ color: D.muted }}>
-                  {searchQuery ? "Žiadne výsledky" : "Zatiaľ žiadne kontakty"}
-                </p>
-                <p className="text-xs mt-2" style={{ color: D.mutedDark }}>
-                  Pridaj manuálne alebo cez AI chat.
-                </p>
-              </div>
-            ) : contacts.map((contact) => (
-              <motion.div
-                key={contact.id}
-                onClick={() => setSelectedContact(contact)}
-                className="p-4 rounded-xl cursor-pointer transition-all"
-                style={{
-                  background: selectedContact?.id === contact.id ? "rgba(99,102,241,0.15)" : "rgba(99,102,241,0.05)",
-                  border: `1px solid ${selectedContact?.id === contact.id ? D.indigoBorder : "transparent"}`,
-                }}
-                whileHover={{ scale: 1.01 }}
-              >
-                <div className="flex items-center gap-3">
-                  <div
-                    className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0"
-                    style={{ background: "rgba(99,102,241,0.2)", color: D.indigo }}
-                  >
-                    {initials(contact.name) || "?"}
+              searchQuery ? (
+                <EmptyIllustration
+                  variant="search"
+                  title="Žiadne výsledky"
+                  hint={`Nenašiel som nič pre "${searchQuery}". Skús iný výraz alebo uvoľni filter.`}
+                />
+              ) : (
+                <EmptyIllustration
+                  variant="contacts"
+                  title="Zatiaľ žiadne kontakty"
+                  hint={'Pridaj manuálne, alebo povedz AI v chate: „Pridaj kontakt Peter Novák, 0950 312 387…".'}
+                  action={
+                    <button
+                      onClick={() => setShowModal(true)}
+                      className="px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-2"
+                      style={{ background: `linear-gradient(135deg,${D.indigo},${D.violet})`, color: "white" }}
+                    >
+                      <Plus className="w-4 h-4" /> Pridať prvý
+                    </button>
+                  }
+                />
+              )
+            ) : contacts.map((contact) => {
+              const isSelected = selected.has(contact.id);
+              const isOpen = selectedContact?.id === contact.id;
+              // Show checkbox permanently once any are selected — avoids mixed UX.
+              const anySelected = selected.size > 0;
+              return (
+                <motion.div
+                  key={contact.id}
+                  onClick={(e) => {
+                    // Shift/Ctrl/Cmd click always toggles selection instead of opening.
+                    if (anySelected || e.shiftKey || e.metaKey || e.ctrlKey) {
+                      toggleSelect(contact.id);
+                    } else {
+                      setSelectedContact(contact);
+                    }
+                  }}
+                  className="group p-4 rounded-xl cursor-pointer transition-all"
+                  style={{
+                    background: isSelected
+                      ? "rgba(139,92,246,0.18)"
+                      : isOpen
+                        ? "rgba(99,102,241,0.15)"
+                        : "rgba(99,102,241,0.05)",
+                    border: `1px solid ${isSelected
+                      ? "rgba(139,92,246,0.45)"
+                      : isOpen ? D.indigoBorder : "transparent"}`,
+                  }}
+                  whileHover={{ scale: 1.01 }}
+                >
+                  <div className="flex items-center gap-3">
+                    {/* Checkbox — visible on hover, or always when any row is selected */}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); toggleSelect(contact.id); }}
+                      className={`w-5 h-5 rounded flex items-center justify-center flex-shrink-0 transition-opacity ${anySelected ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
+                      style={{
+                        background: isSelected ? D.violet : "transparent",
+                        border: `1.5px solid ${isSelected ? D.violet : "rgba(148,163,184,0.4)"}`,
+                      }}
+                      aria-label={isSelected ? "Zrušiť výber" : "Označiť"}
+                    >
+                      {isSelected && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
+                    </button>
+                    <div
+                      className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0"
+                      style={{ background: "rgba(99,102,241,0.2)", color: D.indigo }}
+                    >
+                      {initials(contact.name) || "?"}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium truncate" style={{ color: D.text }}>{contact.name}</div>
+                      <p className="text-xs truncate" style={{ color: D.muted }}>
+                        {contact.company || contact.email || contact.phone || "—"}
+                      </p>
+                    </div>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="font-medium truncate" style={{ color: D.text }}>{contact.name}</div>
-                    <p className="text-xs truncate" style={{ color: D.muted }}>
-                      {contact.company || contact.email || contact.phone || "—"}
-                    </p>
-                  </div>
-                </div>
-              </motion.div>
-            ))}
+                </motion.div>
+              );
+            })}
           </div>
         </div>
 
@@ -342,14 +477,18 @@ function CRMPageInner() {
             </div>
           ) : (
             <div className="h-full flex items-center justify-center">
-              <div className="text-center">
-                <Users className="w-12 h-12 mx-auto mb-4" style={{ color: D.mutedDark }} />
-                <p className="text-sm" style={{ color: D.muted }}>
-                  {contacts.length === 0
-                    ? "Zatiaľ nemáš žiadne kontakty"
-                    : "Vyber kontakt zo zoznamu"}
-                </p>
-              </div>
+              {contacts.length === 0 ? (
+                <EmptyIllustration
+                  variant="contacts"
+                  title="Zatiaľ tu nič nie je"
+                  hint="Pridaj prvý kontakt a začneme!"
+                />
+              ) : (
+                <div className="text-center">
+                  <Users className="w-12 h-12 mx-auto mb-4" style={{ color: D.mutedDark }} />
+                  <p className="text-sm" style={{ color: D.muted }}>Vyber kontakt zo zoznamu</p>
+                </div>
+              )}
             </div>
           )}
         </div>

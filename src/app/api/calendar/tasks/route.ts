@@ -44,8 +44,14 @@ export async function DELETE(req: NextRequest) {
   const { session, response } = await requireAuth(req);
   if (response) return response;
   try {
-    const { id } = await req.json();
-    await prisma.calendarTask.deleteMany({ where: { id, userId: session.userId } });
-    return NextResponse.json({ ok: true });
+    const body = await req.json();
+    const idList: string[] = Array.isArray(body.ids)
+      ? body.ids.filter((x: unknown) => typeof x === "string")
+      : typeof body.id === "string" ? [body.id] : [];
+    if (idList.length === 0) return NextResponse.json({ error: "Missing id(s)" }, { status: 400 });
+    const result = await prisma.calendarTask.deleteMany({
+      where: { id: { in: idList }, userId: session.userId },
+    });
+    return NextResponse.json({ ok: true, deleted: result.count });
   } catch { return NextResponse.json({ error: "DB error" }, { status: 500 }); }
 }
