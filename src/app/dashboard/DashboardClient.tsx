@@ -13,6 +13,10 @@ import CommandPalette from "@/components/ui/CommandPalette";
 import { getSiteConfig } from "@/config/site-settings";
 import { useChatStore, chatActions } from "@/lib/chatStore";
 import { sendChat, regenerateLast } from "@/lib/chatEngine";
+import { MarkdownText } from "@/lib/markdown";
+import MessageReactions from "@/components/ui/MessageReactions";
+import SlashMenu from "@/components/ui/SlashMenu";
+import { matchCommands, extractSlashQuery, type SlashCommand } from "@/lib/slashCommands";
 
 function formatTime(ts: number): string {
   const now = Date.now();
@@ -206,6 +210,38 @@ export default function DashboardClient({ user }: DashboardClientProps) {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
     setUnreadCount(0);
   }, []);
+
+  // ── Slash commands ─────────────────────────────────────────
+  const slashQuery = extractSlashQuery(input);
+  const slashItems = slashQuery !== null ? matchCommands(slashQuery) : [];
+  const slashOpen = slashQuery !== null && slashItems.length > 0;
+  const [slashIdx, setSlashIdx] = useState(0);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Reset highlighted item when the filtered list changes.
+  useEffect(() => { setSlashIdx(0); }, [slashQuery]);
+
+  const pickSlash = useCallback(async (cmd: SlashCommand) => {
+    if (cmd.prompt) {
+      // Pre-baked — send immediately, clear input.
+      setInput("");
+      await sendChat(cmd.prompt, { module: "dashboard", conversationId });
+      return;
+    }
+    if (cmd.template) {
+      // Insert template — focus stays in input so user can complete it.
+      setInput(cmd.template);
+      // Move caret to end after template inserts.
+      queueMicrotask(() => {
+        const el = inputRef.current;
+        if (el) {
+          el.focus();
+          const len = el.value.length;
+          el.setSelectionRange(len, len);
+        }
+      });
+    }
+  }, [conversationId]);
 
   // ── Send wrapper ────────────────────────────────────────────
   const handleSend = useCallback(async () => {
@@ -447,7 +483,7 @@ export default function DashboardClient({ user }: DashboardClientProps) {
                       </div>
                     )}
                     <div className="group relative max-w-[75%]">
-                      <div className="rounded-2xl px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap"
+                      <div className="rounded-2xl px-4 py-2.5 text-sm leading-relaxed"
                         style={msg.role === "user"
                           ? { background: "linear-gradient(135deg,rgba(124,58,237,0.3),rgba(79,70,229,0.3))", border: "1px solid rgba(124,58,237,0.3)", color: "#eef2ff" }
                           : msg.role === "error"
@@ -462,7 +498,9 @@ export default function DashboardClient({ user }: DashboardClientProps) {
                           <SmartThinkingUI />
                         ) : (
                           <>
-                            {msg.content}
+                            {msg.role === "ai"
+                              ? <MarkdownText source={msg.content} />
+                              : <span className="whitespace-pre-wrap">{msg.content}</span>}
                             {msg.id === streamingId && msg.role === "ai" && (
                               <motion.span
                                 className="inline-block w-1.5 h-3.5 ml-0.5 -mb-0.5 rounded-sm"
@@ -474,9 +512,10 @@ export default function DashboardClient({ user }: DashboardClientProps) {
                           </>
                         )}
                       </div>
-                      {/* Hover actions — copy + regenerate (last AI only) */}
+                      {/* Hover actions — reactions + copy + regenerate (last AI only) */}
                       {msg.role === "ai" && msg.content && msg.id !== streamingId && (
                         <div className="absolute -right-1 top-1 opacity-0 group-hover:opacity-100 flex gap-1 transition-opacity">
+                          <MessageReactions msgId={msg.id} />
                           {msg.id === lastAiId && (
                             <button
                               onClick={handleRegenerate}
@@ -561,11 +600,30 @@ export default function DashboardClient({ user }: DashboardClientProps) {
           </AnimatePresence>
 
           {/* Input bar */}
-          <div className="px-4 sm:px-6 pb-5 pt-3 flex-shrink-0" style={{ borderTop: `1px solid ${D.indigoBorder}` }}>
+          <div className="px-4 sm:px-6 pb-5 pt-3 flex-shrink-0 relative" style={{ borderTop: `1px solid ${D.indigoBorder}` }}>
+            <SlashMenu
+              open={slashOpen}
+              items={slashItems}
+              activeIdx={slashIdx}
+              onHover={setSlashIdx}
+              onSelect={pickSlash}
+            />
             <div className="flex items-center gap-2 rounded-2xl px-4 py-3"
               style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${D.indigoBorder}` }}>
-              <input value={input} onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
+              <input
+                ref={inputRef}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (slashOpen) {
+                    if (e.key === "ArrowDown") { e.preventDefault(); setSlashIdx((i) => (i + 1) % slashItems.length); return; }
+                    if (e.key === "ArrowUp")   { e.preventDefault(); setSlashIdx((i) => (i - 1 + slashItems.length) % slashItems.length); return; }
+                    if (e.key === "Enter")     { e.preventDefault(); void pickSlash(slashItems[slashIdx]); return; }
+                    if (e.key === "Escape")    { e.preventDefault(); setInput(""); return; }
+                    if (e.key === "Tab")       { e.preventDefault(); void pickSlash(slashItems[slashIdx]); return; }
+                  }
+                  if (e.key === "Enter" && !e.shiftKey) handleSend();
+                }}
                 placeholder={dashboard.chatPlaceholder}
                 disabled={loading}
                 aria-label="Správa pre AI"
@@ -591,9 +649,15 @@ export default function DashboardClient({ user }: DashboardClientProps) {
             </div>
             {/* Keyboard hints */}
             <div className="flex items-center justify-between mt-2 px-1 text-[0.6rem]" style={{ color: "rgba(148,163,184,0.6)" }}>
-              <span className="flex items-center gap-1.5">
-                <kbd className="px-1.5 py-0.5 rounded" style={{ background: "rgba(99,102,241,0.08)", border: `1px solid ${D.indigoBorder}` }}>↵</kbd>
-                odoslať
+              <span className="flex items-center gap-3">
+                <span className="flex items-center gap-1.5">
+                  <kbd className="px-1.5 py-0.5 rounded" style={{ background: "rgba(99,102,241,0.08)", border: `1px solid ${D.indigoBorder}` }}>↵</kbd>
+                  odoslať
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <kbd className="px-1.5 py-0.5 rounded" style={{ background: "rgba(99,102,241,0.08)", border: `1px solid ${D.indigoBorder}` }}>/</kbd>
+                  príkazy
+                </span>
               </span>
               <span className="flex items-center gap-1.5">
                 <kbd className="px-1.5 py-0.5 rounded" style={{ background: "rgba(99,102,241,0.08)", border: `1px solid ${D.indigoBorder}` }}>⌘K</kbd>

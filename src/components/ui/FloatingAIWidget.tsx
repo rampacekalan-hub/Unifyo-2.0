@@ -11,6 +11,10 @@ import GuidedCard, { type GuidedDraft } from "@/components/ui/GuidedCard";
 import ChatHistory from "@/components/ui/ChatHistory";
 import { chatActions, useChatStore } from "@/lib/chatStore";
 import { sendChat, regenerateLast } from "@/lib/chatEngine";
+import { MarkdownText } from "@/lib/markdown";
+import MessageReactions from "@/components/ui/MessageReactions";
+import SlashMenu from "@/components/ui/SlashMenu";
+import { matchCommands, extractSlashQuery, type SlashCommand } from "@/lib/slashCommands";
 
 function formatTime(ts: number): string {
   const now = Date.now();
@@ -95,6 +99,30 @@ export default function FloatingAIWidget() {
   const scrollToBottom = () => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
     setUnreadCount(0);
+  };
+
+  // Slash command state
+  const slashQuery = extractSlashQuery(input);
+  const slashItems = slashQuery !== null ? matchCommands(slashQuery) : [];
+  const slashOpen = slashQuery !== null && slashItems.length > 0;
+  const [slashIdx, setSlashIdx] = useState(0);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => { setSlashIdx(0); }, [slashQuery]);
+
+  const pickSlash = async (cmd: SlashCommand) => {
+    if (cmd.prompt) {
+      setInput("");
+      await sendChat(cmd.prompt, { module, conversationId });
+      return;
+    }
+    if (cmd.template) {
+      setInput(cmd.template);
+      queueMicrotask(() => {
+        const el = inputRef.current;
+        if (el) { el.focus(); const l = el.value.length; el.setSelectionRange(l, l); }
+      });
+    }
   };
 
   const handleSend = async () => {
@@ -319,7 +347,7 @@ export default function FloatingAIWidget() {
                     )}
                     <div className="group relative max-w-[80%]">
                       <div
-                        className="rounded-2xl px-3 py-2 text-sm whitespace-pre-wrap"
+                        className="rounded-2xl px-3 py-2 text-sm"
                         style={
                           msg.role === "user"
                             ? { background: "linear-gradient(135deg,rgba(124,58,237,0.3),rgba(79,70,229,0.3))", border: "1px solid rgba(124,58,237,0.3)", color: D.text }
@@ -337,7 +365,9 @@ export default function FloatingAIWidget() {
                           </div>
                         ) : (
                           <>
-                            {msg.content}
+                            {msg.role === "ai"
+                              ? <MarkdownText source={msg.content} />
+                              : <span className="whitespace-pre-wrap">{msg.content}</span>}
                             {msg.id === streamingId && msg.role === "ai" && (
                               <motion.span
                                 className="inline-block w-1.5 h-3 ml-0.5 -mb-0.5 rounded-sm"
@@ -351,6 +381,7 @@ export default function FloatingAIWidget() {
                       </div>
                       {msg.role === "ai" && msg.content && msg.id !== streamingId && (
                         <div className="absolute -right-1 top-0.5 opacity-0 group-hover:opacity-100 flex gap-1 transition-opacity">
+                          <MessageReactions msgId={msg.id} />
                           {msg.id === lastAiId && (
                             <button
                               onClick={handleRegenerate}
@@ -432,16 +463,33 @@ export default function FloatingAIWidget() {
             </AnimatePresence>
 
             {/* Input */}
-            <div className="p-3 flex-shrink-0" style={{ borderTop: `1px solid ${D.indigoBorder}` }}>
+            <div className="p-3 flex-shrink-0 relative" style={{ borderTop: `1px solid ${D.indigoBorder}` }}>
+              <SlashMenu
+                open={slashOpen}
+                items={slashItems}
+                activeIdx={slashIdx}
+                onHover={setSlashIdx}
+                onSelect={pickSlash}
+              />
               <div
                 className="flex items-center gap-2 rounded-xl px-3 py-2"
                 style={{ background: D.indigoDim, border: `1px solid ${D.indigoBorder}` }}
               >
                 <input
+                  ref={inputRef}
                   type="text"
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
+                  onKeyDown={(e) => {
+                    if (slashOpen) {
+                      if (e.key === "ArrowDown") { e.preventDefault(); setSlashIdx((i) => (i + 1) % slashItems.length); return; }
+                      if (e.key === "ArrowUp")   { e.preventDefault(); setSlashIdx((i) => (i - 1 + slashItems.length) % slashItems.length); return; }
+                      if (e.key === "Enter")     { e.preventDefault(); void pickSlash(slashItems[slashIdx]); return; }
+                      if (e.key === "Tab")       { e.preventDefault(); void pickSlash(slashItems[slashIdx]); return; }
+                      if (e.key === "Escape")    { e.preventDefault(); setInput(""); return; }
+                    }
+                    if (e.key === "Enter" && !e.shiftKey) handleSend();
+                  }}
                   placeholder="Napíš správu…"
                   className="flex-1 bg-transparent text-sm outline-none"
                   style={{ color: D.text }}
