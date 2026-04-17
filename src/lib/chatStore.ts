@@ -31,6 +31,27 @@ interface StoreState {
 
 const EMPTY_DRAFT: GuidedDraft = { contact: {}, task: {} };
 
+// Normalise AI's task-title mistakes into a proper action title.
+//   "S Peter Novák"  → "Stretnutie: Peter Novák"
+//   "s Peter"        → "Stretnutie: Peter"
+//   "Peter Novák"    → "Stretnutie: Peter Novák" (bare Capitalised name)
+function fixTaskTitle(raw: string): string {
+  const t = raw.trim();
+  if (!t) return t;
+  // Already starts with an action noun — leave untouched.
+  if (/^(stretnutie|konzultácia|telefonát|hovor|príprava|úloha|schôdzka|meeting)/i.test(t)) {
+    return t;
+  }
+  // "S [Name]" / "s [Name]" leading preposition.
+  const prep = t.match(/^[sS]\s+(.+)$/);
+  if (prep) return `Stretnutie: ${prep[1].trim()}`;
+  // Bare capitalised name (First Last) → default to Stretnutie.
+  if (/^[A-ZÁ-Ž][a-zá-ž]+(?:\s+[A-ZÁ-Ž][a-zá-ž]+){0,2}$/.test(t)) {
+    return `Stretnutie: ${t}`;
+  }
+  return t;
+}
+
 const INITIAL: StoreState = {
   conversationId: null,
   messages: [],
@@ -137,10 +158,12 @@ export const chatActions = {
     for (const c of cards) {
       const bucket = c.type === "task" ? "task" : "contact";
       for (const [k, v] of Object.entries(c.fields)) {
-        const val = String(v ?? "").trim();
+        let val = String(v ?? "").trim();
         if (!val) continue;
         // Reject literal placeholders like [NAME] or [MENO].
         if (/^\[[A-Z_]+\]$/.test(val)) continue;
+        // Auto-fix common LLM mistake: task title "S Peter Novák" or bare name.
+        if (bucket === "task" && k === "Úloha") val = fixTaskTitle(val);
         if (base[bucket][k] !== val) {
           base[bucket][k] = val;
           touched = true;

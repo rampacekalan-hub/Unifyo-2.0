@@ -101,6 +101,10 @@ export async function sendChat(
     let fullContent = "";
     let tokensUsed = 0;
     let isDone = false;
+    // IMPORTANT: SSE events can split across TCP chunks. We MUST buffer until
+    // we see a newline before parsing, otherwise partial `data: {...}` lines
+    // get silently dropped and random characters disappear from the stream.
+    let buffer = "";
 
     if (!reader) {
       chatActions.patchMessage(thinkingMsg.id, { role: "error", content: errorStates.aiUnavailable });
@@ -108,29 +112,41 @@ export async function sendChat(
       return;
     }
 
+    const processLine = (rawLine: string) => {
+      const line = rawLine.trim();
+      if (!line || !line.startsWith("data: ")) return;
+      const data = line.slice(6).trim();
+      if (data === "[DONE]") { isDone = true; return; }
+      try {
+        const parsed = JSON.parse(data);
+        if (typeof parsed.delta === "string") {
+          fullContent += parsed.delta;
+          const displayText = maskActionCardBlocks(fullContent);
+          chatActions.patchMessage(thinkingMsg.id, { role: "ai", content: displayText });
+        }
+        if (parsed.done) {
+          isDone = true;
+          if (parsed.tokens) tokensUsed = parsed.tokens;
+        }
+      } catch { /* skip malformed chunks */ }
+    };
+
     while (!isDone) {
       const { done, value } = await reader.read();
       if (done) break;
-      const chunk = decoder.decode(value, { stream: true });
-      const lines = chunk.split("\n").filter((l) => l.trim());
-      for (const line of lines) {
-        if (!line.startsWith("data: ")) continue;
-        const data = line.slice(6).trim();
-        if (data === "[DONE]") { isDone = true; continue; }
-        try {
-          const parsed = JSON.parse(data);
-          if (parsed.delta) {
-            fullContent += parsed.delta;
-            const displayText = maskActionCardBlocks(fullContent);
-            chatActions.patchMessage(thinkingMsg.id, { role: "ai", content: displayText });
-          }
-          if (parsed.done) {
-            isDone = true;
-            if (parsed.tokens) tokensUsed = parsed.tokens;
-          }
-        } catch { /* skip malformed chunks */ }
+      buffer += decoder.decode(value, { stream: true });
+      // Only process up to the LAST complete newline — keep remainder buffered.
+      let nlIdx = buffer.indexOf("\n");
+      while (nlIdx !== -1) {
+        const line = buffer.slice(0, nlIdx);
+        buffer = buffer.slice(nlIdx + 1);
+        processLine(line);
+        if (isDone) break;
+        nlIdx = buffer.indexOf("\n");
       }
     }
+    // Flush anything left in the buffer.
+    if (buffer.trim()) processLine(buffer);
 
     // Extract cards from combined user + AI response (regex fallback tolerance).
     const extractionInput = `${trimmed}\n---\n${fullContent}`;
