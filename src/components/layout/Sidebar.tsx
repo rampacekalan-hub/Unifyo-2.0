@@ -9,7 +9,7 @@ import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Bot, Calendar, Mail, Phone, BarChart3, Zap,
-  Lock, LogOut, ShieldAlert, Menu, X,
+  Lock, LogOut, ShieldAlert, Menu, X, Settings as SettingsIcon,
 } from "lucide-react";
 
 export interface SidebarUser {
@@ -59,9 +59,10 @@ const MODULES: ModuleDef[] = [
   { id: "crm",       label: "CRM",        href: "/crm",       icon: BarChart3, pro: true },
   { id: "calendar",  label: "Kalendár",   href: "/calendar",  icon: Calendar },
   { id: "email",     label: "Email",      href: "/email",     icon: Mail },
-  { id: "calls",     label: "Hovory",     href: "/calls",     icon: Phone,    enabled: false },
-  { id: "analytics", label: "Analytika",  href: "/analytics", icon: BarChart3, enabled: false },
-  { id: "automation",label: "Automation", href: "/automation",icon: Zap,       enabled: false },
+  { id: "calls",     label: "Hovory",     href: "/calls",     icon: Phone },
+  { id: "analytics", label: "Analytika",  href: "/analytics", icon: BarChart3 },
+  { id: "automation",label: "Automation", href: "/automation",icon: Zap },
+  { id: "settings",  label: "Nastavenia", href: "/settings",  icon: SettingsIcon },
 ];
 
 export default function Sidebar({ user, liveToggles }: SidebarProps) {
