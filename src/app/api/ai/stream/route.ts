@@ -98,30 +98,46 @@ export async function POST(req: NextRequest) {
     async start(controller) {
       const reader = openaiRes.body!.getReader();
       const dec = new TextDecoder();
+      // CRITICAL: OpenAI SSE lines can split across TCP chunks. We MUST buffer
+      // until we see `\n`, otherwise partial `data: {...}` lines fail JSON.parse
+      // and get silently dropped — characters visibly missing from the reply.
+      let buffer = "";
+
+      const processLine = (rawLine: string) => {
+        const line = rawLine.trim();
+        if (!line.startsWith("data: ")) return;
+        const data = line.slice(6).trim();
+        if (data === "[DONE]") return;
+        try {
+          const json = JSON.parse(data);
+          const delta = json.choices?.[0]?.delta?.content ?? "";
+          if (delta) {
+            fullContent += delta;
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ delta })}\n\n`));
+          }
+          const tokensUsed = json.usage?.total_tokens ?? 0;
+          if (tokensUsed > 0) {
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ tokens: tokensUsed, done: true, used: used + 1, limit })}\n\n`));
+          }
+        } catch { /* skip malformed chunks */ }
+      };
 
       try {
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
-          const chunk = dec.decode(value, { stream: true });
-          const lines = chunk.split("\n").filter(l => l.startsWith("data: "));
-          for (const line of lines) {
-            const data = line.slice(6).trim();
-            if (data === "[DONE]") continue;
-            try {
-              const json = JSON.parse(data);
-              const delta = json.choices?.[0]?.delta?.content ?? "";
-              if (delta) {
-                fullContent += delta;
-                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ delta })}\n\n`));
-              }
-              const tokensUsed = json.usage?.total_tokens ?? 0;
-              if (tokensUsed > 0) {
-                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ tokens: tokensUsed, done: true, used: used + 1, limit })}\n\n`));
-              }
-            } catch { /* skip malformed chunks */ }
+          buffer += dec.decode(value, { stream: true });
+          // Process only up to the LAST complete newline; keep remainder buffered.
+          let nlIdx = buffer.indexOf("\n");
+          while (nlIdx !== -1) {
+            const line = buffer.slice(0, nlIdx);
+            buffer = buffer.slice(nlIdx + 1);
+            processLine(line);
+            nlIdx = buffer.indexOf("\n");
           }
         }
+        // Flush anything left after stream end.
+        if (buffer.trim()) processLine(buffer);
       } finally {
         // After stream: store memory + log + increment
         if (fullContent) {
