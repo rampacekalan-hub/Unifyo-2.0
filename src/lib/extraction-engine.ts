@@ -28,7 +28,7 @@ function capitalise(s: string): string {
 // ═════════════════════════════════════════════════════════════════
 // VISUAL DEBUG — Console logging for extraction troubleshooting
 // ═════════════════════════════════════════════════════════════════
-const DEBUG_ENABLED = true;
+const DEBUG_ENABLED = process.env.NODE_ENV !== "production";
 
 function debugExtraction(text: string, result: { name: string; note: string; classified: Array<{ word: string; type: string }>; confidence: number }) {
   if (!DEBUG_ENABLED) return;

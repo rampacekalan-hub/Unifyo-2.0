@@ -3,7 +3,7 @@
 import { useRef, useEffect, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
-import { Bot, Send, Loader2, AlertTriangle, X, Check } from "lucide-react";
+import { Bot, Send, Loader2, AlertTriangle, X, Check, Square } from "lucide-react";
 import NeuralBackground from "@/components/ui/NeuralBackground";
 import Sidebar from "@/components/layout/Sidebar";
 import GuidedCard, { type GuidedDraft } from "@/components/ui/GuidedCard";
@@ -176,10 +176,18 @@ export default function DashboardClient({ user }: DashboardClientProps) {
       const results = await Promise.all(promises);
       const allOk = results.every((r) => r.ok);
       if (allOk) {
+        const goto = hasContact ? "/crm" : "/calendar";
+        const label = hasContact ? "Pozrieť v CRM" : "Pozrieť v Kalendári";
         toast.success(
           hasContact && hasTask ? "Kontakt aj termín uložené."
           : hasContact ? "Kontakt uložený do CRM."
           : "Termín pridaný do Kalendára.",
+          {
+            action: {
+              label,
+              onClick: () => { window.location.href = goto; },
+            },
+          },
         );
         chatActions.clearDraft();
       } else {
@@ -356,14 +364,23 @@ export default function DashboardClient({ user }: DashboardClientProps) {
                 disabled={loading}
                 className="flex-1 bg-transparent text-sm outline-none"
                 style={{ color: "#eef2ff", caretColor: "#8b5cf6" }} />
-              <button onClick={handleSend} disabled={loading || !input.trim()}
-                className="w-8 h-8 rounded-2xl flex items-center justify-center transition-all duration-200 flex-shrink-0 disabled:opacity-40"
-                style={{ background: `linear-gradient(135deg,${D.indigo},#4f46e5)`, boxShadow: `0 0 14px ${D.indigoGlow}` }}>
-                {loading
-                  ? <Loader2 className="w-3.5 h-3.5 text-white animate-spin" />
-                  : <Send className="w-3.5 h-3.5 text-white" />
-                }
-              </button>
+              {loading ? (
+                <button
+                  onClick={() => chatActions.abortStream()}
+                  className="w-8 h-8 rounded-2xl flex items-center justify-center transition-all duration-200 flex-shrink-0"
+                  style={{ background: "linear-gradient(135deg,#f43f5e,#be123c)", boxShadow: "0 0 14px rgba(244,63,94,0.3)" }}
+                  title="Zastaviť generovanie"
+                  aria-label="Zastaviť"
+                >
+                  <Square className="w-3 h-3 text-white fill-white" />
+                </button>
+              ) : (
+                <button onClick={handleSend} disabled={!input.trim()}
+                  className="w-8 h-8 rounded-2xl flex items-center justify-center transition-all duration-200 flex-shrink-0 disabled:opacity-40"
+                  style={{ background: `linear-gradient(135deg,${D.indigo},#4f46e5)`, boxShadow: `0 0 14px ${D.indigoGlow}` }}>
+                  <Send className="w-3.5 h-3.5 text-white" />
+                </button>
+              )}
             </div>
           </div>
         </div>

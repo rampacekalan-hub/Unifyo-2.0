@@ -156,9 +156,20 @@ export default function ChatHistory() {
 
               <div className="overflow-y-auto flex-1">
                 {loading && (
-                  <p className="px-4 py-6 text-xs text-center" style={{ color: D.muted }}>
-                    Načítavam…
-                  </p>
+                  <div className="px-4 py-3 space-y-2.5">
+                    {[0, 1, 2].map((i) => (
+                      <motion.div
+                        key={i}
+                        className="space-y-1.5"
+                        initial={{ opacity: 0.4 }}
+                        animate={{ opacity: [0.4, 0.8, 0.4] }}
+                        transition={{ duration: 1.4, repeat: Infinity, delay: i * 0.15, ease: "easeInOut" }}
+                      >
+                        <div className="h-3 rounded-md" style={{ background: "rgba(99,102,241,0.12)", width: "70%" }} />
+                        <div className="h-2 rounded-md" style={{ background: "rgba(99,102,241,0.07)", width: "40%" }} />
+                      </motion.div>
+                    ))}
+                  </div>
                 )}
                 {!loading && convs.length === 0 && (
                   <p className="px-4 py-8 text-xs text-center" style={{ color: D.muted }}>

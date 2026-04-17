@@ -6,7 +6,7 @@
 import { useState, useRef, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Bot, Send, X, Loader2, Sparkles } from "lucide-react";
+import { Bot, Send, X, Loader2, Sparkles, Square } from "lucide-react";
 import GuidedCard, { type GuidedDraft } from "@/components/ui/GuidedCard";
 import ChatHistory from "@/components/ui/ChatHistory";
 import { chatActions, useChatStore } from "@/lib/chatStore";
@@ -85,10 +85,18 @@ export default function FloatingAIWidget() {
     try {
       const results = await Promise.all(promises);
       if (results.every((r) => r.ok)) {
+        const goto = hasContact ? "/crm" : "/calendar";
+        const label = hasContact ? "Pozrieť v CRM" : "Pozrieť v Kalendári";
         toast.success(
           hasContact && hasTask ? "Kontakt aj termín uložené."
           : hasContact ? "Kontakt uložený do CRM."
           : "Termín pridaný do Kalendára.",
+          {
+            action: {
+              label,
+              onClick: () => { window.location.href = goto; },
+            },
+          },
         );
         chatActions.clearDraft();
       } else {
@@ -130,10 +138,10 @@ export default function FloatingAIWidget() {
         {isOpen ? <X className="w-6 h-6 text-white" /> : <Sparkles className="w-6 h-6 text-white" />}
         {!isOpen && unread > 0 && (
           <span
-            className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full text-[0.6rem] font-bold flex items-center justify-center"
-            style={{ background: "#22d3ee", color: "#083344", boxShadow: "0 0 8px rgba(34,211,238,0.55)" }}
+            className="absolute -top-1 -right-1 min-w-[20px] h-[20px] px-1.5 rounded-full text-[0.65rem] font-bold flex items-center justify-center"
+            style={{ background: "#22d3ee", color: "#083344", boxShadow: "0 0 10px rgba(34,211,238,0.6)" }}
           >
-            ●
+            {unread > 9 ? "9+" : unread}
           </span>
         )}
       </motion.button>
@@ -262,14 +270,26 @@ export default function FloatingAIWidget() {
                   style={{ color: D.text }}
                   disabled={loading}
                 />
-                <button
-                  onClick={handleSend}
-                  disabled={!input.trim() || loading}
-                  className="p-2 rounded-lg disabled:opacity-50 transition-opacity"
-                  style={{ background: D.indigo }}
-                >
-                  {loading ? <Loader2 className="w-4 h-4 text-white animate-spin" /> : <Send className="w-4 h-4 text-white" />}
-                </button>
+                {loading ? (
+                  <button
+                    onClick={() => chatActions.abortStream()}
+                    className="p-2 rounded-lg transition-opacity"
+                    style={{ background: "#f43f5e" }}
+                    title="Zastaviť"
+                    aria-label="Zastaviť"
+                  >
+                    <Square className="w-3.5 h-3.5 text-white fill-white" />
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleSend}
+                    disabled={!input.trim()}
+                    className="p-2 rounded-lg disabled:opacity-50 transition-opacity"
+                    style={{ background: D.indigo }}
+                  >
+                    <Send className="w-4 h-4 text-white" />
+                  </button>
+                )}
               </div>
             </div>
           </motion.div>

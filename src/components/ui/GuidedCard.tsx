@@ -3,7 +3,7 @@
 // Single conversational draft card — persists through chat turns,
 // fills LIVE as AI extracts fields from subsequent user replies.
 
-import { useState } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { User, CalendarCheck, Check, X, Pencil, Loader2 } from "lucide-react";
 
@@ -53,13 +53,14 @@ function formatDate(iso?: string): string {
 }
 
 function SectionRow({
-  label, value, placeholder, type, onChange,
+  label, value, placeholder, type, onChange, flash,
 }: {
   label: string;
   value: string;
   placeholder: string;
   type?: string;
   onChange: (v: string) => void;
+  flash?: boolean;
 }) {
   const filled = Boolean(value && value.trim());
   return (
@@ -70,16 +71,23 @@ function SectionRow({
       >
         {label}
       </span>
-      <input
+      <motion.input
         type={type ?? "text"}
         value={value}
-        placeholder={placeholder ? `chýba · ${placeholder}` : "chýba"}
+        placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
-        className="flex-1 bg-transparent text-sm outline-none border-b transition-colors"
+        className="flex-1 bg-transparent text-sm outline-none border-b"
+        animate={
+          flash
+            ? { backgroundColor: ["rgba(34,211,238,0.0)", "rgba(34,211,238,0.18)", "rgba(34,211,238,0.0)"] }
+            : undefined
+        }
+        transition={{ duration: 1.0, ease: "easeOut" }}
         style={{
           color: filled ? D.text : D.muted,
           borderColor: filled ? "rgba(99,102,241,0.35)" : "rgba(148,163,184,0.15)",
           paddingBottom: 2,
+          borderRadius: 3,
         }}
       />
     </div>
@@ -89,6 +97,41 @@ function SectionRow({
 export default function GuidedCard({ draft, onChange, onConfirm, onDismiss }: Props) {
   const [saving, setSaving] = useState(false);
   const [editing, setEditing] = useState(false);
+
+  // ── Flash-animate fields that just became filled (AI added them) ──
+  const prevRef = useRef<GuidedDraft | null>(null);
+  const [flashed, setFlashed] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    const prev = prevRef.current;
+    if (prev) {
+      const newlyFilled = new Set<string>();
+      for (const bucket of ["contact", "task"] as const) {
+        for (const key of Object.keys(draft[bucket])) {
+          const before = (prev[bucket]?.[key] ?? "").trim();
+          const after  = (draft[bucket][key] ?? "").trim();
+          if (!before && after) newlyFilled.add(`${bucket}:${key}`);
+        }
+      }
+      if (newlyFilled.size > 0) {
+        setFlashed(newlyFilled);
+        const t = window.setTimeout(() => setFlashed(new Set()), 1200);
+        return () => window.clearTimeout(t);
+      }
+    }
+    prevRef.current = draft;
+  }, [draft]);
+  useEffect(() => { prevRef.current = draft; }, [draft]);
+
+  // ── Progress: how many fields are filled? ──
+  const progress = useMemo(() => {
+    const contactKeys = CONTACT_FIELDS.map(f => f.key);
+    const taskKeys    = TASK_FIELDS.map(f => f.key);
+    const filled =
+      contactKeys.filter(k => (draft.contact[k] ?? "").trim()).length +
+      taskKeys.filter(k => (draft.task[k] ?? "").trim()).length;
+    const total = contactKeys.length + taskKeys.length;
+    return { filled, total, pct: Math.round((filled / total) * 100) };
+  }, [draft]);
 
   const hasContact = Object.values(draft.contact).some((v) => v && v.trim());
   const hasTask    = Object.values(draft.task).some((v) => v && v.trim());
@@ -144,7 +187,13 @@ export default function GuidedCard({ draft, onChange, onConfirm, onDismiss }: Pr
               className="text-[0.65rem] font-semibold uppercase tracking-widest"
               style={{ color: D.sky }}
             >
-              Sprievodca · Rozpracované
+              Sprievodca
+            </span>
+            <span
+              className="text-[0.6rem] px-1.5 py-0.5 rounded-md font-medium"
+              style={{ background: "rgba(34,211,238,0.12)", color: D.sky, border: `1px solid ${D.borderSky}` }}
+            >
+              {progress.filled}/{progress.total} polí
             </span>
           </div>
           <div className="flex items-center gap-1">
@@ -167,6 +216,17 @@ export default function GuidedCard({ draft, onChange, onConfirm, onDismiss }: Pr
               <X className="w-3.5 h-3.5" />
             </button>
           </div>
+        </div>
+
+        {/* Progress bar */}
+        <div className="h-0.5 w-full" style={{ background: "rgba(99,102,241,0.08)" }}>
+          <motion.div
+            className="h-full"
+            style={{ background: `linear-gradient(90deg, ${D.indigo}, ${D.sky})` }}
+            initial={false}
+            animate={{ width: `${progress.pct}%` }}
+            transition={{ duration: 0.5, ease: "easeOut" }}
+          />
         </div>
 
         {/* Compact summary OR editable sections */}
@@ -239,6 +299,7 @@ export default function GuidedCard({ draft, onChange, onConfirm, onDismiss }: Pr
                   placeholder={f.placeholder}
                   value={draft.contact[f.key] ?? ""}
                   onChange={(v) => setContact(f.key, v)}
+                  flash={flashed.has(`contact:${f.key}`)}
                 />
               ))}
             </div>
@@ -254,6 +315,7 @@ export default function GuidedCard({ draft, onChange, onConfirm, onDismiss }: Pr
                   placeholder={f.placeholder}
                   value={draft.task[f.key] ?? ""}
                   onChange={(v) => setTask(f.key, v)}
+                  flash={flashed.has(`task:${f.key}`)}
                 />
               ))}
             </div>

@@ -29,6 +29,10 @@ interface StoreState {
   loading: boolean;
 }
 
+// Abort controller is kept OUT of the persisted state — it cannot survive
+// navigation or serialization. Lives only in memory as a module-level handle.
+let currentAbortController: AbortController | null = null;
+
 const EMPTY_DRAFT: GuidedDraft = { contact: {}, task: {} };
 
 // Normalise AI's task-title mistakes into a proper action title.
@@ -181,7 +185,9 @@ export const chatActions = {
     emit();
   },
   mergeDraft(cards: ActionCard[]) {
-    // Merge extracted fields into draft; newer non-empty values override.
+    // Merge extracted fields into draft — AI may only FILL empty fields.
+    // Never overwrite existing non-empty values: those are either prior AI
+    // extractions the user confirmed, or user edits in the GuidedCard.
     const base: GuidedDraft = state.draft ?? {
       contact: { ...EMPTY_DRAFT.contact },
       task:    { ...EMPTY_DRAFT.task },
@@ -192,11 +198,14 @@ export const chatActions = {
       for (const [k, v] of Object.entries(c.fields)) {
         let val = String(v ?? "").trim();
         if (!val) continue;
-        // Reject literal placeholders like [NAME] or [MENO].
-        if (/^\[[A-Z_]+\]$/.test(val)) continue;
+        // Reject literal placeholders like [NAME], [meno], [Email].
+        if (/^\[[a-z_]+\]$/i.test(val)) continue;
         // Auto-fix common LLM mistake: task title "S Peter Novák" or bare name.
         if (bucket === "task" && k === "Úloha") val = fixTaskTitle(val);
-        if (base[bucket][k] !== val) {
+        // Only write into EMPTY fields. Preserves user edits + avoids
+        // AI "correcting" a value the user deliberately changed.
+        const current = base[bucket][k];
+        if (!current || !current.trim()) {
           base[bucket][k] = val;
           touched = true;
         }
@@ -233,12 +242,23 @@ export const chatActions = {
     };
     emit();
   },
+  setAbortController(ac: AbortController | null) {
+    currentAbortController = ac;
+  },
+  abortStream() {
+    if (currentAbortController) {
+      try { currentAbortController.abort(); } catch { /* ignore */ }
+      currentAbortController = null;
+    }
+  },
   newConversation() {
-    state = { ...state, conversationId: null, messages: [], draft: null };
+    if (currentAbortController) { try { currentAbortController.abort(); } catch {} currentAbortController = null; }
+    state = { ...state, conversationId: null, messages: [], draft: null, loading: false };
     emit();
   },
   deleteCurrent() {
-    state = { ...state, conversationId: null, messages: [], draft: null };
+    if (currentAbortController) { try { currentAbortController.abort(); } catch {} currentAbortController = null; }
+    state = { ...state, conversationId: null, messages: [], draft: null, loading: false };
     emit();
   },
   hydrateFromRemote(id: string, messages: ChatMessage[]) {

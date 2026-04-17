@@ -85,11 +85,16 @@ export async function sendChat(
   const convId = await ensureConversation(opts.conversationId, trimmed);
   void persistMessage(convId, "user", trimmed);
 
+  // Make the stream cancellable — user-initiated Stop or navigation can abort.
+  const abortController = new AbortController();
+  chatActions.setAbortController(abortController);
+
   try {
     const res = await fetch("/api/ai/stream", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ message: trimmed, module: opts.module }),
+      signal: abortController.signal,
     });
 
     if (!res.ok) {
@@ -180,9 +185,17 @@ export async function sendChat(
     }
 
     void persistMessage(convId, "ai", finalText, tokensUsed);
-  } catch {
-    chatActions.patchMessage(thinkingMsg.id, { role: "error", content: errorStates.networkError });
+  } catch (err: unknown) {
+    // AbortError = user clicked Stop or switched conversations — show a neutral
+    // note instead of a scary red error bubble.
+    const isAbort = (err as { name?: string } | null)?.name === "AbortError";
+    if (isAbort) {
+      chatActions.patchMessage(thinkingMsg.id, { role: "ai", content: "⏹ Zastavené používateľom." });
+    } else {
+      chatActions.patchMessage(thinkingMsg.id, { role: "error", content: errorStates.networkError });
+    }
   } finally {
+    chatActions.setAbortController(null);
     chatActions.setLoading(false);
   }
 }
