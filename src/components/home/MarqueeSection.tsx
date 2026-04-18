@@ -1,14 +1,16 @@
 "use client";
 
+// Realistický stack, bez emoji placeholderov a bez Vercelu
+// (Unifyo je self-hostovaná na Hetzneri).
 const logos = [
   { name: "Next.js", icon: "▲" },
-  { name: "PostgreSQL", icon: "🐘" },
+  { name: "React", icon: "⚛" },
+  { name: "TypeScript", icon: "TS" },
+  { name: "Tailwind CSS", icon: "~" },
+  { name: "PostgreSQL", icon: "◉" },
   { name: "Prisma", icon: "◆" },
   { name: "Hetzner", icon: "⬡" },
-  { name: "TypeScript", icon: "TS" },
-  { name: "Tailwind CSS", icon: "🌊" },
-  { name: "Vercel", icon: "▲" },
-  { name: "React", icon: "⚛" },
+  { name: "Stripe", icon: "S" },
 ];
 
 export default function MarqueeSection() {
@@ -32,7 +34,7 @@ export default function MarqueeSection() {
               key={`${logo.name}-${i}`}
               className="flex items-center gap-2.5 cursor-default select-none flex-shrink-0" style={{ opacity: 0.55 }}
             >
-              <span className="text-lg">{logo.icon}</span>
+              <span className="text-lg" style={{ color: "#a78bfa" }}>{logo.icon}</span>
               <span className="text-sm font-semibold tracking-tight" style={{ color: "#94a3b8" }}>{logo.name}</span>
             </div>
           ))}

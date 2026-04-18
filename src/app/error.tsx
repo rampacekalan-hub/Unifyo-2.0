@@ -9,13 +9,13 @@ import { AlertTriangle, RefreshCw, Mail } from "lucide-react";
 const B = {
   bg: "#080b12",
   surface: "rgba(15,18,32,0.85)",
-  border: "rgba(99,102,241,0.18)",
+  border: "rgba(139,92,246,0.18)",
   text: "#eef2ff",
   muted: "#94a3b8",
   dim: "#64748b",
-  indigo: "#6366f1",
   violet: "#8b5cf6",
-  indigoGlow: "rgba(99,102,241,0.35)",
+  violetDeep: "#7c3aed",
+  violetGlow: "rgba(124,58,237,0.35)",
   red: "#ef4444",
   redDim: "rgba(239,68,68,0.15)",
 };
@@ -42,14 +42,14 @@ export default function ErrorPage({ error, reset }: ErrorPageProps) {
       <div
         className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] rounded-full pointer-events-none"
         style={{
-          background: "radial-gradient(circle, rgba(99,102,241,0.08) 0%, transparent 70%)",
+          background: "radial-gradient(circle, rgba(124,58,237,0.08) 0%, transparent 70%)",
           filter: "blur(80px)",
         }}
       />
       <div
         className="absolute bottom-[-20%] right-[-10%] w-[500px] h-[500px] rounded-full pointer-events-none"
         style={{
-          background: "radial-gradient(circle, rgba(139,92,246,0.07) 0%, transparent 70%)",
+          background: "radial-gradient(circle, rgba(6,182,212,0.06) 0%, transparent 70%)",
           filter: "blur(80px)",
         }}
       />
@@ -74,7 +74,7 @@ export default function ErrorPage({ error, reset }: ErrorPageProps) {
             background: B.surface,
             border: `1px solid ${B.border}`,
             backdropFilter: "blur(24px)",
-            boxShadow: "0 0 60px rgba(99,102,241,0.08)",
+            boxShadow: "0 0 60px rgba(124,58,237,0.08)",
           }}
         >
           {/* Icon */}
@@ -106,7 +106,7 @@ export default function ErrorPage({ error, reset }: ErrorPageProps) {
           <div
             className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg mb-6"
             style={{
-              background: "rgba(99,102,241,0.08)",
+              background: "rgba(139,92,246,0.08)",
               border: `1px solid ${B.border}`,
             }}
           >
@@ -115,7 +115,7 @@ export default function ErrorPage({ error, reset }: ErrorPageProps) {
             </span>
             <span
               className="text-xs font-mono font-bold tracking-wide"
-              style={{ color: B.indigo }}
+              style={{ color: B.violet }}
             >
               {code}
             </span>
@@ -141,9 +141,9 @@ export default function ErrorPage({ error, reset }: ErrorPageProps) {
               onClick={reset}
               className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all active:scale-[0.98]"
               style={{
-                background: `linear-gradient(135deg, ${B.indigo}, #5b21b6)`,
+                background: `linear-gradient(135deg, ${B.violetDeep}, #5b21b6)`,
                 color: "#fff",
-                boxShadow: `0 0 20px ${B.indigoGlow}`,
+                boxShadow: `0 0 20px ${B.violetGlow}`,
               }}
             >
               <RefreshCw className="w-4 h-4" />
@@ -153,7 +153,7 @@ export default function ErrorPage({ error, reset }: ErrorPageProps) {
               href={`mailto:info@unifyo.online?subject=Chyba%20${code}`}
               className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all active:scale-[0.98]"
               style={{
-                background: "rgba(99,102,241,0.1)",
+                background: "rgba(139,92,246,0.1)",
                 border: `1px solid ${B.border}`,
                 color: B.text,
               }}

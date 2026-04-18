@@ -57,9 +57,9 @@ export default function SukromiePage() {
           title: "Príjemcovia a cezhraničný prenos osobných údajov",
           content: [
             "Stripe, Inc. (USA) — spracovanie platieb; prenos do USA na základe štandardných zmluvných doložiek EÚ (SCCs) a certifikácie PCI DSS Level 1.",
-            "Vercel, Inc. — hosting aplikácie; dátové centrá v rámci EÚ (Frankfurt).",
-            "Supabase, Inc. — databázová infraštruktúra; dátové centrá v EÚ.",
-            "Poskytovatelia AI (napr. OpenAI) — spracovanie AI požiadaviek; minimalizácia dát, žiadne trvanlé uchovávanie obsahu na strane AI.",
+            "Hetzner Online GmbH (Nemecko) — hosting aplikácie a databázy; dátové centrá v EÚ (Nürnberg / Falkenstein), GDPR súlad.",
+            "Websupport, s.r.o. (Slovensko) — doručovanie transakčných emailov (overenie účtu, reset hesla); SMTP služba, prevádzkovateľ v EÚ.",
+            "Poskytovatelia AI (napr. OpenAI, Anthropic) — spracovanie AI požiadaviek; minimalizácia dát, žiadne trvalé uchovávanie obsahu na strane AI.",
             "Osobné údaje nie sú predávané ani poskytované tretím stranám na marketingové alebo iné komerčné účely.",
             "Prevádzkovateľ zabezpečuje, že všetci sprostredkovatelia sú zmluvne zaviazaní chrániť osobné údaje v súlade s GDPR.",
           ],

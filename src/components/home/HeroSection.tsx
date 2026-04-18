@@ -174,7 +174,7 @@ export default function HeroSection() {
           {texts.hero.headline}
           <br />
           <span style={{
-            background: "linear-gradient(90deg, #a78bfa 0%, #38bdf8 55%, #6ee7b7 100%)",
+            background: "linear-gradient(90deg, #a78bfa, #67e8f9)",
             WebkitBackgroundClip: "text",
             WebkitTextFillColor: "transparent",
             backgroundClip: "text",
@@ -207,8 +207,8 @@ export default function HeroSection() {
         >
           <Link href="/register" style={{
             display: "inline-flex", alignItems: "center", gap: "10px",
-            background: "linear-gradient(135deg, #7c3aed, #4f46e5)",
-            boxShadow: "0 0 0 1px rgba(139,92,246,0.35), 0 8px 28px rgba(124,58,237,0.35)",
+            background: "linear-gradient(135deg, #7c3aed, #5b21b6)",
+            boxShadow: "0 0 0 1px rgba(139,92,246,0.3), 0 4px 20px rgba(124,58,237,0.35)",
             color: "#fff",
             borderRadius: "14px",
             padding: "13px 24px",
@@ -312,7 +312,7 @@ export default function HeroSection() {
                     fontSize: "0.75rem", fontWeight: 500,
                     background: i === sceneIdx ? "rgba(139,92,246,0.14)" : "transparent",
                     border: `1px solid ${i === sceneIdx ? "rgba(139,92,246,0.3)" : "transparent"}`,
-                    color: i === sceneIdx ? s.tagColor : "#374151",
+                    color: i === sceneIdx ? s.tagColor : "#64748b",
                     cursor: "pointer", transition: "all 0.15s",
                   }}>
                     <TabIcon style={{ width: "12px", height: "12px" }} />
@@ -464,12 +464,12 @@ export default function HeroSection() {
               borderRadius: "12px", padding: "10px 14px",
             }}>
               <SceneIcon style={{ width: "15px", height: "15px", color: scene.accent, flexShrink: 0 }} />
-              <span style={{ flex: 1, fontSize: "clamp(0.75rem, 2vw, 0.85rem)", color: "#374151" }}>
+              <span style={{ flex: 1, fontSize: "clamp(0.75rem, 2vw, 0.85rem)", color: "#64748b" }}>
                 Opýtaj sa Unifyo AI čokoľvek po slovensky...
               </span>
               <div style={{
                 width: "30px", height: "30px", borderRadius: "9px",
-                background: "linear-gradient(135deg, #7c3aed, #4f46e5)",
+                background: "linear-gradient(135deg, #7c3aed, #5b21b6)",
                 display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
               }}>
                 <ArrowRight style={{ width: "14px", height: "14px", color: "#fff" }} />

@@ -196,14 +196,14 @@ export default function PricingSection() {
                           }}>
                           {feature.included
                             ? <Check className="w-2.5 h-2.5" style={{ color: "#a78bfa" }} />
-                            : <Minus className="w-2.5 h-2.5" style={{ color: "#374151" }} />
+                            : <Minus className="w-2.5 h-2.5" style={{ color: "#64748b" }} />
                           }
                         </div>
                         {feature.tooltip ? (
                           <Tooltip>
                             <TooltipTrigger>
                               <span className="text-xs leading-relaxed cursor-help underline decoration-dotted underline-offset-2"
-                                style={{ color: feature.included ? "#cbd5e1" : "#4b5563" }}>
+                                style={{ color: feature.included ? "#cbd5e1" : "#64748b" }}>
                                 {feature.text}
                               </span>
                             </TooltipTrigger>
@@ -219,7 +219,7 @@ export default function PricingSection() {
                           </Tooltip>
                         ) : (
                           <span className="text-xs leading-relaxed"
-                            style={{ color: feature.included ? "#cbd5e1" : "#4b5563" }}>
+                            style={{ color: feature.included ? "#cbd5e1" : "#64748b" }}>
                             {feature.text}
                           </span>
                         )}

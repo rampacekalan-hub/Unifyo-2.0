@@ -19,8 +19,18 @@ export default function KontaktPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setFormState("sending");
-    await new Promise(r => setTimeout(r, 1200));
-    setFormState("sent");
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, message }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      setFormState("sent");
+    } catch (err) {
+      console.error("[contact] submit failed:", err);
+      setFormState("error");
+    }
   }
 
   const inputStyle = {
@@ -113,7 +123,7 @@ export default function KontaktPage() {
           {/* Divider */}
           <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "32px" }}>
             <div style={{ flex: 1, height: "1px", background: "rgba(139,92,246,0.12)" }} />
-            <span style={{ fontSize: "0.75rem", color: "#4b5563", fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase" }}>alebo napíš cez formulár</span>
+            <span style={{ fontSize: "0.75rem", color: "#64748b", fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase" }}>alebo napíš cez formulár</span>
             <div style={{ flex: 1, height: "1px", background: "rgba(139,92,246,0.12)" }} />
           </div>
 
@@ -161,7 +171,7 @@ export default function KontaktPage() {
                   exit={{ opacity: 0 }}
                   style={{ display: "flex", flexDirection: "column", gap: "16px" }}
                 >
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 600, color: "#94a3b8", marginBottom: "7px", letterSpacing: "0.04em" }}>
                         Meno
@@ -243,8 +253,13 @@ export default function KontaktPage() {
                     )}
                   </button>
 
-                  <p style={{ fontSize: "0.75rem", color: "#4b5563", textAlign: "center", lineHeight: 1.5 }}>
-                    Odoslaním súhlasíš so spracúvaním údajov podla našich{" "}
+                  {formState === "error" && (
+                    <p style={{ fontSize: "0.8rem", color: "#f87171", textAlign: "center", marginTop: "-4px" }}>
+                      Odoslanie zlyhalo. Skús to prosím znova, alebo napíš priamo na info@unifyo.online.
+                    </p>
+                  )}
+                  <p style={{ fontSize: "0.75rem", color: "#64748b", textAlign: "center", lineHeight: 1.5 }}>
+                    Odoslaním súhlasíš so spracúvaním údajov podľa našich{" "}
                     <Link href="/sukromie" style={{ color: "#8b5cf6", textDecoration: "none" }}>Zásad ochrany súkromia</Link>.
                   </p>
                 </motion.form>

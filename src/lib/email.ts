@@ -293,3 +293,55 @@ function escape(s: string): string {
 }
 
 export const _appUrl = APP_URL;
+
+// ── Contact form ─────────────────────────────────────────────────
+// Odosielané z /api/contact na vlastnú schránku info@unifyo.online.
+// Reply-To je nastavený na email odosielateľa, takže stačí stlačiť "odpovedať".
+
+export async function sendContactMessage(args: {
+  name: string;
+  email: string;
+  message: string;
+}): Promise<void> {
+  const { name, email, message } = args;
+  const inbox = process.env.CONTACT_INBOX || "info@unifyo.online";
+  const subject = `Nová správa z kontaktného formulára — ${name}`;
+  const text = [
+    "Nová správa z kontaktného formulára na unifyo.online",
+    "",
+    `Od:    ${name} <${email}>`,
+    `Čas:   ${new Date().toISOString()}`,
+    "",
+    "── Správa ──────────────────────────────",
+    message,
+    "────────────────────────────────────────",
+    "",
+    "Odpovedať môžeš priamo na tento email (Reply-To smeruje na odosielateľa).",
+  ].join("\n");
+
+  const html = `<!DOCTYPE html><html><body style="font-family:ui-sans-serif,system-ui,sans-serif;background:#0a0c18;color:#eef2ff;padding:24px">
+  <div style="max-width:560px;margin:0 auto;background:#0f1220;border:1px solid rgba(139,92,246,0.22);border-radius:14px;padding:24px">
+    <div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#94a3b8;margin-bottom:6px">Kontaktný formulár</div>
+    <div style="font-size:20px;font-weight:800;color:#eef2ff;margin-bottom:18px">Nová správa od ${escape(name)}</div>
+    <table style="width:100%;border-collapse:collapse;font-size:13px;color:#cbd5e1">
+      <tr><td style="padding:6px 0;color:#94a3b8;width:80px">Meno</td><td>${escape(name)}</td></tr>
+      <tr><td style="padding:6px 0;color:#94a3b8">Email</td><td><a style="color:#a78bfa" href="mailto:${escape(email)}">${escape(email)}</a></td></tr>
+      <tr><td style="padding:6px 0;color:#94a3b8">Čas</td><td>${new Date().toLocaleString("sk-SK")}</td></tr>
+    </table>
+    <div style="margin:20px 0 8px;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#94a3b8">Správa</div>
+    <div style="white-space:pre-wrap;line-height:1.6;font-size:14px;color:#eef2ff;background:#0a0c18;border:1px solid rgba(139,92,246,0.14);border-radius:10px;padding:14px">${escape(message)}</div>
+  </div></body></html>`;
+
+  if (!transport) {
+    console.warn(`[email DEV] contact from=${email} name=${name}\n${message}`);
+    return;
+  }
+  await transport.sendMail({
+    from: FROM,
+    to: inbox,
+    replyTo: `${name} <${email}>`,
+    subject,
+    text,
+    html,
+  });
+}
