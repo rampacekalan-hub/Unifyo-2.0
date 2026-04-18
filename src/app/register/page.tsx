@@ -8,6 +8,7 @@ import { motion } from "framer-motion";
 import { Loader2, Eye, EyeOff, Check, X } from "lucide-react";
 import { getSiteConfig } from "@/config/site-settings";
 import { toast } from "sonner";
+import AuthBrand, { GradientTitle } from "@/components/auth/AuthBrand";
 
 const { branding, texts, validation } = getSiteConfig();
 const B = branding.colors;
@@ -88,15 +89,8 @@ export default function RegisterPage() {
         transition={{ duration: 0.45, ease: [0.21, 0.47, 0.32, 0.98] }}
         className="w-full max-w-sm"
       >
-        {/* Logo */}
-        <div className="text-center mb-8">
-          <h1 className="text-2xl font-black tracking-tight" style={{ color: B.text }}>
-            Unifyo
-          </h1>
-          <p className="text-sm mt-1" style={{ color: B.textMuted }}>
-            {texts.auth.registerSubtitle}
-          </p>
-        </div>
+        {/* Brand */}
+        <AuthBrand subtitle={texts.auth.registerSubtitle} />
 
         {/* Card */}
         <div
@@ -107,9 +101,11 @@ export default function RegisterPage() {
             backdropFilter: "blur(20px)",
           }}
         >
-          <h2 className="text-lg font-bold mb-5" style={{ color: B.text }}>
-            {texts.auth.registerTitle}
-          </h2>
+          <GradientTitle
+            before="Začni"
+            accent="zadarmo"
+            className="text-lg font-black tracking-tight mb-5"
+          />
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Meno */}

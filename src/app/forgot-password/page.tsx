@@ -9,6 +9,7 @@ import { motion } from "framer-motion";
 import { Loader2, ArrowLeft, MailCheck } from "lucide-react";
 import { getSiteConfig } from "@/config/site-settings";
 import { toast } from "sonner";
+import AuthBrand, { GradientTitle } from "@/components/auth/AuthBrand";
 
 const { branding } = getSiteConfig();
 const B = branding.colors;
@@ -51,14 +52,7 @@ export default function ForgotPasswordPage() {
         transition={{ duration: 0.45, ease: [0.21, 0.47, 0.32, 0.98] }}
         className="w-full max-w-sm"
       >
-        <div className="text-center mb-8">
-          <h1 className="text-2xl font-black tracking-tight" style={{ color: B.text }}>
-            Unifyo
-          </h1>
-          <p className="text-sm mt-1" style={{ color: B.textMuted }}>
-            Obnovenie hesla
-          </p>
-        </div>
+        <AuthBrand subtitle="Obnovenie hesla" />
 
         <div
           className="rounded-2xl p-6"
@@ -79,9 +73,11 @@ export default function ForgotPasswordPage() {
               >
                 <MailCheck className="w-7 h-7" style={{ color: "#10b981" }} />
               </div>
-              <h2 className="text-base font-bold mb-2" style={{ color: B.text }}>
-                Skontroluj si schránku
-              </h2>
+              <GradientTitle
+                before="Skontroluj"
+                accent="schránku"
+                className="text-lg font-black tracking-tight mb-2"
+              />
               <p className="text-xs leading-relaxed" style={{ color: B.textMuted }}>
                 Ak účet s emailom <strong style={{ color: B.text }}>{email}</strong> existuje,
                 poslali sme naň odkaz na obnovu hesla. Odkaz platí 60 minút.
@@ -92,9 +88,11 @@ export default function ForgotPasswordPage() {
             </div>
           ) : (
             <>
-              <h2 className="text-lg font-bold mb-2" style={{ color: B.text }}>
-                Zabudnuté heslo?
-              </h2>
+              <GradientTitle
+                before="Zabudnuté"
+                accent="heslo?"
+                className="text-lg font-black tracking-tight mb-2"
+              />
               <p className="text-xs mb-5" style={{ color: B.textMuted }}>
                 Napíš svoj email a pošleme ti odkaz na nastavenie nového hesla.
               </p>

@@ -9,6 +9,7 @@ import { useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { CheckCircle2, XCircle, Loader2 } from "lucide-react";
 import { getSiteConfig } from "@/config/site-settings";
+import AuthBrand, { GradientTitle } from "@/components/auth/AuthBrand";
 
 const { branding } = getSiteConfig();
 const B = branding.colors;
@@ -72,11 +73,7 @@ function VerifyEmailInner() {
         transition={{ duration: 0.45 }}
         className="w-full max-w-sm text-center"
       >
-        <div className="mb-8">
-          <h1 className="text-2xl font-black tracking-tight" style={{ color: B.text }}>
-            Unifyo
-          </h1>
-        </div>
+        <AuthBrand subtitle="Overenie emailu" />
 
         <div
           className="rounded-2xl p-8"
@@ -88,7 +85,7 @@ function VerifyEmailInner() {
           {state === "loading" && (
             <>
               <Loader2 className="w-10 h-10 mx-auto mb-4 animate-spin" style={{ color: B.primary }} />
-              <h2 className="text-base font-bold" style={{ color: B.text }}>Overujem…</h2>
+              <GradientTitle before="" accent="Overujem…" className="text-lg font-black tracking-tight" />
             </>
           )}
           {state === "success" && (
@@ -102,9 +99,11 @@ function VerifyEmailInner() {
               >
                 <CheckCircle2 className="w-8 h-8" style={{ color: "#10b981" }} />
               </div>
-              <h2 className="text-lg font-bold mb-2" style={{ color: B.text }}>
-                Email overený
-              </h2>
+              <GradientTitle
+                before="Email"
+                accent="overený"
+                className="text-xl font-black tracking-tight mb-2"
+              />
               <p className="text-xs leading-relaxed" style={{ color: B.textMuted }}>
                 Tvoj účet je plne aktivovaný. Môžeš pokračovať v Unifyo.
               </p>
@@ -131,9 +130,11 @@ function VerifyEmailInner() {
               >
                 <XCircle className="w-8 h-8" style={{ color: "#f43f5e" }} />
               </div>
-              <h2 className="text-lg font-bold mb-2" style={{ color: B.text }}>
-                Odkaz nefunguje
-              </h2>
+              <GradientTitle
+                before="Odkaz"
+                accent="nefunguje"
+                className="text-xl font-black tracking-tight mb-2"
+              />
               <p className="text-xs leading-relaxed" style={{ color: B.textMuted }}>
                 {message || "Odkaz je neplatný alebo expiroval."}
               </p>

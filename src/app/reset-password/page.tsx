@@ -10,6 +10,7 @@ import { motion } from "framer-motion";
 import { Loader2, Eye, EyeOff, ShieldCheck, AlertTriangle } from "lucide-react";
 import { getSiteConfig } from "@/config/site-settings";
 import { toast } from "sonner";
+import AuthBrand, { GradientTitle } from "@/components/auth/AuthBrand";
 
 const { branding } = getSiteConfig();
 const B = branding.colors;
@@ -77,14 +78,7 @@ function ResetPasswordForm() {
         transition={{ duration: 0.45, ease: [0.21, 0.47, 0.32, 0.98] }}
         className="w-full max-w-sm"
       >
-        <div className="text-center mb-8">
-          <h1 className="text-2xl font-black tracking-tight" style={{ color: B.text }}>
-            Unifyo
-          </h1>
-          <p className="text-sm mt-1" style={{ color: B.textMuted }}>
-            Nové heslo
-          </p>
-        </div>
+        <AuthBrand subtitle="Nové heslo" />
 
         <div
           className="rounded-2xl p-6"
@@ -105,9 +99,11 @@ function ResetPasswordForm() {
               >
                 <AlertTriangle className="w-7 h-7" style={{ color: "#f43f5e" }} />
               </div>
-              <h2 className="text-base font-bold mb-2" style={{ color: B.text }}>
-                Odkaz je neplatný
-              </h2>
+              <GradientTitle
+                before="Odkaz je"
+                accent="neplatný"
+                className="text-lg font-black tracking-tight mb-2"
+              />
               <p className="text-xs leading-relaxed" style={{ color: B.textMuted }}>
                 Tento odkaz chýba alebo je poškodený. Požiadaj o nový odkaz na resetovanie hesla.
               </p>
@@ -126,9 +122,11 @@ function ResetPasswordForm() {
             <>
               <div className="flex items-center gap-2 mb-5">
                 <ShieldCheck className="w-5 h-5" style={{ color: B.primary }} />
-                <h2 className="text-lg font-bold" style={{ color: B.text }}>
-                  Nastav si nové heslo
-                </h2>
+                <GradientTitle
+                  before="Nastav si"
+                  accent="nové heslo"
+                  className="text-lg font-black tracking-tight"
+                />
               </div>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
