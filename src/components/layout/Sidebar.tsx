@@ -5,7 +5,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Bot, Calendar, Mail, Phone, BarChart3, Zap,
@@ -69,6 +69,15 @@ const MODULES: ModuleDef[] = [
 
 export default function Sidebar({ user, liveToggles }: SidebarProps) {
   const pathname = usePathname() ?? "";
+  const router = useRouter();
+
+  async function handleLogout() {
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+    } catch {}
+    router.push("/login");
+    router.refresh();
+  }
   const isSuperAdmin = user?.role === "SUPERADMIN" || user?.role === "ADMIN";
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -234,24 +243,23 @@ export default function Sidebar({ user, liveToggles }: SidebarProps) {
           </Link>
         )}
 
-        <form action="/api/auth/logout" method="POST">
-          <button
-            type="submit"
-            className="w-full flex items-center gap-2 px-3 py-2.5 rounded-2xl transition-all duration-200"
-            style={{ color: D.muted }}
-            onMouseEnter={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.color = D.text;
-              (e.currentTarget as HTMLButtonElement).style.background = D.indigoDim;
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.color = D.muted;
-              (e.currentTarget as HTMLButtonElement).style.background = "transparent";
-            }}
-          >
-            <LogOut className="w-4 h-4 flex-shrink-0" />
-            <span className={`text-xs ${isMobile ? "block" : "hidden md:block"}`}>Odhlásiť</span>
-          </button>
-        </form>
+        <button
+          type="button"
+          onClick={handleLogout}
+          className="w-full flex items-center gap-2 px-3 py-2.5 rounded-2xl transition-all duration-200"
+          style={{ color: D.muted }}
+          onMouseEnter={(e) => {
+            (e.currentTarget as HTMLButtonElement).style.color = D.text;
+            (e.currentTarget as HTMLButtonElement).style.background = D.indigoDim;
+          }}
+          onMouseLeave={(e) => {
+            (e.currentTarget as HTMLButtonElement).style.color = D.muted;
+            (e.currentTarget as HTMLButtonElement).style.background = "transparent";
+          }}
+        >
+          <LogOut className="w-4 h-4 flex-shrink-0" />
+          <span className={`text-xs ${isMobile ? "block" : "hidden md:block"}`}>Odhlásiť</span>
+        </button>
       </div>
     </>
   );
