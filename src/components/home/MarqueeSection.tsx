@@ -24,7 +24,7 @@ export default function MarqueeSection() {
 
       <div className="flex">
         <div
-          className="flex items-center gap-14 animate-marquee whitespace-nowrap"
+          className="flex items-center gap-8 sm:gap-14 animate-marquee whitespace-nowrap"
           style={{ animation: "marquee 22s linear infinite" }}
         >
           {[...logos, ...logos].map((logo, i) => (

@@ -6,14 +6,14 @@ import { ArrowRight, Sparkles } from "lucide-react";
 
 export default function CtaSection() {
   return (
-    <section className="py-28 px-6 section-bg">
+    <section className="py-20 sm:py-28 px-4 sm:px-6 section-bg">
       <div className="max-w-4xl mx-auto">
         <motion.div
           initial={{ opacity: 0, y: 28 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6, ease: [0.21, 0.47, 0.32, 0.98] }}
-          className="relative rounded-3xl p-12 sm:p-16 text-center overflow-hidden"
+          className="relative rounded-3xl px-6 py-12 sm:p-16 text-center overflow-hidden"
           style={{
             background: "linear-gradient(135deg, rgba(124,58,237,0.12) 0%, rgba(12,15,26,0.9) 50%, rgba(6,182,212,0.08) 100%)",
             border: "1px solid rgba(139,92,246,0.18)",
@@ -41,8 +41,8 @@ export default function CtaSection() {
               Začni ešte dnes
             </div>
 
-            <h2 className="font-black tracking-[-0.03em] leading-[1.06] mb-5"
-              style={{ fontSize: "clamp(2rem, 4vw, 3.5rem)", color: "#eef2ff" }}>
+            <h2 className="font-black tracking-[-0.03em] leading-[1.08] mb-5"
+              style={{ fontSize: "clamp(1.7rem, 6vw, 3.5rem)", color: "#eef2ff", wordBreak: "break-word" }}>
               Nechaj AI pracovať{" "}
               <span style={{
                 background: "linear-gradient(90deg, #a78bfa, #67e8f9)",

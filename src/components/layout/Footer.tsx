@@ -31,13 +31,13 @@ export default function Footer() {
             {/* Status indicator */}
             <div className="flex items-center gap-1.5 mt-1">
               <span className="w-1.5 h-1.5 rounded-full bg-[#10b981] inline-block" />
-              <span className="text-[0.68rem]" style={{ color: "#64748b" }}>Všetky systémy fungujú</span>
+              <span className="text-[0.72rem]" style={{ color: "#64748b" }}>Všetky systémy fungujú</span>
             </div>
           </div>
 
           {/* Nav col */}
           <div className="flex flex-col gap-3.5">
-            <p className="text-[0.62rem] font-semibold uppercase tracking-[0.16em]" style={{ color: "#94a3b8" }}>
+            <p className="text-[0.7rem] font-semibold uppercase tracking-[0.16em]" style={{ color: "#94a3b8" }}>
               Navigácia
             </p>
             {config.links.nav.slice(0, 3).map((link) => (
@@ -51,7 +51,7 @@ export default function Footer() {
 
           {/* Account col */}
           <div className="flex flex-col gap-3.5">
-            <p className="text-[0.62rem] font-semibold uppercase tracking-[0.16em]" style={{ color: "#94a3b8" }}>
+            <p className="text-[0.7rem] font-semibold uppercase tracking-[0.16em]" style={{ color: "#94a3b8" }}>
               Účet
             </p>
             {config.links.nav.slice(3).map((link) => (
@@ -70,7 +70,7 @@ export default function Footer() {
 
           {/* Legal col */}
           <div className="flex flex-col gap-3.5">
-            <p className="text-[0.62rem] font-semibold uppercase tracking-[0.16em]" style={{ color: "#94a3b8" }}>
+            <p className="text-[0.7rem] font-semibold uppercase tracking-[0.16em]" style={{ color: "#94a3b8" }}>
               Právne & Kontakt
             </p>
             {config.links.legal.map((link) => (
@@ -93,18 +93,18 @@ export default function Footer() {
 
         {/* Bottom bar */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-          <p className="text-[0.68rem]" style={{ color: "#64748b" }}>
+          <p className="text-[0.72rem]" style={{ color: "#64748b" }}>
             {config.texts.footer.copyright}
           </p>
           <div className="flex items-center gap-5">
-            <span className="text-[0.68rem]" style={{ color: "#64748b" }}>
+            <span className="text-[0.72rem]" style={{ color: "#64748b" }}>
               🇸🇰 Made in Slovakia
             </span>
             {config.links.social.map((s) => (
               <a key={s.platform} href={s.href}
                 target="_blank" rel="noopener noreferrer"
                 aria-label={s.label}
-                className="text-[0.68rem] transition-colors duration-200 hover:text-[#a78bfa]"
+                className="text-[0.72rem] transition-colors duration-200 hover:text-[#a78bfa]"
                 style={{ color: "#64748b" }}
               >
                 {s.label}

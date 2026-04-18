@@ -129,9 +129,9 @@ export default function HeroSection() {
           position: "relative",
           zIndex: 10,
           width: "100%",
-          maxWidth: "800px",
+          maxWidth: "min(800px, 94vw)",
           margin: "0 auto",
-          padding: "0 24px",
+          padding: "0 16px",
           textAlign: "center",
         }}
       >
@@ -162,10 +162,11 @@ export default function HeroSection() {
           initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.65, delay: 0.1 }}
           style={{
-            fontSize: "clamp(2.2rem, 7vw, 5.2rem)",
+            fontSize: "clamp(1.9rem, 7vw, 5.2rem)",
             fontWeight: 900,
-            letterSpacing: "-0.04em",
-            lineHeight: 1.06,
+            letterSpacing: "-0.03em",
+            lineHeight: 1.08,
+            wordBreak: "break-word",
             color: "#eef2ff",
             marginBottom: "24px",
           }}
@@ -187,10 +188,11 @@ export default function HeroSection() {
           initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.55, delay: 0.18 }}
           style={{
-            fontSize: "clamp(0.93rem, 2.2vw, 1.18rem)",
+            fontSize: "clamp(0.95rem, 2.2vw, 1.18rem)",
             color: "#8b9ab0",
-            lineHeight: 1.7,
+            lineHeight: 1.6,
             maxWidth: "44ch",
+            padding: "0 4px",
             margin: "0 auto 36px",
           }}
         >
@@ -242,9 +244,9 @@ export default function HeroSection() {
           position: "relative",
           zIndex: 10,
           width: "100%",
-          maxWidth: "760px",
+          maxWidth: "min(760px, 94vw)",
           margin: "clamp(32px, 5vw, 56px) auto 0",
-          padding: "0 24px",
+          padding: "0 16px",
         }}
       >
         {/* Purple glow behind card */}
@@ -349,8 +351,8 @@ export default function HeroSection() {
                 },0.25)`,
                 border: `1px solid ${scene.accent}50`,
                 borderRadius: "18px 18px 4px 18px",
-                padding: "11px 16px",
-                maxWidth: "72%",
+                padding: "11px 14px",
+                maxWidth: "min(85%, 440px)",
                 fontSize: "0.875rem",
                 color: "#f1f5f9",
                 lineHeight: 1.6,
@@ -424,8 +426,8 @@ export default function HeroSection() {
                         background: "rgba(18,10,36,0.95)",
                         border: `1px solid ${scene.accent}35`,
                         borderRadius: "4px 18px 18px 18px",
-                        padding: "12px 16px",
-                        maxWidth: "82%",
+                        padding: "12px 14px",
+                        maxWidth: "min(92%, 480px)",
                       }}
                     >
                       <AnimatePresence initial={false}>
