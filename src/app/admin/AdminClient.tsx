@@ -660,6 +660,19 @@ export default function AdminClient({ adminEmail, users: initUsers, stats, recen
         {/* Footer */}
         <div className="p-4 flex-shrink-0" style={{ borderTop: `1px solid ${P.cyanBorder}` }}>
           <p className="text-[0.6rem] hidden md:block mb-2 truncate" style={{ color: P.faint }}>{adminEmail}</p>
+          <Link href="/admin/errors"
+            className="w-full flex items-center gap-2 px-3 py-2.5 rounded-2xl transition-all duration-200 mb-1"
+            style={{ color: P.muted }}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLAnchorElement).style.color = "#a78bfa";
+              (e.currentTarget as HTMLAnchorElement).style.background = "rgba(124,58,237,0.1)";
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLAnchorElement).style.color = P.muted;
+              (e.currentTarget as HTMLAnchorElement).style.background = "transparent";
+            }}>
+            <span className="text-xs hidden md:block">⚠ Error log</span>
+          </Link>
           <Link href="/dashboard"
             className="w-full flex items-center gap-2 px-3 py-2.5 rounded-2xl transition-all duration-200"
             style={{ color: P.muted }}

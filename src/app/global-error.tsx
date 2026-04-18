@@ -1,6 +1,8 @@
 "use client";
 // src/app/global-error.tsx — kritická chyba celého layoutu (musí mať vlastné html/body)
 
+import { useEffect } from "react";
+
 export default function GlobalError({
   error,
   reset,
@@ -9,6 +11,25 @@ export default function GlobalError({
   reset: () => void;
 }) {
   const code = error.digest ?? "CRITICAL";
+
+  useEffect(() => {
+    try {
+      fetch("/api/errors/log", {
+        method: "POST",
+        keepalive: true,
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          source: "client",
+          name: error.name,
+          message: error.message,
+          stack: error.stack,
+          digest: error.digest,
+          url: typeof window !== "undefined" ? window.location.href : null,
+          meta: { boundary: "global" },
+        }),
+      }).catch(() => {});
+    } catch {}
+  }, [error]);
 
   return (
     <html lang="sk">
@@ -40,7 +61,7 @@ export default function GlobalError({
             height: "600px",
             borderRadius: "50%",
             background:
-              "radial-gradient(circle, rgba(99,102,241,0.08) 0%, transparent 70%)",
+              "radial-gradient(circle, rgba(124,58,237,0.08) 0%, transparent 70%)",
             filter: "blur(80px)",
             pointerEvents: "none",
           }}
@@ -88,11 +109,11 @@ export default function GlobalError({
           <div
             style={{
               background: "rgba(15,18,32,0.9)",
-              border: "1px solid rgba(99,102,241,0.18)",
+              border: "1px solid rgba(124,58,237,0.18)",
               borderRadius: "16px",
               padding: "40px 32px",
               backdropFilter: "blur(24px)",
-              boxShadow: "0 0 60px rgba(99,102,241,0.08)",
+              boxShadow: "0 0 60px rgba(124,58,237,0.08)",
             }}
           >
             {/* Icon */}
@@ -143,8 +164,8 @@ export default function GlobalError({
                 gap: "8px",
                 padding: "6px 12px",
                 borderRadius: "8px",
-                background: "rgba(99,102,241,0.08)",
-                border: "1px solid rgba(99,102,241,0.18)",
+                background: "rgba(124,58,237,0.08)",
+                border: "1px solid rgba(124,58,237,0.18)",
                 marginBottom: "28px",
               }}
             >
@@ -163,7 +184,7 @@ export default function GlobalError({
                   fontFamily: "monospace",
                   fontWeight: 700,
                   letterSpacing: "0.05em",
-                  color: "#6366f1",
+                  color: "#a78bfa",
                 }}
               >
                 {code}
@@ -181,7 +202,7 @@ export default function GlobalError({
               <button
                 onClick={reset}
                 style={{
-                  background: "linear-gradient(135deg, #6366f1, #5b21b6)",
+                  background: "linear-gradient(135deg, #7c3aed, #5b21b6)",
                   color: "#fff",
                   border: "none",
                   borderRadius: "12px",
@@ -189,7 +210,7 @@ export default function GlobalError({
                   fontSize: "0.875rem",
                   fontWeight: 600,
                   cursor: "pointer",
-                  boxShadow: "0 0 20px rgba(99,102,241,0.35)",
+                  boxShadow: "0 0 20px rgba(124,58,237,0.35)",
                   width: "100%",
                 }}
               >
@@ -199,8 +220,8 @@ export default function GlobalError({
                 href={`mailto:info@unifyo.online?subject=Kritická%20chyba%20${code}`}
                 style={{
                   display: "block",
-                  background: "rgba(99,102,241,0.1)",
-                  border: "1px solid rgba(99,102,241,0.18)",
+                  background: "rgba(124,58,237,0.1)",
+                  border: "1px solid rgba(124,58,237,0.18)",
                   color: "#eef2ff",
                   borderRadius: "12px",
                   padding: "11px 20px",

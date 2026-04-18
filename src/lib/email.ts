@@ -294,6 +294,71 @@ function escape(s: string): string {
 
 export const _appUrl = APP_URL;
 
+// ── Error alert (Sentry-lite interný) ────────────────────────────
+// Posielame LEN na prvom výskyte v 24h cooldown okne (cez error-log.ts).
+// Príjemca = ADMIN_ALERT_INBOX alebo fallback CONTACT_INBOX / info@unifyo.online.
+
+export async function sendErrorAlert(row: {
+  id: string;
+  fingerprint: string;
+  source: string;
+  name: string | null;
+  message: string;
+  stack: string | null;
+  url: string | null;
+  userEmail: string | null;
+  createdAt: Date;
+}): Promise<void> {
+  const inbox =
+    process.env.ADMIN_ALERT_INBOX ||
+    process.env.CONTACT_INBOX ||
+    "info@unifyo.online";
+  const title = row.name ? `${row.name}: ${row.message}` : row.message;
+  const subject = `[Unifyo error] ${title.slice(0, 120)}`;
+  const link = `${APP_URL}/admin/errors/${row.id}`;
+
+  const text = [
+    `Nový error v produkcii — ${row.source.toUpperCase()}`,
+    "",
+    `Čas:         ${row.createdAt.toISOString()}`,
+    `Fingerprint: ${row.fingerprint}`,
+    `URL:         ${row.url ?? "n/a"}`,
+    `User:        ${row.userEmail ?? "anonymous"}`,
+    "",
+    "── Message ─────────────────────────",
+    title,
+    "",
+    "── Stack ──────────────────────────",
+    row.stack ?? "(no stack)",
+    "",
+    `Detail: ${link}`,
+  ].join("\n");
+
+  const html = `<!DOCTYPE html><html><body style="font-family:ui-sans-serif,system-ui,sans-serif;background:#0a0c18;color:#eef2ff;padding:24px">
+  <div style="max-width:640px;margin:0 auto;background:#0f1220;border:1px solid rgba(239,68,68,0.35);border-radius:14px;padding:24px">
+    <div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#f87171;margin-bottom:6px">⚠ Error · ${escape(row.source)}</div>
+    <div style="font-size:18px;font-weight:800;color:#eef2ff;margin-bottom:14px;word-break:break-word">${escape(title.slice(0, 200))}</div>
+    <table style="width:100%;border-collapse:collapse;font-size:12px;color:#cbd5e1;margin-bottom:16px">
+      <tr><td style="padding:4px 0;color:#94a3b8;width:110px">Fingerprint</td><td style="font-family:ui-monospace,monospace;color:#a78bfa">${escape(row.fingerprint)}</td></tr>
+      <tr><td style="padding:4px 0;color:#94a3b8">URL</td><td style="word-break:break-all">${escape(row.url ?? "n/a")}</td></tr>
+      <tr><td style="padding:4px 0;color:#94a3b8">User</td><td>${escape(row.userEmail ?? "anonymous")}</td></tr>
+      <tr><td style="padding:4px 0;color:#94a3b8">Čas</td><td>${row.createdAt.toLocaleString("sk-SK")}</td></tr>
+    </table>
+    ${row.stack ? `<div style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:#94a3b8;margin-bottom:6px">Stack</div>
+    <pre style="white-space:pre-wrap;word-break:break-word;font-size:11px;line-height:1.5;background:#0a0c18;border:1px solid rgba(139,92,246,0.14);border-radius:10px;padding:12px;color:#cbd5e1;max-height:280px;overflow:auto">${escape(row.stack.slice(0, 4000))}</pre>` : ""}
+    <div style="margin-top:20px">
+      <a href="${escape(link)}" style="display:inline-block;background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff;text-decoration:none;padding:10px 18px;border-radius:10px;font-weight:600;font-size:13px">Otvoriť detail →</a>
+    </div>
+    <div style="margin-top:18px;font-size:11px;color:#64748b">Ďalšie rovnaké chyby v nasledujúcich 24 h nebudú hlásené emailom (cooldown per fingerprint).</div>
+  </div></body></html>`;
+
+  if (!transport) {
+    console.warn(`[email DEV] error alert fp=${row.fingerprint} "${title}"`);
+    return;
+  }
+  await transport.sendMail({ from: FROM, to: inbox, subject, text, html });
+}
+
 // ── Contact form ─────────────────────────────────────────────────
 // Odosielané z /api/contact na vlastnú schránku info@unifyo.online.
 // Reply-To je nastavený na email odosielateľa, takže stačí stlačiť "odpovedať".

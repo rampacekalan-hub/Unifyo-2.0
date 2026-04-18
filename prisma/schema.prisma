@@ -269,3 +269,32 @@ model AuditLog {
   @@index([createdAt])
   @@index([adminEmail])
 }
+
+// ── Error log (interný Sentry-lite) ─────────────────────────────
+// Každý row = jedna occurrence. Podobné chyby zdieľajú `fingerprint`
+// (16-hex hash z name + first stack frame), takže admin môže grupovať.
+// `notifiedAt` je nastavený len na prvom výskyte v 24h okne — tak
+// zabraňujeme flood emailom keď sa niečo rozbije pre 500 userov.
+model ErrorLog {
+  id          String   @id @default(cuid())
+  fingerprint String   // stable hash pre grupovanie similar errors
+  source      String   // "client" | "server" | "edge"
+  level       String   @default("error") // "error" | "warn"
+  name        String?  // napr. "TypeError", "PrismaClientKnownRequestError"
+  message     String   @db.Text
+  stack       String?  @db.Text
+  url         String?  // kde chyba nastala (path alebo full URL)
+  userAgent   String?
+  userId      String?  // ak bol prihlásený
+  userEmail   String?  // snapshot pre prípad že user neskôr zanikne
+  digest      String?  // Next.js error digest (pre cross-ref s error.tsx)
+  meta        Json?    // ľubovoľný ďalší kontext (request headers, params…)
+  resolved    Boolean  @default(false)
+  resolvedAt  DateTime?
+  notifiedAt  DateTime?
+  createdAt   DateTime @default(now())
+
+  @@index([fingerprint, createdAt])
+  @@index([resolved, createdAt])
+  @@index([createdAt])
+}

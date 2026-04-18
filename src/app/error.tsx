@@ -28,6 +28,25 @@ interface ErrorPageProps {
 export default function ErrorPage({ error, reset }: ErrorPageProps) {
   useEffect(() => {
     console.error("[ErrorBoundary]", error);
+    // Fire-and-forget report to interný Sentry-lite. keepalive aby request
+    // prežil prípadnú navigáciu/reset.
+    try {
+      fetch("/api/errors/log", {
+        method: "POST",
+        keepalive: true,
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          source: "client",
+          name: error.name,
+          message: error.message,
+          stack: error.stack,
+          digest: error.digest,
+          url: typeof window !== "undefined" ? window.location.href : null,
+        }),
+      }).catch(() => {});
+    } catch {
+      // never let reporting itself crash the error UI
+    }
   }, [error]);
 
   const code = error.digest ?? "UNKNOWN";
