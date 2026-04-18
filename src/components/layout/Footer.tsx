@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getSiteConfig } from "@/config/site-settings";
+import CookieManagerButton from "@/components/ui/CookieManagerButton";
 
 const config = getSiteConfig();
 
@@ -97,6 +98,7 @@ export default function Footer() {
             {config.texts.footer.copyright}
           </p>
           <div className="flex items-center gap-5">
+            <CookieManagerButton />
             <span className="text-[0.72rem]" style={{ color: "#64748b" }}>
               🇸🇰 Made in Slovakia
             </span>
