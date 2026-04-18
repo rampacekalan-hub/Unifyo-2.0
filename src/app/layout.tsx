@@ -35,7 +35,7 @@ export const metadata: Metadata = {
     description: config.seo.description,
     url: config.seo.canonicalUrl,
     siteName: config.name,
-    images: [{ url: config.seo.ogImage }],
+    // OG image je generovaný súborom src/app/opengraph-image.tsx (Next 16 file convention)
     locale: config.locale,
     type: "website",
   },
@@ -44,7 +44,7 @@ export const metadata: Metadata = {
     title: config.seo.title,
     description: config.seo.description,
     creator: config.seo.twitterHandle,
-    images: [config.seo.ogImage],
+    // Twitter image sa dopĺňa cez app/opengraph-image.tsx alebo twitter-image.tsx
   },
 };
 

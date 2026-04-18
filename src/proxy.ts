@@ -3,8 +3,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jwtVerify } from "jose";
 
+const SECRET_RAW = process.env.JWT_SECRET;
+if (!SECRET_RAW || SECRET_RAW.length < 32) {
+  if (process.env.NODE_ENV === "production") {
+    throw new Error(
+      "[proxy] JWT_SECRET must be set and at least 32 characters long in production."
+    );
+  }
+  console.warn(
+    "[proxy] JWT_SECRET is missing or too short — using insecure dev fallback. DO NOT USE IN PRODUCTION."
+  );
+}
 const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET ?? "unifyo-secret-change-in-production-min-32-chars"
+  SECRET_RAW ?? "unifyo-dev-secret-change-in-production-min-32-chars-xxxxx"
 );
 const COOKIE_NAME = "unifyo_session";
 
