@@ -1,16 +1,27 @@
 // src/lib/email.ts
-// Thin wrapper around Resend. Keeps transactional templates in one place
-// so marketing/tone changes don't need to chase API routes. Fails soft in
-// development — when RESEND_API_KEY is missing, we log the email to the
-// console instead of throwing, so signup still works on localhost.
+// Thin wrapper around nodemailer + SMTP (Websupport). Keeps transactional
+// templates in one place so marketing/tone changes don't chase API routes.
+// Fails soft in development — when SMTP creds are missing, we log the email
+// to the console instead of throwing, so signup still works on localhost.
 
-import { Resend } from "resend";
+import nodemailer, { type Transporter } from "nodemailer";
 
-const API_KEY = process.env.RESEND_API_KEY;
-const FROM = process.env.EMAIL_FROM || "Unifyo <noreply@unifyo.online>";
+const SMTP_HOST = process.env.SMTP_HOST;
+const SMTP_PORT = Number(process.env.SMTP_PORT || 465);
+const SMTP_USER = process.env.SMTP_USER;
+const SMTP_PASSWORD = process.env.SMTP_PASSWORD;
+const FROM = process.env.EMAIL_FROM || "Unifyo <info@unifyo.online>";
 const APP_URL = (process.env.APP_URL || "https://unifyo.online").replace(/\/$/, "");
 
-const resend = API_KEY ? new Resend(API_KEY) : null;
+const transport: Transporter | null =
+  SMTP_HOST && SMTP_USER && SMTP_PASSWORD
+    ? nodemailer.createTransport({
+        host: SMTP_HOST,
+        port: SMTP_PORT,
+        secure: SMTP_PORT === 465, // 465 = SSL; 587 = STARTTLS
+        auth: { user: SMTP_USER, pass: SMTP_PASSWORD },
+      })
+    : null;
 
 // ── Low-level send ────────────────────────────────────────────────
 
@@ -23,7 +34,7 @@ interface SendArgs {
 }
 
 async function send({ to, subject, html, text, tag }: SendArgs): Promise<void> {
-  if (!resend) {
+  if (!transport) {
     // Dev fallback — visible in terminal so you can copy the link.
     console.warn(
       `[email DEV] would send to=${to} subject="${subject}"\n---\n${text}\n---`,
@@ -31,15 +42,7 @@ async function send({ to, subject, html, text, tag }: SendArgs): Promise<void> {
     return;
   }
   try {
-    const res = await resend.emails.send({
-      from: FROM,
-      to,
-      subject,
-      html,
-      text,
-      tags: tag ? [{ name: "type", value: tag }] : undefined,
-    });
-    if (res.error) throw new Error(res.error.message);
+    await transport.sendMail({ from: FROM, to, subject, html, text });
   } catch (e) {
     console.error("[email]", tag, "failed:", e);
     throw e;
