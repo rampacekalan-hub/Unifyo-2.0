@@ -3,7 +3,8 @@
 // History popover — lists past conversations, lets user switch or delete.
 // Uses shared chatStore so selection is visible everywhere (dashboard + widget).
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { MessageSquarePlus, History, Trash2, Check } from "lucide-react";
 import { chatActions, useChatStore, type ConversationSummary } from "@/lib/chatStore";
@@ -38,6 +39,29 @@ export default function ChatHistory() {
   const [open, setOpen] = useState(false);
   const [convs, setConvs] = useState<ConversationSummary[]>([]);
   const [loading, setLoading] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const [anchor, setAnchor] = useState<{ top: number; right: number } | null>(null);
+  const btnRef = useRef<HTMLButtonElement | null>(null);
+
+  useEffect(() => { setMounted(true); }, []);
+
+  // Anchor the portal dropdown to the button's viewport position.
+  useEffect(() => {
+    if (!open) return;
+    const update = () => {
+      const el = btnRef.current;
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      setAnchor({ top: r.bottom + 8, right: Math.max(8, window.innerWidth - r.right) });
+    };
+    update();
+    window.addEventListener("resize", update);
+    window.addEventListener("scroll", update, true);
+    return () => {
+      window.removeEventListener("resize", update);
+      window.removeEventListener("scroll", update, true);
+    };
+  }, [open]);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -95,46 +119,30 @@ export default function ChatHistory() {
     }
   };
 
-  return (
-    <div className="relative">
-      <button
-        onClick={() => setOpen((o) => !o)}
-        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[0.7rem] font-medium transition-colors"
+  const dropdown = mounted && open && anchor ? createPortal(
+    <AnimatePresence>
+      <div
+        key="scrim"
+        className="fixed inset-0"
+        onClick={() => setOpen(false)}
+        style={{ background: "rgba(5,7,15,0.55)", zIndex: 2147483000 }}
+      />
+      <motion.div
+        key="panel"
+        initial={{ opacity: 0, y: -6, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: -6, scale: 0.98 }}
+        transition={{ duration: 0.18 }}
+        className="fixed w-[320px] max-h-[70vh] rounded-2xl overflow-hidden flex flex-col"
         style={{
-          background: open ? "rgba(99,102,241,0.15)" : "rgba(99,102,241,0.06)",
+          top: anchor.top,
+          right: anchor.right,
+          zIndex: 2147483001,
+          background: "#0a0c18",
           border: `1px solid ${D.border}`,
-          color: D.text,
+          boxShadow: "0 20px 50px rgba(0,0,0,0.65), 0 0 24px rgba(99,102,241,0.22)",
         }}
-        aria-label="História rozhovorov"
       >
-        <History className="w-3.5 h-3.5" style={{ color: D.indigo }} />
-        <span>História</span>
-      </button>
-
-      <AnimatePresence>
-        {open && (
-          <>
-            <div
-              className="fixed inset-0 z-40"
-              onClick={() => setOpen(false)}
-              // Jemný scrim — kliknutie mimo zavrie dropdown a zároveň
-              // vizuálne odsunie obsah do pozadia.
-              style={{ background: "rgba(5,7,15,0.45)" }}
-            />
-            <motion.div
-              initial={{ opacity: 0, y: -6, scale: 0.98 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -6, scale: 0.98 }}
-              transition={{ duration: 0.18 }}
-              className="absolute right-0 mt-2 w-[320px] max-h-[70vh] rounded-2xl z-50 overflow-hidden flex flex-col"
-              style={{
-                // Plne nepriehľadné pozadie — backdrop-filter sám nestačí
-                // (správy spod dropdownu presvitali cez alpha 0.95).
-                background: "#0a0c18",
-                border: `1px solid ${D.border}`,
-                boxShadow: "0 20px 50px rgba(0,0,0,0.65), 0 0 24px rgba(99,102,241,0.22)",
-              }}
-            >
               <div
                 className="flex items-center justify-between px-4 py-3 flex-shrink-0"
                 style={{ borderBottom: `1px solid ${D.border}` }}
@@ -212,10 +220,28 @@ export default function ChatHistory() {
                   );
                 })}
               </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
+      </motion.div>
+    </AnimatePresence>,
+    document.body,
+  ) : null;
+
+  return (
+    <div className="relative">
+      <button
+        ref={btnRef}
+        onClick={() => setOpen((o) => !o)}
+        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[0.7rem] font-medium transition-colors"
+        style={{
+          background: open ? "rgba(99,102,241,0.15)" : "rgba(99,102,241,0.06)",
+          border: `1px solid ${D.border}`,
+          color: D.text,
+        }}
+        aria-label="História rozhovorov"
+      >
+        <History className="w-3.5 h-3.5" style={{ color: D.indigo }} />
+        <span>História</span>
+      </button>
+      {dropdown}
     </div>
   );
 }
