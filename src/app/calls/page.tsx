@@ -9,6 +9,9 @@ export default function CallsPage() {
       <ComingSoon
         title="Hovory"
         icon={Phone}
+        feature="calls"
+        eta="Q4 2026"
+        progress={15}
         description="Prichádzajúce a odchádzajúce hovory na jednom mieste, so záznamom do CRM."
         features={[
           "Automatický prepis a sumarizácia rozhovoru",

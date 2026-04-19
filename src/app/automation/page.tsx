@@ -9,6 +9,9 @@ export default function AutomationPage() {
       <ComingSoon
         title="Automatizácia"
         icon={Zap}
+        feature="automation"
+        eta="Q4 2026"
+        progress={10}
         description="Workflow engine — nechaj AI spúšťať úlohy automaticky podľa pravidiel."
         features={[
           "Triggery: nový kontakt, zmena dealu, deadline úlohy",

@@ -57,6 +57,7 @@ model User {
   userPolicies  UserPolicy[]
   loginEvents   LoginEvent[]
   authTokens    AuthToken[]
+  waitlist      WaitlistSignup[]
 }
 
 // ── Auth tokens (password reset + email verification) ────────────
@@ -312,4 +313,22 @@ model RateLimitHit {
   createdAt DateTime @default(now())
 
   @@index([key, createdAt])
+}
+
+// Waitlist — užívateľ (alebo anon email) sa prihlási na notifikáciu
+// keď bude konkrétny "coming soon" modul hotový. Feature = slug modulu
+// (email | calls | analytics | automation | ...). userId je optional,
+// email povinný. Unikátnosť per-feature aby to nespamovalo tú istú
+// osobu opakovaným kliknutím.
+model WaitlistSignup {
+  id        String   @id @default(cuid())
+  feature   String
+  email     String
+  userId    String?
+  createdAt DateTime @default(now())
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@unique([feature, email])
+  @@index([feature, createdAt])
+  @@index([userId])
 }

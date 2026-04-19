@@ -9,6 +9,9 @@ export default function EmailPage() {
       <ComingSoon
         title="Email"
         icon={Mail}
+        feature="email"
+        eta="Q3 2026"
+        progress={35}
         description="Všetky schránky na jednom mieste — s AI triedením, návrhmi odpovedí a prepojením na CRM."
         features={[
           "Automatické triedenie do priorít podľa kontextu",
