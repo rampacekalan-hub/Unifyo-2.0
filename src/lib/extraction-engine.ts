@@ -690,12 +690,12 @@ function regexFallback(text: string): ActionCard[] {
   }
 
   // ── Calendar card ─────────────────────────────────────────────
-  // MULTI-ENTITY RULE: Create Calendar card if ANY of:
-  // - explicit task keyword
-  // - date word (piatok, zajtra, etc.)
-  // - intent detected
-  // - person signal present (dual-entity: person + implied task)
-  const shouldCreateCalendar = hasTaskKw || hasDate || hasIntent || hasPersonSignal;
+  // Vytvor iba keď je EXPLICITNÝ signál plánovania. Predtým sa tvorila
+  // aj z holého "hasPersonSignal" alebo "hasIntent" ("poistenie"), čo
+  // generovalo ghost stretnutia pri obyčajnej zmienke osoby.
+  const hasTimeKw = /\b\d{1,2}:\d{2}\b/.test(text);
+  const shouldCreateCalendar = hasTaskKw || hasDate || hasTimeKw;
+  void hasIntent; // (ponecháné, aby neostala warning o unused)
   
   if (shouldCreateCalendar) {
     const fields: Record<string, string> = {};
@@ -743,23 +743,54 @@ function regexFallback(text: string): ActionCard[] {
 // Rule: If intent/time detected → Calendar card is MANDATORY
 // Rule: Dual-extraction = ALWAYS both cards when Person + Intent + Date present
 
+// Detect "advisory" messages — user is asking for advice, not commanding
+// a save. For these we MUST NOT greedily auto-generate Sprievodca cards,
+// lebo to potom vyzerá že AI si vymýšľa termíny a kontakty ktoré user
+// nežiadal ("Stretnutie: Následný · ne 19. 4." pri otázke "čo s tým").
+// AI stále môže explicitne vygenerovať action-card bloky keď user
+// potvrdí — tieto prejdú cez parseActionCardBlocks a obídu túto bránu.
+function isAdvisoryQuestion(text: string): boolean {
+  const t = text.trim().toLowerCase();
+  if (t.length === 0) return false;
+  // Otáznik kdekoľvek
+  if (/\?/.test(t)) return true;
+  // Začiatok vety s otáznym slovom
+  if (/^(?:čo|ako|kedy|prečo|kde|kto|ktorý|ktorá|mal by|mala by|mám|oplatí|dá sa|vieš|vies|povedz|poraď|pomôž|pomoz)\b/i.test(t)) return true;
+  // Poradenské frázy
+  if (/(?:\bčo s tým\b|\bco s tym\b|\bčo robiť\b|\bco robit\b|\bporaď\b|\bporad\b|\bpomôž\b|\bpomoz\b|\bneviem čo\b|\bneviem co\b|\bčo myslíš\b|\bco myslis\b|\bčo navrhuješ\b|\bco navrhujes\b|\bčo by si\b|\bco by si\b|\bako riešiť\b|\bako riesit\b|\bmal sa rozm|\bmala sa rozm)/i.test(t)) return true;
+  return false;
+}
+
 export function extractActionCards(text: string): ActionCard[] {
-  // Run AI parser first
+  // Run AI parser first — explicitné ```action-card``` bloky od AI sú
+  // vždy rešpektované, aj pri advisory messages.
   const aiCards = parseActionCardBlocks(text);
-  
+
+  // ADVISORY GATE: ak user kladie otázku a AI explicitne nevygenerovala
+  // žiadne action-card bloky, NIČ nevytváraj automaticky. Inak by sa pri
+  // otázke typu "klient váha s poistením, čo s tým?" objavili ghost karty
+  // s vymysleným dátumom/časom.
+  if (aiCards.length === 0 && isAdvisoryQuestion(text)) {
+    return [];
+  }
+
   // Detect entities in raw text using fallback analysis
   const { name: contactName, confidence } = forceEntityExtraction(text);
   const dateInfo = normalizeDate(text);
   const intent = resolveIntent(text);
-  const hasTaskKw = /(?:zaplánuj|pripomeň|stretnutie|hovor|volanie|úloha|zavolaj|pošli|pozvi)/i.test(text);
+  const hasTaskKw = /(?:zaplánuj|pripomeň|stretnutie|hovor|volanie|úloha|zavolaj|pošli|pozvi|naplánuj)/i.test(text);
+  const hasTimeKw = /\b\d{1,2}:\d{2}\b/.test(text);
   const hasDate = dateInfo.normalized !== "" || dateInfo.raw !== "";
-  const hasIntent = intent !== null || hasTaskKw;
+  // Calendar card vyžaduje EXPLICITNÝ signál plánovania — dátum, čas, alebo
+  // task keyword. Samotná zmienka "poistenie" (intent keyword) NEMÁ
+  // stačiť, inak sa pri každej vete o poistení vytvorí fake stretnutie.
+  const hasExplicitSchedule = hasDate || hasTimeKw || hasTaskKw;
   const hasPerson = contactName && confidence >= 90; // Strict threshold
-  
+
   // Architecture Check: Do we have both cards when we should?
   const hasCRM = aiCards.some(c => c.targetModule === "crm");
   const hasCalendar = aiCards.some(c => c.targetModule === "calendar");
-  
+
   const result: ActionCard[] = [...aiCards];
   
   // MANDATORY CRM: If person exists but no CRM card, create one
@@ -800,9 +831,10 @@ export function extractActionCards(text: string): ActionCard[] {
     result.push(validateCard(crmCard));
   }
   
-  // MANDATORY CALENDAR: If intent/time exists but no Calendar card, create one
-  // This now triggers EVEN WITHOUT person (standalone task) or WITH person (dual-action)
-  if ((hasIntent || hasDate) && !hasCalendar) {
+  // CALENDAR: iba keď je EXPLICITNÝ signál plánovania (dátum, čas, alebo
+  // task keyword). Predtým sa vytvárala aj keď user iba spomenul "poistenie"
+  // — to vygenerovalo ghost "Konzultácia: Poistenie · 10:00" pri otázkach.
+  if (hasExplicitSchedule && !hasCalendar) {
     const calFields: Record<string, string> = {};
     
     // Úloha title from intent or default

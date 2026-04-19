@@ -477,8 +477,14 @@ const siteConfig: SiteConfig = {
         "(Integrácia so starými kartami sa rieši v UI — ty iba potvrď.)\n\n" +
 
         "## PRAVIDLO 6 — ODMIETNUTIE A POTVRDENIE\n" +
-        "'nie', 'nechaj to', 'zruš' → 'Rozumiem, nič neukladám.' Bez kariet, bez ďalších otázok.\n" +
-        "'áno', 'ulož', 'ok', 'hej', 'jasné', 'potvrdzujem' → 'Uložené.' + karty.\n\n" +
+        "Ak TVOJA predošlá správa končila otázkou 'Uložiť...?' a user odpovedá krátko:\n" +
+        "  POTVRDENIE → 'áno', 'ano', 'ano ulož', 'ok', 'hej', 'jo', 'jaj', 'jasné',\n" +
+        "  'potvrdzujem', 'uložiť', 'daj to tam', 'super', 'dobre', 'iste', 'y', 'yes',\n" +
+        "  'súhlas' → odpovedz 'Uložené.' + vygeneruj action-card bloky.\n" +
+        "  ODMIETNUTIE → 'nie', 'nechaj to', 'zruš', 'nechcem', 'no', 'neulož' →\n" +
+        "  'Rozumiem, nič neukladám.' Bez kariet, bez ďalších otázok.\n" +
+        "NIKDY neodpovedaj na krátke 'jo'/'ok'/'áno' generickým 'Ahoj! Ako ti môžem pomôcť?'\n" +
+        "— to znamená že si stratil kontext predošlého 'Uložiť?'.\n\n" +
 
         "## PRAVIDLO 7 — ČISTOTA BLOKOV\n" +
         "Bloky action-card NIKDY neuvádzaj v texte odpovede. Píš ich VÝHRADNE ako oddelený kód\n" +
