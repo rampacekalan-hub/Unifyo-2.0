@@ -5,11 +5,15 @@ import { prisma } from "@/lib/prisma";
 import { setSessionCookie } from "@/lib/auth";
 import { loginSchema } from "@/lib/validations";
 import { rateLimit } from "@/lib/rate-limit";
+import { requireSameOrigin } from "@/lib/csrf";
 import { getSiteConfig } from "@/config/site-settings";
 
 const { security } = getSiteConfig();
 
 export async function POST(req: NextRequest) {
+  const csrf = requireSameOrigin(req);
+  if (csrf) return csrf;
+
   // Rate limiting
   const limited = rateLimit(req, security.rateLimit.auth, "login");
   if (limited) return limited;

@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { rateLimit } from "@/lib/rate-limit";
+import { requireSameOrigin } from "@/lib/csrf";
 import { getSiteConfig } from "@/config/site-settings";
 import { issueToken } from "@/lib/tokens";
 import { sendPasswordResetEmail } from "@/lib/email";
@@ -18,6 +19,9 @@ const schema = z.object({
 });
 
 export async function POST(req: NextRequest) {
+  const csrf = requireSameOrigin(req);
+  if (csrf) return csrf;
+
   // Tight rate limit — this is a heavy endpoint (DB + external email).
   const limited = rateLimit(req, security.rateLimit.auth, "forgot-password");
   if (limited) return limited;

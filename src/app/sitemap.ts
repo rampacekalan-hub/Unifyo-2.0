@@ -17,5 +17,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${base}/podmienky`, lastModified: now, changeFrequency: "yearly", priority: 0.4 },
     { url: `${base}/sukromie`, lastModified: now, changeFrequency: "yearly", priority: 0.4 },
     { url: `${base}/cookies`, lastModified: now, changeFrequency: "yearly", priority: 0.4 },
+    { url: `${base}/dpa`, lastModified: now, changeFrequency: "yearly", priority: 0.4 },
   ];
 }

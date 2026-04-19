@@ -633,6 +633,7 @@ const siteConfig: SiteConfig = {
       { label: "Obchodné podmienky", href: "/podmienky" },
       { label: "Ochrana súkromia", href: "/sukromie" },
       { label: "Cookies", href: "/cookies" },
+      { label: "DPA (GDPR čl. 28)", href: "/dpa" },
       { label: "Kontakt", href: "/kontakt" },
     ],
     contact: {

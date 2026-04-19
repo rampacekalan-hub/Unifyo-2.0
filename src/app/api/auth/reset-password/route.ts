@@ -8,6 +8,7 @@ import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { rateLimit } from "@/lib/rate-limit";
+import { requireSameOrigin } from "@/lib/csrf";
 import { getSiteConfig } from "@/config/site-settings";
 import { consumeToken } from "@/lib/tokens";
 
@@ -19,6 +20,9 @@ const schema = z.object({
 });
 
 export async function POST(req: NextRequest) {
+  const csrf = requireSameOrigin(req);
+  if (csrf) return csrf;
+
   const limited = rateLimit(req, security.rateLimit.auth, "reset-password");
   if (limited) return limited;
 

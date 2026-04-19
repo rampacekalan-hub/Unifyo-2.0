@@ -8,6 +8,7 @@
 import { NextResponse } from "next/server";
 import { logError, type ErrorSource } from "@/lib/error-log";
 import { getSession } from "@/lib/auth";
+import { requireSameOrigin } from "@/lib/csrf";
 
 const WINDOW_MS = 60_000;
 const MAX_PER_WINDOW = 10;
@@ -36,6 +37,9 @@ function getIp(req: Request): string {
 }
 
 export async function POST(req: Request) {
+  const csrf = requireSameOrigin(req);
+  if (csrf) return csrf;
+
   const ip = getIp(req);
   if (!rateLimit(ip)) {
     return NextResponse.json({ ok: false }, { status: 429 });

@@ -5,6 +5,7 @@
 
 import { NextResponse } from "next/server";
 import { sendContactMessage } from "@/lib/email";
+import { requireSameOrigin } from "@/lib/csrf";
 
 const WINDOW_MS = 10 * 60 * 1000;
 const MAX_PER_WINDOW = 3;
@@ -32,6 +33,9 @@ function getIp(req: Request): string {
 }
 
 export async function POST(req: Request) {
+  const csrf = requireSameOrigin(req);
+  if (csrf) return csrf;
+
   const ip = getIp(req);
   if (!rateLimit(ip)) {
     return NextResponse.json(

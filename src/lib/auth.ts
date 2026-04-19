@@ -4,6 +4,7 @@
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import { jwtVerify, SignJWT } from "jose";
+import { requireSameOrigin } from "@/lib/csrf";
 
 const SECRET_RAW = process.env.JWT_SECRET;
 if (!SECRET_RAW || SECRET_RAW.length < 32) {
@@ -101,6 +102,14 @@ export type RequireAuthResult =
   | { session: null; response: NextResponse };
 
 export async function requireAuth(req: NextRequest): Promise<RequireAuthResult> {
+  // CSRF guard — na mutation metódach musí byť request same-origin.
+  // Aplikuje sa PRED auth checkom, aby cross-origin requesty nikdy nedostali
+  // signál "JWT is valid" (timing attack / error oracle prevention).
+  const csrfFail = requireSameOrigin(req);
+  if (csrfFail) {
+    return { session: null, response: csrfFail };
+  }
+
   const token = req.cookies.get(COOKIE_NAME)?.value;
   if (!token) {
     return {
