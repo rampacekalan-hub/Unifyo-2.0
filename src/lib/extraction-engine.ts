@@ -828,12 +828,15 @@ export function extractActionCards(text: string): ActionCard[] {
       calFields["Dátum"] = dateInfo.raw;
     }
     
-    // Čas: extract from text or default to 10:00
+    // Čas: extract from text ONLY. NIKDY nedefaultuj — prázdne pole user
+    // doplní v karte (a confirm-first flow sa ho spýta pri potvrdení).
+    // Predtým tu bol default "10:00" — halucinoval čas ktorý user nikdy
+    // nenapísal, čo vyzeralo ako keby AI vymýšľala fakty.
     const timeMatch = text.match(/(\d{1,2}):(\d{2})/);
     if (timeMatch) {
       calFields["Čas"] = `${String(parseInt(timeMatch[1])).padStart(2, '0')}:${timeMatch[2]}`;
     } else {
-      calFields["Čas"] = "10:00";
+      calFields["Čas"] = "";
     }
     
     const calCard: ActionCard = {
