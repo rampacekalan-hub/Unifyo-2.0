@@ -117,7 +117,9 @@ export default function ChatHistory() {
             <div
               className="fixed inset-0 z-40"
               onClick={() => setOpen(false)}
-              style={{ background: "transparent" }}
+              // Jemný scrim — kliknutie mimo zavrie dropdown a zároveň
+              // vizuálne odsunie obsah do pozadia.
+              style={{ background: "rgba(5,7,15,0.45)" }}
             />
             <motion.div
               initial={{ opacity: 0, y: -6, scale: 0.98 }}
@@ -126,11 +128,11 @@ export default function ChatHistory() {
               transition={{ duration: 0.18 }}
               className="absolute right-0 mt-2 w-[320px] max-h-[70vh] rounded-2xl z-50 overflow-hidden flex flex-col"
               style={{
-                background: "rgba(10,12,24,0.95)",
+                // Plne nepriehľadné pozadie — backdrop-filter sám nestačí
+                // (správy spod dropdownu presvitali cez alpha 0.95).
+                background: "#0a0c18",
                 border: `1px solid ${D.border}`,
-                boxShadow: "0 20px 50px rgba(0,0,0,0.5), 0 0 24px rgba(99,102,241,0.18)",
-                backdropFilter: "blur(28px)",
-                WebkitBackdropFilter: "blur(28px)",
+                boxShadow: "0 20px 50px rgba(0,0,0,0.65), 0 0 24px rgba(99,102,241,0.22)",
               }}
             >
               <div

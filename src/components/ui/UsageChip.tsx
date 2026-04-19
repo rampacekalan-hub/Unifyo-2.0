@@ -59,10 +59,10 @@ export default function UsageChip() {
         <div
           className="absolute top-full right-0 mt-2 w-[220px] rounded-xl p-3 z-50 text-left"
           style={{
-            background: "rgba(10,12,24,0.96)",
+            // Plne nepriehľadné — alpha pozadie nestačilo na čitateľnosť.
+            background: "#0a0c18",
             border: `1px solid ${D.border}`,
-            boxShadow: "0 10px 30px rgba(0,0,0,0.5)",
-            backdropFilter: "blur(20px)",
+            boxShadow: "0 10px 30px rgba(0,0,0,0.6)",
           }}
         >
           <p className="text-[0.65rem] font-semibold uppercase tracking-widest mb-2" style={{ color: D.muted }}>
