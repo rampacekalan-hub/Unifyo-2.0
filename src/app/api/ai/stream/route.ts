@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth";
 import { rateLimit } from "@/lib/rate-limit";
+import { requireAiAccess } from "@/lib/verification-gate";
 import { getSiteConfig } from "@/config/site-settings";
 import { checkDailyLimit, incrementDailyUsage, retrieveContext, storeMemory, getActivePolicies, getUserPolicies } from "@/lib/ai/neural-core";
 import type { MembershipTier } from "@/lib/ai/neural-core";
@@ -28,11 +29,14 @@ const STYLE_INSTRUCTIONS: Record<"concise" | "friendly" | "formal", string> = {
 };
 
 export async function POST(req: NextRequest) {
-  const limited = rateLimit(req, config.security.rateLimit.ai, "ai-stream");
+  const limited = await rateLimit(req, config.security.rateLimit.ai, "ai-stream");
   if (limited) return limited;
 
   const { session, response: authError } = await requireAuth(req);
   if (authError) return authError;
+
+  const gate = await requireAiAccess(session.userId);
+  if (!gate.ok && gate.response) return gate.response;
 
   let body: unknown;
   try { body = await req.json(); }

@@ -13,7 +13,7 @@ import { sendVerificationEmail } from "@/lib/email";
 const { security } = getSiteConfig();
 
 export async function POST(req: NextRequest) {
-  const limited = rateLimit(req, security.rateLimit.auth, "resend-verification");
+  const limited = await rateLimit(req, security.rateLimit.auth, "resend-verification");
   if (limited) return limited;
 
   const { session, response } = await requireAuth(req);

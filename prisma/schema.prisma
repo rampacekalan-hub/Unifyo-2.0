@@ -298,3 +298,18 @@ model ErrorLog {
   @@index([resolved, createdAt])
   @@index([createdAt])
 }
+
+// ── Shared rate-limit hits ──────────────────────────────────────
+// Persistent store pre rate-limiting. Predtým sme mali Map v RAM —
+// PM2 reštart = reset limitov, pri multi-instance deploye to navyše
+// vôbec nefunguje (každý proces má vlastné okno).
+//
+// Row = jeden hit. Cleanup lazy: 1% chance pri každom hite zmažeme
+// všetky riadky staršie ako 1h. Takže tabuľka ostáva malá, žiadny cron.
+model RateLimitHit {
+  id        String   @id @default(cuid())
+  key       String   // format: "prefix:ip"
+  createdAt DateTime @default(now())
+
+  @@index([key, createdAt])
+}

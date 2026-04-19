@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth";
 import { rateLimit } from "@/lib/rate-limit";
+import { requireAiAccess } from "@/lib/verification-gate";
 import { getSiteConfig } from "@/config/site-settings";
 import {
   checkDailyLimit,
@@ -21,12 +22,17 @@ const chatSchema = z.object({
 
 export async function POST(req: NextRequest) {
   // 1. Rate limit
-  const limited = rateLimit(req, config.security.rateLimit.ai, "ai-chat");
+  const limited = await rateLimit(req, config.security.rateLimit.ai, "ai-chat");
   if (limited) return limited;
 
   // 2. Auth
   const { session, response: authError } = await requireAuth(req);
   if (authError) return authError;
+
+  // 2b. Verification gate — prvých UNVERIFIED_AI_TRIAL (=10) requestov
+  // funguje bez overeného emailu (trial experience). Potom 402.
+  const gate = await requireAiAccess(session.userId);
+  if (!gate.ok && gate.response) return gate.response;
 
   // 3. Input validation
   let body: unknown;

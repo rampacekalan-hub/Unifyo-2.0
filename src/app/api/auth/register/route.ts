@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
   if (csrf) return csrf;
 
   // Rate limiting
-  const limited = rateLimit(req, security.rateLimit.auth, "register");
+  const limited = await rateLimit(req, security.rateLimit.auth, "register");
   if (limited) return limited;
 
   try {

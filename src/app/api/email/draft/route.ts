@@ -7,7 +7,7 @@ const config = getSiteConfig();
 
 // Email draft generation based on context
 export async function POST(req: NextRequest) {
-  const limited = rateLimit(req, config.security.rateLimit.ai, "email-draft");
+  const limited = await rateLimit(req, config.security.rateLimit.ai, "email-draft");
   if (limited) return limited;
 
   const { session, response: authError } = await requireAuth(req);

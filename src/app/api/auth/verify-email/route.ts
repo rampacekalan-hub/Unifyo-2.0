@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
   const csrf = requireSameOrigin(req);
   if (csrf) return csrf;
 
-  const limited = rateLimit(req, security.rateLimit.auth, "verify-email");
+  const limited = await rateLimit(req, security.rateLimit.auth, "verify-email");
   if (limited) return limited;
 
   try {

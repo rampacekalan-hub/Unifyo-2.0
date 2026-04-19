@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
   if (csrf) return csrf;
 
   // Tight rate limit — this is a heavy endpoint (DB + external email).
-  const limited = rateLimit(req, security.rateLimit.auth, "forgot-password");
+  const limited = await rateLimit(req, security.rateLimit.auth, "forgot-password");
   if (limited) return limited;
 
   const GENERIC_OK = NextResponse.json({

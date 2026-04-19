@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
   const csrf = requireSameOrigin(req);
   if (csrf) return csrf;
 
-  const limited = rateLimit(req, security.rateLimit.auth, "reset-password");
+  const limited = await rateLimit(req, security.rateLimit.auth, "reset-password");
   if (limited) return limited;
 
   try {
