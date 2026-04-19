@@ -482,8 +482,8 @@ export default function DashboardClient({ user }: DashboardClientProps) {
                         }
                       </div>
                     )}
-                    <div className="group relative max-w-[75%]">
-                      <div className="rounded-2xl px-4 py-2.5 text-sm leading-relaxed"
+                    <div className={"group relative " + (msg.role === "ai" ? "max-w-[82%]" : "max-w-[75%]")}>
+                      <div className="rounded-2xl px-4 py-3 text-sm leading-[1.6]"
                         style={msg.role === "user"
                           ? { background: "linear-gradient(135deg,rgba(124,58,237,0.3),rgba(79,70,229,0.3))", border: "1px solid rgba(124,58,237,0.3)", color: "#eef2ff" }
                           : msg.role === "error"
