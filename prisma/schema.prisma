@@ -74,6 +74,30 @@ model User {
   referralsGiven    Referral[] @relation("referrer")
   referralsReceived Referral[] @relation("referred")
   shareLinks        ShareLink[]
+  googleIntegration GoogleIntegration?
+}
+
+// ── Google integration (Gmail + Calendar OAuth tokens) ──────
+// One row per user, per Google account. `refreshToken` is issued once
+// by Google on first consent (with prompt=consent + access_type=offline)
+// and lets us mint a fresh `accessToken` indefinitely. Scopes are stored
+// so UI can show what was granted; account email is stored for display.
+// `connectedAt` = first connect, `updatedAt` = last refresh or re-consent.
+// One-to-one with User — if the user wants a different Google account
+// they must disconnect first.
+model GoogleIntegration {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  googleEmail   String
+  accessToken   String   @db.Text
+  refreshToken  String   @db.Text
+  expiresAt     DateTime
+  scopes        String   // space-separated, as returned by Google
+  connectedAt   DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([expiresAt])
 }
 
 // ── Referrals ────────────────────────────────────────────────────

@@ -13,6 +13,7 @@ import { confirmWithUndo } from "@/lib/undoable";
 import AppLayout from "@/components/layout/AppLayout";
 import EmptyIllustration from "@/components/ui/EmptyIllustration";
 import ShareButton from "@/components/ui/ShareButton";
+import GoogleEventsPanel from "@/components/calendar/GoogleEventsPanel";
 import { track } from "@/lib/analytics";
 
 interface Task {
@@ -268,6 +269,8 @@ function CalendarPageInner() {
       <div className="flex flex-col lg:flex-row h-full p-4 md:p-6 gap-4 md:gap-6">
         {/* ── Calendar grid ── */}
         <div className="flex-1 min-w-0">
+          {/* Google Calendar overlay — renders only if connected */}
+          <GoogleEventsPanel />
           <div className="flex items-center justify-between mb-4 md:mb-6 flex-wrap gap-2">
             <div className="flex items-center gap-2 md:gap-4">
               <button

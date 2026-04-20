@@ -241,6 +241,14 @@ export default function SettingsPage() {
         {/* ── Plán & fakturácia (link) ── */}
         <BillingLinkRow />
 
+        {/* ── Integrácie (Google, Microsoft, …) ── */}
+        <ExternalLinkRow
+          href="/settings/integrations"
+          icon={Link2}
+          title="Integrácie"
+          subtitle="Pripoj Gmail, Google Kalendár a ďalšie služby"
+        />
+
         {/* ── FAQ (link) ── */}
         <ExternalLinkRow
           href="/faq"
