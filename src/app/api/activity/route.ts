@@ -7,28 +7,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { ymdInBratislava, startOfBratislavaDayUTC, addDaysYmd } from "@/lib/tz";
 
 export const dynamic = "force-dynamic";
-
-function ymdInBratislava(d: Date): string {
-  const parts = new Intl.DateTimeFormat("sv-SE", {
-    timeZone: "Europe/Bratislava",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(d);
-  const y = parts.find((p) => p.type === "year")?.value;
-  const m = parts.find((p) => p.type === "month")?.value;
-  const day = parts.find((p) => p.type === "day")?.value;
-  return `${y}-${m}-${day}`;
-}
-
-function startOfBratislavaDayUTC(ymd: string): Date {
-  const midnightUTC = new Date(`${ymd}T00:00:00Z`);
-  const baWall = new Date(midnightUTC.toLocaleString("en-US", { timeZone: "Europe/Bratislava" }));
-  const offsetMs = baWall.getTime() - midnightUTC.getTime();
-  return new Date(midnightUTC.getTime() - offsetMs);
-}
 
 export async function GET(req: NextRequest) {
   const { session, response } = await requireAuth(req);
@@ -40,18 +21,16 @@ export async function GET(req: NextRequest) {
 
   try {
     const userId = session.userId;
-    const now = new Date();
 
     // Build list of the last `days` calendar days in Bratislava, ending today.
-    const todayYmd = ymdInBratislava(now);
+    // We step through YMD strings (via addDaysYmd's noon-UTC anchor) instead of
+    // subtracting 24h from a UTC instant — that naive approach drops or
+    // duplicates a day on DST transitions.
+    const todayYmd = ymdInBratislava();
     const daysList: string[] = [];
     for (let i = days - 1; i >= 0; i--) {
-      const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
-      daysList.push(ymdInBratislava(d));
+      daysList.push(addDaysYmd(todayYmd, -i));
     }
-    // Ensure today is definitely included even if DST arithmetic nudged us
-    // (the loop above is correct in all real cases — this is a safety net).
-    if (!daysList.includes(todayYmd)) daysList.push(todayYmd);
 
     const windowStart = startOfBratislavaDayUTC(daysList[0]);
 

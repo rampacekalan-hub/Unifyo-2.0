@@ -12,7 +12,7 @@ import { getSiteConfig } from "@/config/site-settings";
 import {
   verifyChallengeToken,
   verifyTotp,
-  findBackupCodeMatch,
+  hashBackupCode,
 } from "@/lib/twofactor";
 
 const { security } = getSiteConfig();
@@ -73,16 +73,27 @@ export async function POST(req: NextRequest) {
 
     const trimmed = code.trim();
     let verified = false;
-    let consumedBackupHash: string | null = null;
+    let backupConsumed = false;
 
+    // Try TOTP first — cheap and stateless.
     if (/^\d{6}$/.test(trimmed.replace(/\s+/g, ""))) {
       verified = verifyTotp(user.twoFactorSecret, trimmed, user.email);
     }
+
+    // Fall back to backup code. Consume atomically via array_remove so two
+    // concurrent requests with the same code can't both succeed: the second
+    // UPDATE will match zero rows because the hash is already gone.
     if (!verified) {
-      const match = findBackupCodeMatch(trimmed, user.twoFactorBackupCodes);
-      if (match) {
+      const hash = hashBackupCode(trimmed);
+      const affected = await prisma.$executeRaw`
+        UPDATE "User"
+        SET "twoFactorBackupCodes" = array_remove("twoFactorBackupCodes", ${hash})
+        WHERE "id" = ${user.id}
+          AND ${hash} = ANY("twoFactorBackupCodes")
+      `;
+      if (affected === 1) {
         verified = true;
-        consumedBackupHash = match;
+        backupConsumed = true;
       }
     }
 
@@ -95,20 +106,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Nesprávny kód" }, { status: 401 });
     }
 
-    // Persist backup code consumption + mark session active.
+    // Mark session active (backup code already consumed atomically above).
     await Promise.all([
       prisma.user.update({
         where: { id: user.id },
-        data: {
-          lastActiveAt: new Date(),
-          ...(consumedBackupHash
-            ? {
-                twoFactorBackupCodes: user.twoFactorBackupCodes.filter(
-                  (h) => h !== consumedBackupHash
-                ),
-              }
-            : {}),
-        },
+        data: { lastActiveAt: new Date() },
       }),
       prisma.loginEvent.create({
         data: { userId: user.id, ip, userAgent: ua, success: true },
@@ -126,8 +128,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       ok: true,
       user: { id: user.id, email: user.email, name: user.name, role: user.role },
-      backupCodeConsumed: Boolean(consumedBackupHash),
-      backupCodesRemaining: consumedBackupHash
+      backupCodeConsumed: backupConsumed,
+      backupCodesRemaining: backupConsumed
         ? user.twoFactorBackupCodes.length - 1
         : user.twoFactorBackupCodes.length,
     });
