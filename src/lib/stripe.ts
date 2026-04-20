@@ -19,7 +19,7 @@ export function stripe(): Stripe {
   _client = new Stripe(SECRET, {
     // Pin API version — otherwise Stripe silently upgrades us and a field
     // we depend on might change shape. Update deliberately.
-    apiVersion: "2026-03-25.dahlia",
+    apiVersion: "2025-10-29.clover",
     typescript: true,
     appInfo: { name: "Unifyo 2.0", version: "0.1.0" },
   });
