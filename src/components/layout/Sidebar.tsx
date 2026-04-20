@@ -8,7 +8,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Bot, Calendar, Mail, Phone, BarChart3, Zap,
+  Bot, Calendar, Mail, Phone, BarChart3, Zap, Kanban,
   Lock, LogOut, ShieldAlert, Menu, X, Settings as SettingsIcon, LayoutDashboard,
 } from "lucide-react";
 import Avatar from "@/components/ui/Avatar";
@@ -58,7 +58,8 @@ interface ModuleDef {
 const MODULES: ModuleDef[] = [
   { id: "overview",  label: "Prehľad",    href: "/dashboard-overview", icon: LayoutDashboard },
   { id: "dashboard", label: "AI Chat",    href: "/dashboard", icon: Bot },
-  { id: "crm",       label: "CRM",        href: "/crm",       icon: BarChart3, pro: true },
+  { id: "crm",       label: "CRM",        href: "/crm",       icon: BarChart3 },
+  { id: "pipeline",  label: "Pipeline",   href: "/pipeline",  icon: Kanban },
   { id: "calendar",  label: "Kalendár",   href: "/calendar",  icon: Calendar },
   { id: "email",     label: "Email",      href: "/email",     icon: Mail },
   { id: "calls",     label: "Hovory",     href: "/calls",     icon: Phone },

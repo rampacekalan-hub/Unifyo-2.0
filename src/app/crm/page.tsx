@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import {
   Users, Calendar, Mail, Search, Plus, Phone, Briefcase, X, Trash2, Loader2, Check,
-  Upload, Download, FileText,
+  Upload, Download, FileText, Kanban,
 } from "lucide-react";
 import { toast } from "sonner";
 import { confirmWithUndo } from "@/lib/undoable";
@@ -312,8 +312,21 @@ function CRMPageInner() {
             )}
           </AnimatePresence>
 
-          {/* Import / Export toolbar */}
+          {/* Pipeline + Import / Export toolbar */}
           <div className="flex gap-2 mb-3">
+            <Link
+              href="/pipeline"
+              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium"
+              style={{
+                background: `linear-gradient(135deg,${D.indigo}22,${D.violet}22)`,
+                border: `1px solid ${D.indigoBorder}`,
+                color: D.text,
+              }}
+              title="Otvoriť deal pipeline"
+            >
+              <Kanban className="w-3.5 h-3.5" />
+              Pipeline
+            </Link>
             <button
               onClick={() => setShowImport(true)}
               className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium"
@@ -321,7 +334,7 @@ function CRMPageInner() {
               title="Import kontaktov z CSV"
             >
               <Upload className="w-3.5 h-3.5" />
-              Import CSV
+              Import
             </button>
             <a
               href="/api/crm/export"
@@ -331,7 +344,7 @@ function CRMPageInner() {
               title="Stiahnuť všetky kontakty ako CSV"
             >
               <Download className="w-3.5 h-3.5" />
-              Export CSV
+              Export
             </a>
           </div>
 

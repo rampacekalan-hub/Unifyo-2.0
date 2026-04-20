@@ -63,6 +63,7 @@ model User {
   dailyUsage    DailyUsage[]
   neuralMemory  NeuralMemory[]
   crmContacts   CrmContact[]
+  crmDeals      CrmDeal[]
   calendarTasks CalendarTask[]
   conversations Conversation[]
   userPolicies  UserPolicy[]
@@ -209,8 +210,45 @@ model CrmContact {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   notes     CrmNote[]
+  deals     CrmDeal[]
 
   @@index([userId, updatedAt])
+}
+
+// ── CRM deal pipeline ───────────────────────────────────────────
+// A deal is an opportunity attached to (optionally) a contact. `stage`
+// moves left→right through the pipeline; `position` is the in-column
+// sort order (smaller = higher in the column). `expectedValue` is in
+// EUR cents to avoid float rounding. `lastActivityAt` is bumped on any
+// note/stage change — the AI next-step suggestion uses it to detect
+// stale deals that need a follow-up.
+model CrmDeal {
+  id              String    @id @default(cuid())
+  userId          String
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  contactId       String?
+  contact         CrmContact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  title           String
+  stage           DealStage @default(LEAD)
+  position        Int       @default(0)
+  expectedValue   Int?      // EUR cents; null = unknown
+  expectedCloseAt DateTime?
+  note            String?   // free-form context, rendered in card
+  closedAt        DateTime? // set when stage moves to WON or LOST
+  lastActivityAt  DateTime  @default(now())
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([userId, stage, position])
+  @@index([contactId])
+}
+
+enum DealStage {
+  LEAD       // new, not yet contacted
+  QUALIFIED  // confirmed interest
+  PROPOSAL   // offer sent
+  WON        // closed — success
+  LOST       // closed — lost
 }
 
 model CrmNote {
