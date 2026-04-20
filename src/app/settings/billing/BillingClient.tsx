@@ -5,11 +5,13 @@
 // pricing section. Stripe checkout is not wired yet — the Pro CTA
 // currently signs the user up to the "billing" waitlist slug.
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import {
   Check, Minus, Sparkles, Crown, Building2, ChevronLeft, Loader2, ArrowRight,
+  ExternalLink, CheckCircle2,
 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import { getSiteConfig } from "@/config/site-settings";
@@ -42,14 +44,41 @@ const PLAN_ICONS: Record<string, typeof Sparkles> = {
   enterprise: Building2,
 };
 
+interface SubscriptionInfo {
+  status: string;
+  currentPeriodEnd: string | null;
+  cancelAtPeriodEnd: boolean;
+  priceId: string | null;
+}
+
 interface Props {
   plan: string;
   tier: string;
   email: string;
+  subscription: SubscriptionInfo | null;
 }
 
-export default function BillingClient({ plan, tier, email }: Props) {
+const ACTIVE_SUB_STATUSES = new Set(["active", "trialing", "past_due"]);
+
+export default function BillingClient({ plan, tier, email, subscription }: Props) {
   const currentPlan = (plan ?? "basic").toLowerCase();
+  const hasActiveSub =
+    subscription !== null && ACTIVE_SUB_STATUSES.has(subscription.status);
+
+  // Surface Stripe checkout outcome in a toast, then strip the query so
+  // a refresh doesn't re-trigger it.
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  useEffect(() => {
+    const c = searchParams.get("checkout");
+    if (c === "success") {
+      toast.success("Platba prešla — Pro funkcie sú aktívne (môže chvíľu trvať).");
+      router.replace("/settings/billing");
+    } else if (c === "cancelled") {
+      toast("Platba zrušená.");
+      router.replace("/settings/billing");
+    }
+  }, [searchParams, router]);
 
   return (
     <AppLayout title="Plán a fakturácia" subtitle="Plán a fakturácia —">
@@ -73,6 +102,34 @@ export default function BillingClient({ plan, tier, email }: Props) {
             Ceny a funkcie sa zhodujú s verejným cenníkom. Počas bety je všetko zadarmo.
           </p>
         </div>
+
+        {/* Active subscription banner */}
+        {hasActiveSub && subscription && (
+          <div
+            className="rounded-2xl p-4 flex items-center gap-3 flex-wrap"
+            style={{
+              background: "linear-gradient(135deg, rgba(16,185,129,0.08), rgba(34,211,238,0.05))",
+              border: "1px solid rgba(16,185,129,0.3)",
+            }}
+          >
+            <CheckCircle2 className="w-4 h-4 flex-shrink-0" style={{ color: D.emerald }} />
+            <div className="flex-1 min-w-0">
+              <div className="text-xs font-bold" style={{ color: D.text }}>
+                Predplatné aktívne · {subscription.status}
+                {subscription.cancelAtPeriodEnd && " · zruší sa na konci obdobia"}
+              </div>
+              {subscription.currentPeriodEnd && (
+                <div className="text-[11px]" style={{ color: D.muted }}>
+                  {subscription.cancelAtPeriodEnd ? "Končí" : "Obnoví sa"}{" "}
+                  {new Date(subscription.currentPeriodEnd).toLocaleDateString("sk-SK", {
+                    day: "numeric", month: "long", year: "numeric",
+                  })}
+                </div>
+              )}
+            </div>
+            <ManagePortalButton compact />
+          </div>
+        )}
 
         {/* Plan cards — rendered from config.pricing so we never drift */}
         <div className="grid gap-4 md:grid-cols-3">
@@ -115,7 +172,13 @@ export default function BillingClient({ plan, tier, email }: Props) {
                 </Link>
               );
             } else {
-              cta = <ProWaitlistButton email={email} />;
+              // Pro → real Stripe checkout. If user already has an active
+              // sub on this exact plan, show "Manage" instead.
+              cta = isCurrent && hasActiveSub ? (
+                <ManagePortalButton />
+              ) : (
+                <CheckoutButton plan={p.id} label={p.cta ?? "Upgrade"} />
+              );
             }
 
             return (
@@ -244,36 +307,35 @@ function PlanCard({
   );
 }
 
-// ── Pro waitlist CTA (Stripe TODO) ─────────────────────────────────
-function ProWaitlistButton({ email }: { email: string }) {
-  const [state, setState] = useState<"idle" | "loading" | "done" | "error">("idle");
+// ── Stripe Checkout CTA ───────────────────────────────────────────
+function CheckoutButton({ plan, label }: { plan: string; label: string }) {
+  const [loading, setLoading] = useState(false);
 
-  const joinBeta = async () => {
-    if (state === "loading" || state === "done") return;
-    setState("loading");
-    // TODO(stripe): wire checkout session creation here
+  const go = async () => {
+    if (loading) return;
+    setLoading(true);
     try {
-      const res = await fetch("/api/waitlist", {
+      const res = await fetch("/api/billing/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ feature: "billing", email }),
+        body: JSON.stringify({ plan }),
       });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || "Nepodarilo sa.");
+      const json = await res.json();
+      if (!res.ok || !json.url) {
+        throw new Error(json.error || `HTTP ${res.status}`);
       }
-      setState("done");
-      toast.success("Si v poradí — ozveme sa pri spustení Pro.");
+      // Full-page navigation to Stripe-hosted checkout.
+      window.location.href = json.url;
     } catch (e) {
-      setState("error");
+      setLoading(false);
       toast.error(e instanceof Error ? e.message : "Nepodarilo sa.");
     }
   };
 
   return (
     <button
-      onClick={joinBeta}
-      disabled={state === "loading" || state === "done"}
+      onClick={go}
+      disabled={loading}
       className="w-full px-4 py-2.5 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-70"
       style={{
         background: `linear-gradient(135deg,${D.indigo},${D.violet})`,
@@ -281,12 +343,61 @@ function ProWaitlistButton({ email }: { email: string }) {
         boxShadow: "0 0 18px rgba(99,102,241,0.4)",
       }}
     >
-      {state === "loading" && <Loader2 className="w-4 h-4 animate-spin" />}
-      {state === "done"
-        ? "Si v poradí ✓"
-        : state === "loading"
-        ? "Prihlasujem…"
-        : "Čoskoro — zapojiť sa do betatestu"}
+      {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRight className="w-3.5 h-3.5" />}
+      {loading ? "Presmerovávam…" : label}
+    </button>
+  );
+}
+
+// ── Customer Portal CTA ───────────────────────────────────────────
+function ManagePortalButton({ compact = false }: { compact?: boolean }) {
+  const [loading, setLoading] = useState(false);
+
+  const open = async () => {
+    if (loading) return;
+    setLoading(true);
+    try {
+      const res = await fetch("/api/billing/portal", { method: "POST" });
+      const json = await res.json();
+      if (!res.ok || !json.url) throw new Error(json.error || `HTTP ${res.status}`);
+      window.location.href = json.url;
+    } catch (e) {
+      setLoading(false);
+      toast.error(e instanceof Error ? e.message : "Nepodarilo sa.");
+    }
+  };
+
+  if (compact) {
+    return (
+      <button
+        onClick={open}
+        disabled={loading}
+        className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-xl disabled:opacity-50"
+        style={{
+          background: "rgba(99,102,241,0.08)",
+          border: `1px solid ${D.indigoBorder}`,
+          color: D.text,
+        }}
+      >
+        {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ExternalLink className="w-3 h-3" />}
+        Spravovať predplatné
+      </button>
+    );
+  }
+
+  return (
+    <button
+      onClick={open}
+      disabled={loading}
+      className="w-full px-4 py-2.5 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-70"
+      style={{
+        background: D.indigoDim,
+        border: `1px solid ${D.indigoBorder}`,
+        color: D.text,
+      }}
+    >
+      {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ExternalLink className="w-3.5 h-3.5" />}
+      Spravovať predplatné
     </button>
   );
 }

@@ -75,6 +75,31 @@ model User {
   referralsReceived Referral[] @relation("referred")
   shareLinks        ShareLink[]
   googleIntegration GoogleIntegration?
+  stripeSubscription StripeSubscription?
+}
+
+// ── Stripe subscription (billing state mirror) ──────────────
+// One row per user — reflects the latest state received via webhook.
+// `customerId` is created the first time the user clicks "Upgrade" and
+// reused across future checkouts / portal visits. `status` mirrors the
+// Stripe enum exactly so UI can show trialing / past_due / canceled
+// without translation. `currentPeriodEnd` drives the "renews on" label
+// and acts as a hard fallback when a webhook is lost — cron can expire
+// stale rows nightly.
+model StripeSubscription {
+  id                 String    @id @default(cuid())
+  userId             String    @unique
+  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  customerId         String    @unique
+  subscriptionId     String?   @unique
+  priceId            String?
+  status             String    @default("incomplete") // Stripe Subscription.Status
+  currentPeriodEnd   DateTime?
+  cancelAtPeriodEnd  Boolean   @default(false)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@index([status])
 }
 
 // ── Google integration (Gmail + Calendar OAuth tokens) ──────
