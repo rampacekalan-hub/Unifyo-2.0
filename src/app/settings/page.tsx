@@ -9,7 +9,7 @@ import { toast } from "sonner";
 import {
   User, KeyRound, Bell, Sparkles, LogOut, Save, Loader2, Mail, Shield, Palette,
   Brain, Thermometer, MessageSquare, Camera, Trash2, Download, AlertTriangle,
-  Monitor, Smartphone, Globe, CheckCircle2, XCircle,
+  Monitor, Smartphone, Globe, CheckCircle2, XCircle, Upload,
 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import { loadPrefs, savePrefs, type AiPrefs, type ResponseStyle } from "@/lib/aiPrefs";
@@ -183,8 +183,11 @@ export default function SettingsPage() {
         {/* ── Prihlásenia & bezpečnosť ── */}
         <SessionsSection />
 
-        {/* ── Export dát ── */}
+        {/* ── Export údajov ── */}
         <DataExportSection />
+
+        {/* ── Import CRM ── */}
+        <CrmImportSection />
 
         {/* ── Zmazať účet ── */}
         <DeleteAccountSection email={me?.email ?? ""} />
@@ -530,21 +533,54 @@ function DataExportSection() {
   };
 
   return (
-    <Section icon={Download} title="Export dát" subtitle="GDPR: stiahni si všetky svoje údaje ako JSON">
+    <Section icon={Download} title="Export údajov" subtitle="GDPR: stiahni si svoje údaje">
       <p className="text-xs mb-3" style={{ color: D.muted }}>
         Export obsahuje tvoj profil, kontakty, úlohy, konverzácie a AI pamäť.
         Súbor je citlivý — uchovávaj ho v bezpečí.
       </p>
-      <button
-        onClick={handleExport}
-        disabled={busy}
-        className="px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-2 disabled:opacity-50"
-        style={{ background: D.indigoDim, border: `1px solid ${D.indigoBorder}`, color: D.text }}
-      >
-        {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-        Stiahnuť moje údaje
-      </button>
+      <div className="flex flex-col sm:flex-row gap-2">
+        <button
+          onClick={handleExport}
+          disabled={busy}
+          className="px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-2 disabled:opacity-50"
+          style={{ background: D.indigoDim, border: `1px solid ${D.indigoBorder}`, color: D.text }}
+        >
+          {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+          Stiahni všetky moje údaje (JSON)
+        </button>
+        <a
+          href="/api/crm/export"
+          download
+          className="px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-2"
+          style={{ background: D.indigoDim, border: `1px solid ${D.indigoBorder}`, color: D.text }}
+        >
+          <Download className="w-4 h-4" />
+          Stiahni kontakty (CSV)
+        </a>
+      </div>
     </Section>
+  );
+}
+
+// ── CRM import section (anchor target for /settings#import) ───────────
+function CrmImportSection() {
+  return (
+    <div id="import" className="scroll-mt-24">
+      <Section icon={Upload} title="Import kontaktov" subtitle="Nahraj CSV s kontaktmi do CRM">
+        <p className="text-xs mb-3" style={{ color: D.muted }}>
+          Podporované stĺpce: Meno, Firma, Email, Telefón, Poznámka. Duplikáty (rovnaký email
+          alebo telefón) sa preskočia. Max 5000 riadkov na jeden import.
+        </p>
+        <a
+          href="/crm"
+          className="px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-2 w-fit"
+          style={{ background: D.indigoDim, border: `1px solid ${D.indigoBorder}`, color: D.text }}
+        >
+          <Upload className="w-4 h-4" />
+          Otvoriť import v CRM
+        </a>
+      </Section>
+    </div>
   );
 }
 

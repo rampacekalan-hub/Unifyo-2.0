@@ -66,6 +66,22 @@ export async function POST(req: NextRequest) {
       tv: 0,
     });
 
+    // Seed a welcome notification for the bell center. Non-blocking — a
+    // failed insert shouldn't break signup, so we log and continue.
+    try {
+      await prisma.notification.create({
+        data: {
+          userId: user.id,
+          type: "welcome",
+          title: "Vitaj v Unifyo 🎉",
+          body: "Začni tým, že si pridáš prvý kontakt alebo napíš AI do chatu.",
+          href: "/dashboard",
+        },
+      });
+    } catch (e) {
+      console.error("[register] welcome notification failed:", e);
+    }
+
     // Fire off verification email — don't block signup on Resend latency.
     // Errors are logged; user can resend from Settings if it never arrived.
     try {

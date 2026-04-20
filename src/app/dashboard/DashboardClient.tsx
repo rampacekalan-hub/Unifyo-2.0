@@ -8,8 +8,10 @@ import NeuralBackground from "@/components/ui/NeuralBackground";
 import Sidebar from "@/components/layout/Sidebar";
 import GuidedCard, { type GuidedDraft } from "@/components/ui/GuidedCard";
 import ChatHistory from "@/components/ui/ChatHistory";
+import NotificationBell from "@/components/ui/NotificationBell";
 import UsageChip from "@/components/ui/UsageChip";
 import CommandPalette from "@/components/ui/CommandPalette";
+import OnboardingChecklist from "@/components/ui/OnboardingChecklist";
 import { getSiteConfig } from "@/config/site-settings";
 import { useChatStore, chatActions } from "@/lib/chatStore";
 import { sendChat, regenerateLast } from "@/lib/chatEngine";
@@ -157,6 +159,22 @@ export default function DashboardClient({ user }: DashboardClientProps) {
     if (loading) return;
     await sendChat(prompt, { module: "dashboard", conversationId });
   };
+
+  // ── `?prompt=` URL param — empty states on /crm and /calendar link here ──
+  // When present, we auto-send it once and strip the param so reloads don't replay.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const p = params.get("prompt");
+    if (!p) return;
+    params.delete("prompt");
+    const qs = params.toString();
+    const url = window.location.pathname + (qs ? `?${qs}` : "");
+    window.history.replaceState({}, "", url);
+    void sendChat(p, { module: "dashboard", conversationId });
+    // Only run on first mount — conversationId will be stable enough by then.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // ── Live toggles from admin store ────────────────────────────
   const [liveToggles, setLiveToggles] = useState<Record<string, boolean> | null>(null);
@@ -390,6 +408,7 @@ export default function DashboardClient({ user }: DashboardClientProps) {
           <div className="flex items-center gap-2">
             <UsageChip />
             <ChatHistory />
+            <NotificationBell />
           </div>
         </header>
 
@@ -404,6 +423,8 @@ export default function DashboardClient({ user }: DashboardClientProps) {
             aria-label="AI rozhovor"
             className="flex-1 overflow-y-auto px-4 sm:px-6 py-5 space-y-4 relative"
           >
+            {/* Onboarding checklist — self-hides once all 5 steps complete or dismissed */}
+            <OnboardingChecklist />
             {showGreeting && (
               <>
                 <motion.div

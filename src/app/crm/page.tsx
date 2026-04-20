@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import {
   Users, Calendar, Mail, Search, Plus, Phone, Briefcase, X, Trash2, Loader2, Check,
+  Upload, Download, FileText,
 } from "lucide-react";
 import { toast } from "sonner";
 import { confirmWithUndo } from "@/lib/undoable";
@@ -62,6 +63,11 @@ function CRMPageInner() {
   // Bulk selection — Set of contact ids. When non-empty, action bar appears.
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkDeleting, setBulkDeleting] = useState(false);
+
+  // CSV import modal state
+  const [showImport, setShowImport] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
 
   const toggleSelect = useCallback((id: string) => {
     setSelected((prev) => {
@@ -203,6 +209,48 @@ function CRMPageInner() {
     });
   }
 
+  // Import CSV — read file client-side, POST text to /api/crm/import.
+  async function handleImportFile(file: File) {
+    if (!file) return;
+    if (!/\.csv$/i.test(file.name) && file.type !== "text/csv") {
+      toast.error("Očakávaný CSV súbor");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Súbor je priveľký (max 5 MB)");
+      return;
+    }
+    setImporting(true);
+    try {
+      const text = await file.text();
+      const res = await fetch("/api/crm/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ csv: text }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(data.error ?? "Import zlyhal");
+        return;
+      }
+      const imported = Number(data.imported ?? 0);
+      const skipped = Number(data.skipped ?? 0);
+      const errCount = Array.isArray(data.errors) ? data.errors.length : 0;
+      const parts = [
+        `Importovaných ${imported} ${imported === 1 ? "kontakt" : imported < 5 ? "kontakty" : "kontaktov"}`,
+      ];
+      if (skipped > 0) parts.push(`${skipped} preskočené — duplikáty`);
+      if (errCount > 0) parts.push(`${errCount} chýb`);
+      toast.success(parts.join(", "));
+      setShowImport(false);
+      loadContacts(searchQuery);
+    } catch {
+      toast.error("Import zlyhal");
+    } finally {
+      setImporting(false);
+    }
+  }
+
   function initials(name: string): string {
     return name.split(" ").map(n => n[0]).filter(Boolean).join("").slice(0, 2).toUpperCase();
   }
@@ -260,6 +308,29 @@ function CRMPageInner() {
             )}
           </AnimatePresence>
 
+          {/* Import / Export toolbar */}
+          <div className="flex gap-2 mb-3">
+            <button
+              onClick={() => setShowImport(true)}
+              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium"
+              style={{ background: D.indigoDim, border: `1px solid ${D.indigoBorder}`, color: D.text }}
+              title="Import kontaktov z CSV"
+            >
+              <Upload className="w-3.5 h-3.5" />
+              Import CSV
+            </button>
+            <a
+              href="/api/crm/export"
+              download
+              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium"
+              style={{ background: D.indigoDim, border: `1px solid ${D.indigoBorder}`, color: D.text }}
+              title="Stiahnuť všetky kontakty ako CSV"
+            >
+              <Download className="w-3.5 h-3.5" />
+              Export CSV
+            </a>
+          </div>
+
           {/* Search + Add */}
           <div className="flex gap-2 md:gap-3 mb-4">
             <div className="flex-1 relative">
@@ -299,16 +370,32 @@ function CRMPageInner() {
               ) : (
                 <EmptyIllustration
                   variant="contacts"
-                  title="Zatiaľ žiadne kontakty"
-                  hint={'Pridaj manuálne, alebo povedz AI v chate: „Pridaj kontakt Peter Novák, 0950 312 387…".'}
+                  title="Žiadni klienti — poďme pridať prvého."
+                  hint="Vyber rýchlu cestu:"
                   action={
-                    <button
-                      onClick={() => setShowModal(true)}
-                      className="px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-2"
-                      style={{ background: `linear-gradient(135deg,${D.indigo},${D.violet})`, color: "white" }}
-                    >
-                      <Plus className="w-4 h-4" /> Pridať prvý
-                    </button>
+                    <div className="flex flex-col gap-2 w-full max-w-xs">
+                      <button
+                        onClick={() => setShowModal(true)}
+                        className="px-4 py-2.5 rounded-xl text-sm font-medium flex items-center justify-center gap-2 transition-all"
+                        style={{ background: `linear-gradient(135deg,${D.indigo},${D.violet})`, color: "white" }}
+                      >
+                        👤 Pridaj kontakt manuálne
+                      </button>
+                      <Link
+                        href={`/dashboard?prompt=${encodeURIComponent("Pridaj kontakt Peter Novák, telefón 0950 312 387, záujem o hypotéku")}`}
+                        className="px-4 py-2.5 rounded-xl text-sm font-medium flex items-center justify-center gap-2 transition-all"
+                        style={{ background: "rgba(99,102,241,0.12)", border: `1px solid ${D.indigoBorder}`, color: D.text }}
+                      >
+                        💬 Povedz to AI
+                      </Link>
+                      <Link
+                        href="/settings#import"
+                        className="px-4 py-2.5 rounded-xl text-sm font-medium flex items-center justify-center gap-2 transition-all"
+                        style={{ background: "rgba(99,102,241,0.06)", border: `1px solid ${D.indigoBorder}`, color: D.muted }}
+                      >
+                        📋 Importuj z CSV
+                      </Link>
+                    </div>
                   }
                 />
               )
@@ -571,6 +658,83 @@ function CRMPageInner() {
                   Uložiť
                 </button>
               </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Import CSV modal ── */}
+      <AnimatePresence>
+        {showImport && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}
+            onClick={() => !importing && setShowImport(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 10 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 10 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-md rounded-2xl p-6"
+              style={{ background: "#0a0d1a", border: `1px solid ${D.indigoBorder}` }}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-bold" style={{ color: D.text }}>Import CSV</h2>
+                <button onClick={() => setShowImport(false)} disabled={importing} className="p-1">
+                  <X className="w-5 h-5" style={{ color: D.muted }} />
+                </button>
+              </div>
+              <p className="text-xs mb-4" style={{ color: D.muted }}>
+                Podporované stĺpce: Meno, Firma, Email, Telefón, Poznámka. Prvý riadok musí byť hlavička.
+                Duplikáty (rovnaký email alebo telefón) budú preskočené.
+              </p>
+              <label
+                onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                onDragLeave={() => setDragOver(false)}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setDragOver(false);
+                  const file = e.dataTransfer.files?.[0];
+                  if (file) handleImportFile(file);
+                }}
+                className="flex flex-col items-center justify-center gap-2 p-8 rounded-xl cursor-pointer transition-colors"
+                style={{
+                  background: dragOver ? "rgba(99,102,241,0.15)" : D.indigoDim,
+                  border: `1.5px dashed ${dragOver ? D.indigo : D.indigoBorder}`,
+                }}
+              >
+                {importing ? (
+                  <>
+                    <Loader2 className="w-6 h-6 animate-spin" style={{ color: D.indigo }} />
+                    <span className="text-sm" style={{ color: D.text }}>Importujem…</span>
+                  </>
+                ) : (
+                  <>
+                    <FileText className="w-8 h-8" style={{ color: D.indigo }} />
+                    <span className="text-sm font-medium" style={{ color: D.text }}>
+                      Klikni alebo pretiahni CSV súbor
+                    </span>
+                    <span className="text-[10px]" style={{ color: D.mutedDark }}>
+                      max 5 MB · max 5000 riadkov
+                    </span>
+                  </>
+                )}
+                <input
+                  type="file"
+                  accept=".csv,text/csv"
+                  className="hidden"
+                  disabled={importing}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleImportFile(file);
+                    e.target.value = "";
+                  }}
+                />
+              </label>
             </motion.div>
           </motion.div>
         )}

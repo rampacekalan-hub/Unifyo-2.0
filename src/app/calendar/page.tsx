@@ -8,6 +8,7 @@ import {
   CalendarDays, Search, LayoutGrid, Rows3,
 } from "lucide-react";
 import { toast } from "sonner";
+import Link from "next/link";
 import { confirmWithUndo } from "@/lib/undoable";
 import AppLayout from "@/components/layout/AppLayout";
 import EmptyIllustration from "@/components/ui/EmptyIllustration";
@@ -559,7 +560,41 @@ function CalendarPageInner() {
                 <Loader2 className="w-4 h-4 animate-spin" style={{ color: D.muted }} />
               </div>
             ) : upcoming.length === 0 ? (
-              <p className="text-xs" style={{ color: D.mutedDark }}>Žiadne nadchádzajúce úlohy.</p>
+              tasks.length === 0 ? (
+                <EmptyIllustration
+                  variant="calendar"
+                  size={88}
+                  title="Žiadne úlohy — naplánuj prvú."
+                  hint="Vyber rýchlu cestu:"
+                  action={
+                    <div className="flex flex-col gap-2 w-full max-w-xs">
+                      <button
+                        onClick={() => setShowModal(true)}
+                        className="px-4 py-2.5 rounded-xl text-sm font-medium flex items-center justify-center gap-2 transition-all"
+                        style={{ background: `linear-gradient(135deg,${D.indigo},${D.violet})`, color: "white" }}
+                      >
+                        📅 Nová úloha
+                      </button>
+                      <Link
+                        href={`/dashboard?prompt=${encodeURIComponent("Naplánuj stretnutie s klientom zajtra o 14:00")}`}
+                        className="px-4 py-2.5 rounded-xl text-sm font-medium flex items-center justify-center gap-2 transition-all"
+                        style={{ background: "rgba(99,102,241,0.12)", border: `1px solid ${D.indigoBorder}`, color: D.text }}
+                      >
+                        💬 AI to naplánuje
+                      </Link>
+                      <button
+                        onClick={() => setShowModal(true)}
+                        className="px-4 py-2.5 rounded-xl text-sm font-medium flex items-center justify-center gap-2 transition-all"
+                        style={{ background: "rgba(99,102,241,0.06)", border: `1px solid ${D.indigoBorder}`, color: D.muted }}
+                      >
+                        🔁 Opakujúca sa úloha
+                      </button>
+                    </div>
+                  }
+                />
+              ) : (
+                <p className="text-xs" style={{ color: D.mutedDark }}>Žiadne nadchádzajúce úlohy.</p>
+              )
             ) : (
               <ul className="space-y-2">
                 {upcoming.map((t) => (

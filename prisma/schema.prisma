@@ -58,6 +58,26 @@ model User {
   loginEvents   LoginEvent[]
   authTokens    AuthToken[]
   waitlist      WaitlistSignup[]
+  notifications Notification[]
+}
+
+// ── In-app notifications (bell icon center) ──────────────────────
+// Table grows organically from events (signup welcome, future task-due
+// worker, broadcasts). No cron cleanup for now — rows are cheap.
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String // "task_due" | "system" | "broadcast" | "welcome"
+  title     String
+  body      String?
+  href      String?
+  read      Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  readAt    DateTime?
+
+  @@index([userId, createdAt])
+  @@index([userId, read])
 }
 
 // ── Auth tokens (password reset + email verification) ────────────
