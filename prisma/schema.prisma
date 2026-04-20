@@ -51,6 +51,13 @@ model User {
   // lazily on first /api/referral call. Nullable so legacy users don't
   // block the migration — they get a code the moment they hit the page.
   referralCode    String?   @unique
+  // Two-factor authentication (TOTP). `twoFactorSecret` holds the base32
+  // secret; while `twoFactorEnabledAt` is null the secret is only a
+  // pending setup (not enforced at login). `twoFactorBackupCodes` stores
+  // SHA-256 hashes of 10 single-use recovery codes.
+  twoFactorSecret       String?
+  twoFactorEnabledAt    DateTime?
+  twoFactorBackupCodes  String[]  @default([])
 
   aiRequests    AiRequest[]
   dailyUsage    DailyUsage[]
@@ -65,6 +72,7 @@ model User {
   notifications Notification[]
   referralsGiven    Referral[] @relation("referrer")
   referralsReceived Referral[] @relation("referred")
+  shareLinks        ShareLink[]
 }
 
 // ── Referrals ────────────────────────────────────────────────────
@@ -391,4 +399,25 @@ model WaitlistSignup {
   @@unique([feature, email])
   @@index([feature, createdAt])
   @@index([userId])
+}
+
+// ── Share links ─────────────────────────────────────────────────
+// Public read-only links for sharing a CalendarTask or CrmContact
+// without forcing the recipient to sign up. Token is URL-safe random
+// (~22 chars base64url from 16 random bytes). Optional expiry and
+// manual revocation supported. viewCount is an incrementing counter.
+model ShareLink {
+  id           String    @id @default(cuid())
+  token        String    @unique
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resourceType String    // "task" | "contact"
+  resourceId   String
+  createdAt    DateTime  @default(now())
+  expiresAt    DateTime? // null = no expiry
+  revokedAt    DateTime?
+  viewCount    Int       @default(0)
+
+  @@index([userId, createdAt])
+  @@index([token])
 }

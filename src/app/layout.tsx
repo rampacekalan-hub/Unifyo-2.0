@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Inter } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "next-themes";
@@ -7,6 +7,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { getSiteConfig } from "@/config/site-settings";
 import CookieConsent from "@/components/ui/CookieConsent";
 import PageViewTracker from "@/components/analytics/PageViewTracker";
+import InstallPrompt from "@/components/ui/InstallPrompt";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -49,6 +50,10 @@ export const metadata: Metadata = {
   },
 };
 
+export const viewport: Viewport = {
+  themeColor: "#6366f1",
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -71,6 +76,7 @@ export default function RootLayout({
             {children}
             <PageViewTracker />
             <CookieConsent />
+            <InstallPrompt />
             <Toaster richColors position="bottom-right" theme="dark" />
           </TooltipProvider>
         </ThemeProvider>

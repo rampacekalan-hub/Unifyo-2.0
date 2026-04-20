@@ -18,5 +18,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${base}/sukromie`, lastModified: now, changeFrequency: "yearly", priority: 0.4 },
     { url: `${base}/cookies`, lastModified: now, changeFrequency: "yearly", priority: 0.4 },
     { url: `${base}/dpa`, lastModified: now, changeFrequency: "yearly", priority: 0.4 },
+    { url: `${base}/faq`, lastModified: now, changeFrequency: "monthly", priority: 0.6 },
+    { url: `${base}/changelog`, lastModified: now, changeFrequency: "weekly", priority: 0.5 },
   ];
 }

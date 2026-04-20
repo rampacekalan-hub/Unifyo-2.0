@@ -7,6 +7,7 @@ import { loginSchema } from "@/lib/validations";
 import { rateLimit } from "@/lib/rate-limit";
 import { requireSameOrigin } from "@/lib/csrf";
 import { getSiteConfig } from "@/config/site-settings";
+import { createChallengeToken } from "@/lib/twofactor";
 
 const { security } = getSiteConfig();
 
@@ -34,7 +35,16 @@ export async function POST(req: NextRequest) {
     // Nájdi usera
     const user = await prisma.user.findUnique({
       where: { email },
-      select: { id: true, email: true, name: true, role: true, membershipTier: true, password: true, tokenVersion: true },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        membershipTier: true,
+        password: true,
+        tokenVersion: true,
+        twoFactorEnabledAt: true,
+      },
     });
 
     // Konštantný čas — ochrana pred timing attack
@@ -63,6 +73,17 @@ export async function POST(req: NextRequest) {
         { error: "Nesprávny e-mail alebo heslo" },
         { status: 401 }
       );
+    }
+
+    // 2FA gate — don't issue session cookie yet. Client must redeem the
+    // challenge token via /api/auth/login/2fa with a valid TOTP or backup
+    // code. We do NOT log a success event here; that happens post-2FA.
+    if (user.twoFactorEnabledAt) {
+      const challengeToken = await createChallengeToken(user.id);
+      return NextResponse.json({
+        requiresTwoFactor: true,
+        challengeToken,
+      });
     }
 
     // Aktualizuj lastActiveAt + zaloguj úspešný login

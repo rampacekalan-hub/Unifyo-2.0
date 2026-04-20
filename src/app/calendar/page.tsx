@@ -12,6 +12,7 @@ import Link from "next/link";
 import { confirmWithUndo } from "@/lib/undoable";
 import AppLayout from "@/components/layout/AppLayout";
 import EmptyIllustration from "@/components/ui/EmptyIllustration";
+import ShareButton from "@/components/ui/ShareButton";
 import { track } from "@/lib/analytics";
 
 interface Task {
@@ -666,6 +667,7 @@ function CalendarPageInner() {
                   <Check className="w-4 h-4" />
                   {selectedTask.done ? "Hotovo" : "Označiť ako hotové"}
                 </button>
+                <ShareButton resourceType="task" resourceId={selectedTask.id} fullWidth />
               </div>
             ) : (
               <EmptyIllustration

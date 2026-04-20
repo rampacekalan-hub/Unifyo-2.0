@@ -13,6 +13,7 @@ import { confirmWithUndo } from "@/lib/undoable";
 import SwipeableRow from "@/components/ui/SwipeableRow";
 import AppLayout from "@/components/layout/AppLayout";
 import EmptyIllustration from "@/components/ui/EmptyIllustration";
+import ShareButton from "@/components/ui/ShareButton";
 import { track } from "@/lib/analytics";
 
 interface CrmNote {
@@ -576,6 +577,7 @@ function CRMPageInner() {
                 >
                   <Calendar className="w-4 h-4" /> Schôdzka
                 </Link>
+                <ShareButton resourceType="contact" resourceId={selectedContact.id} fullWidth />
               </div>
             </div>
           ) : (

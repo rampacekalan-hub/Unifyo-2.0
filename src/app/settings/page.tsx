@@ -10,7 +10,8 @@ import {
   User, KeyRound, Bell, Sparkles, LogOut, Save, Loader2, Mail, Shield, Palette,
   Brain, Thermometer, MessageSquare, Camera, Trash2, Download, AlertTriangle,
   Monitor, Smartphone, Globe, CheckCircle2, XCircle, Upload,
-  Gift, Copy, Share2, CreditCard, ChevronRight,
+  Gift, Copy, Share2, CreditCard, ChevronRight, BadgeCheck, HelpCircle, Sparkle,
+  Link2,
 } from "lucide-react";
 import Link from "next/link";
 import AppLayout from "@/components/layout/AppLayout";
@@ -36,6 +37,9 @@ interface Me {
   name: string | null;
   role: string;
   membershipTier: string | null;
+  twoFactorEnabledAt?: string | null;
+  emailVerifiedAt?: string | null;
+  createdAt?: string | null;
 }
 
 export default function SettingsPage() {
@@ -63,26 +67,31 @@ export default function SettingsPage() {
   useEffect(() => { load(); }, [load]);
 
   async function handleSave() {
-    if (!name.trim()) {
+    const trimmed = name.trim();
+    if (!trimmed) {
       toast.error("Meno nemôže byť prázdne");
+      return;
+    }
+    if (trimmed.length > 80) {
+      toast.error("Meno môže mať maximálne 80 znakov");
       return;
     }
     setSaving(true);
     try {
-      // Endpoint nebude 404-ovať — ak neexistuje PATCH, spadneme do catch
       const res = await fetch("/api/user/me", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: name.trim() }),
+        body: JSON.stringify({ name: trimmed }),
       });
       if (res.ok) {
         toast.success("Profil uložený");
         load();
       } else {
-        toast.info("Ukladanie profilu bude dostupné čoskoro");
+        const data = await res.json().catch(() => ({}));
+        toast.error(data?.error ?? "Uloženie zlyhalo");
       }
     } catch {
-      toast.info("Ukladanie profilu bude dostupné čoskoro");
+      toast.error("Uloženie zlyhalo");
     } finally {
       setSaving(false);
     }
@@ -123,36 +132,68 @@ export default function SettingsPage() {
                   style={{ background: "rgba(99,102,241,0.04)", border: `1px solid ${D.indigoBorder}`, color: D.muted }}
                 >
                   <Mail className="w-3.5 h-3.5" style={{ color: D.indigo }} />
-                  {me?.email ?? "—"}
-                </div>
-              </Field>
-              <Field label="Členstvo">
-                <div className="flex items-center gap-2">
-                  <span
-                    className="px-2.5 py-1 rounded-lg text-xs font-semibold"
-                    style={{
-                      background: "linear-gradient(135deg, rgba(99,102,241,0.2), rgba(139,92,246,0.2))",
-                      border: `1px solid ${D.indigoBorder}`,
-                      color: D.text,
-                    }}
-                  >
-                    {me?.membershipTier ?? "FREE"}
-                  </span>
-                  {me?.role === "SUPERADMIN" || me?.role === "ADMIN" ? (
+                  <span className="flex-1 truncate">{me?.email ?? "—"}</span>
+                  {me?.emailVerifiedAt ? (
                     <span
-                      className="px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1"
+                      className="px-2 py-0.5 rounded-full text-[0.6rem] font-semibold uppercase tracking-widest flex items-center gap-1"
+                      style={{
+                        background: "rgba(16,185,129,0.12)",
+                        border: "1px solid rgba(16,185,129,0.35)",
+                        color: "#10b981",
+                      }}
+                    >
+                      <BadgeCheck className="w-3 h-3" />
+                      Overený
+                    </span>
+                  ) : (
+                    <span
+                      className="px-2 py-0.5 rounded-full text-[0.6rem] font-semibold uppercase tracking-widest"
                       style={{
                         background: "rgba(245,158,11,0.1)",
                         border: "1px solid rgba(245,158,11,0.3)",
                         color: "#f59e0b",
                       }}
                     >
-                      <Shield className="w-3 h-3" />
-                      {me.role}
+                      Neoverený
                     </span>
-                  ) : null}
+                  )}
                 </div>
               </Field>
+              <Field label="Plán">
+                <div
+                  className="w-full px-3 py-2.5 rounded-lg text-sm flex items-center"
+                  style={{ background: "rgba(99,102,241,0.04)", border: `1px solid ${D.indigoBorder}`, color: D.text }}
+                >
+                  {(me?.membershipTier ?? "Basic").toString().replace(/^./, (c) => c.toUpperCase())}
+                </div>
+              </Field>
+              <Field label="Člen od">
+                <div
+                  className="w-full px-3 py-2.5 rounded-lg text-sm"
+                  style={{ background: "rgba(99,102,241,0.04)", border: `1px solid ${D.indigoBorder}`, color: D.muted }}
+                >
+                  {me?.createdAt
+                    ? new Date(me.createdAt).toLocaleDateString("sk-SK", {
+                        day: "2-digit", month: "long", year: "numeric",
+                      })
+                    : "—"}
+                </div>
+              </Field>
+              {(me?.role === "SUPERADMIN" || me?.role === "ADMIN") && (
+                <Field label="Rola">
+                  <span
+                    className="inline-flex px-2.5 py-1 rounded-lg text-xs font-semibold items-center gap-1"
+                    style={{
+                      background: "rgba(245,158,11,0.1)",
+                      border: "1px solid rgba(245,158,11,0.3)",
+                      color: "#f59e0b",
+                    }}
+                  >
+                    <Shield className="w-3 h-3" />
+                    {me.role}
+                  </span>
+                </Field>
+              )}
               <button
                 onClick={handleSave}
                 disabled={saving}
@@ -170,8 +211,14 @@ export default function SettingsPage() {
           )}
         </Section>
 
-        {/* ── Heslo ── */}
-        <Section icon={KeyRound} title="Heslo a bezpečnosť" subtitle="Zmena hesla, dvojfaktorová autentifikácia" comingSoon />
+        {/* ── Zmena hesla ── */}
+        <ChangePasswordSection />
+
+        {/* ── 2FA ── */}
+        <TwoFactorSection
+          enabledAt={me?.twoFactorEnabledAt ?? null}
+          onChange={load}
+        />
 
         {/* ── AI preferencie ── */}
         <AiPrefsSection />
@@ -194,8 +241,27 @@ export default function SettingsPage() {
         {/* ── Plán & fakturácia (link) ── */}
         <BillingLinkRow />
 
+        {/* ── FAQ (link) ── */}
+        <ExternalLinkRow
+          href="/faq"
+          icon={HelpCircle}
+          title="Často kladené otázky"
+          subtitle="Odpovede na 12 najčastejších otázok o Unifyo"
+        />
+
+        {/* ── Changelog (link) ── */}
+        <ExternalLinkRow
+          href="/changelog"
+          icon={Sparkle}
+          title="Čo je nové"
+          subtitle="Prehľad zmien, nových funkcií a opráv"
+        />
+
         {/* ── Referral ── */}
         <ReferralSection />
+
+        {/* ── Moje zdieľané odkazy ── */}
+        <ShareLinksSection />
 
         {/* ── Zmazať účet ── */}
         <DeleteAccountSection email={me?.email ?? ""} />
@@ -954,6 +1020,47 @@ function BillingLinkRow() {
   );
 }
 
+// ── Generic settings link row (FAQ, Changelog, …) ─────────────────
+function ExternalLinkRow({
+  href,
+  icon: Icon,
+  title,
+  subtitle,
+}: {
+  href: string;
+  icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>;
+  title: string;
+  subtitle: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className="block rounded-2xl p-5 transition-all hover:brightness-125"
+      style={{
+        background: "rgba(99,102,241,0.04)",
+        border: `1px solid ${D.indigoBorder}`,
+      }}
+    >
+      <div className="flex items-center gap-3">
+        <div
+          className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+          style={{
+            background: "linear-gradient(135deg, rgba(99,102,241,0.15), rgba(139,92,246,0.1))",
+            border: `1px solid ${D.indigoBorder}`,
+          }}
+        >
+          <Icon className="w-4 h-4" style={{ color: D.indigo }} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <h3 className="text-sm font-semibold" style={{ color: D.text }}>{title}</h3>
+          <p className="text-xs mt-0.5" style={{ color: D.muted }}>{subtitle}</p>
+        </div>
+        <ChevronRight className="w-4 h-4 flex-shrink-0" style={{ color: D.muted }} />
+      </div>
+    </Link>
+  );
+}
+
 // ── Referral section ───────────────────────────────────────────────
 interface ReferralRow {
   email: string | null;
@@ -1132,6 +1239,640 @@ function ReferralSection() {
               </ul>
             )}
           </div>
+        </div>
+      )}
+    </Section>
+  );
+}
+
+// ── Shared links section ───────────────────────────────────────────
+interface ShareLinkRow {
+  token: string;
+  url: string;
+  resourceType: "task" | "contact";
+  label: string;
+  createdAt: string;
+  expiresAt: string | null;
+  viewCount: number;
+  state: "active" | "revoked" | "expired";
+}
+
+function ShareLinksSection() {
+  const [rows, setRows] = useState<ShareLinkRow[] | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [revokingToken, setRevokingToken] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/share");
+      if (res.ok) {
+        const data = await res.json();
+        setRows(Array.isArray(data) ? data : []);
+      } else {
+        setRows([]);
+      }
+    } catch {
+      setRows([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const copyUrl = async (url: string) => {
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success("Odkaz skopírovaný");
+    } catch {
+      toast.error("Kopírovanie zlyhalo");
+    }
+  };
+
+  const revoke = async (token: string) => {
+    if (!confirm("Naozaj zrušiť tento zdieľaný odkaz?")) return;
+    setRevokingToken(token);
+    try {
+      const res = await fetch(`/api/share/${token}`, { method: "DELETE" });
+      if (res.ok) {
+        toast.success("Odkaz zrušený");
+        // Optimistic: mark revoked locally.
+        setRows((prev) =>
+          prev ? prev.map((r) => (r.token === token ? { ...r, state: "revoked" as const } : r)) : prev
+        );
+      } else {
+        toast.error("Zrušenie zlyhalo");
+      }
+    } catch {
+      toast.error("Zrušenie zlyhalo");
+    } finally {
+      setRevokingToken(null);
+    }
+  };
+
+  const active = (rows ?? []).filter((r) => r.state === "active");
+  const inactive = (rows ?? []).filter((r) => r.state !== "active");
+
+  return (
+    <Section
+      icon={Link2}
+      title="Moje zdieľané odkazy"
+      subtitle="Verejné read-only odkazy na úlohy a kontakty"
+    >
+      {loading ? (
+        <Skeleton />
+      ) : !rows || rows.length === 0 ? (
+        <div
+          className="rounded-xl p-4 text-xs text-center"
+          style={{
+            background: "rgba(99,102,241,0.04)",
+            border: `1px dashed ${D.indigoBorder}`,
+            color: D.muted,
+          }}
+        >
+          Zatiaľ žiadne zdieľané odkazy. Klikni na „Zdieľať“ v CRM alebo Kalendári.
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {active.length > 0 && (
+            <ul className="space-y-2">
+              {active.map((r) => (
+                <li
+                  key={r.token}
+                  className="rounded-xl p-3"
+                  style={{
+                    background: "rgba(99,102,241,0.05)",
+                    border: `1px solid ${D.indigoBorder}`,
+                  }}
+                >
+                  <div className="flex items-start gap-3">
+                    <div
+                      className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5"
+                      style={{
+                        background: "rgba(99,102,241,0.12)",
+                        border: `1px solid ${D.indigoBorder}`,
+                      }}
+                    >
+                      <Link2 className="w-3.5 h-3.5" style={{ color: D.indigo }} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium truncate" style={{ color: D.text }}>
+                        {r.label}
+                      </div>
+                      <div className="text-[10px] mt-0.5" style={{ color: D.mutedDark }}>
+                        {r.resourceType === "task" ? "Úloha" : "Kontakt"}
+                        {" • "}
+                        Vytvorené {new Date(r.createdAt).toLocaleDateString("sk-SK")}
+                        {" • "}
+                        {r.viewCount} {r.viewCount === 1 ? "zobrazenie" : r.viewCount < 5 ? "zobrazenia" : "zobrazení"}
+                        {" • "}
+                        {r.expiresAt
+                          ? `Expiruje ${new Date(r.expiresAt).toLocaleDateString("sk-SK")}`
+                          : "Neobmedzená platnosť"}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                      <button
+                        onClick={() => copyUrl(r.url)}
+                        className="px-2.5 py-1.5 rounded-lg text-[11px] font-medium flex items-center gap-1"
+                        style={{
+                          background: D.indigoDim,
+                          border: `1px solid ${D.indigoBorder}`,
+                          color: D.text,
+                        }}
+                      >
+                        <Copy className="w-3 h-3" />
+                        Kopírovať
+                      </button>
+                      <button
+                        onClick={() => revoke(r.token)}
+                        disabled={revokingToken === r.token}
+                        className="px-2.5 py-1.5 rounded-lg text-[11px] font-medium disabled:opacity-50"
+                        style={{
+                          background: "rgba(244,63,94,0.1)",
+                          border: "1px solid rgba(244,63,94,0.3)",
+                          color: "#fca5a5",
+                        }}
+                      >
+                        {revokingToken === r.token ? "…" : "Zrušiť"}
+                      </button>
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {inactive.length > 0 && (
+            <div>
+              <div
+                className="text-[10px] font-bold uppercase tracking-widest mb-2"
+                style={{ color: D.mutedDark }}
+              >
+                Neaktívne ({inactive.length})
+              </div>
+              <ul className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                {inactive.map((r) => (
+                  <li
+                    key={r.token}
+                    className="flex items-center gap-2 py-2 px-3 rounded-lg text-xs"
+                    style={{ background: "rgba(99,102,241,0.03)" }}
+                  >
+                    <span className="flex-1 truncate" style={{ color: D.muted }}>
+                      {r.label}
+                    </span>
+                    <span
+                      className="text-[9px] font-bold px-2 py-0.5 rounded-full tracking-wider uppercase"
+                      style={{
+                        background: "rgba(148,163,184,0.1)",
+                        color: D.mutedDark,
+                        border: "1px solid rgba(148,163,184,0.2)",
+                      }}
+                    >
+                      {r.state === "revoked" ? "Zrušené" : "Expirované"}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
+    </Section>
+  );
+}
+
+// ── Change password section ────────────────────────────────────────
+function ChangePasswordSection() {
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (saving) return;
+    if (newPassword.length < 10) {
+      toast.error("Nové heslo musí mať aspoň 10 znakov");
+      return;
+    }
+    if (currentPassword === newPassword) {
+      toast.error("Nové heslo musí byť iné ako súčasné");
+      return;
+    }
+    setSaving(true);
+    try {
+      const res = await fetch("/api/user/password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(data.error ?? "Zmena hesla zlyhala");
+        return;
+      }
+      toast.success("Heslo zmenené. Ostatné zariadenia boli odhlásené.");
+      setCurrentPassword("");
+      setNewPassword("");
+    } catch {
+      toast.error("Sieťová chyba");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Section icon={KeyRound} title="Zmena hesla" subtitle="Nové heslo odhlási všetky ostatné zariadenia">
+      <form onSubmit={handleSubmit} className="space-y-3">
+        <Field label="Súčasné heslo">
+          <input
+            type="password"
+            value={currentPassword}
+            onChange={(e) => setCurrentPassword(e.target.value)}
+            autoComplete="current-password"
+            required
+            className="w-full px-3 py-2.5 rounded-lg text-sm outline-none"
+            style={{ background: D.indigoDim, border: `1px solid ${D.indigoBorder}`, color: D.text }}
+          />
+        </Field>
+        <Field label="Nové heslo (min. 10 znakov)">
+          <input
+            type="password"
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+            autoComplete="new-password"
+            required
+            minLength={10}
+            className="w-full px-3 py-2.5 rounded-lg text-sm outline-none"
+            style={{ background: D.indigoDim, border: `1px solid ${D.indigoBorder}`, color: D.text }}
+          />
+        </Field>
+        <button
+          type="submit"
+          disabled={saving || !currentPassword || newPassword.length < 10}
+          className="px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+          style={{
+            background: `linear-gradient(135deg,${D.indigo},${D.violet})`,
+            color: "white",
+            boxShadow: "0 0 14px rgba(99,102,241,0.35)",
+          }}
+        >
+          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+          Uložiť
+        </button>
+      </form>
+    </Section>
+  );
+}
+
+// ── Two-factor authentication section ──────────────────────────────
+function TwoFactorSection({
+  enabledAt,
+  onChange,
+}: {
+  enabledAt: string | null;
+  onChange: () => void;
+}) {
+  const [setupData, setSetupData] = useState<{
+    secret: string;
+    otpauthUrl: string;
+    qrDataUrl: string;
+  } | null>(null);
+  const [verifyCode, setVerifyCode] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [backupCodes, setBackupCodes] = useState<string[] | null>(null);
+  const [disableOpen, setDisableOpen] = useState(false);
+  const [disablePassword, setDisablePassword] = useState("");
+  const [disableCode, setDisableCode] = useState("");
+
+  const enabled = !!enabledAt;
+
+  async function startSetup() {
+    setBusy(true);
+    try {
+      const res = await fetch("/api/user/2fa/setup", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error ?? "Nepodarilo sa spustiť 2FA");
+        return;
+      }
+      setSetupData(data);
+      setVerifyCode("");
+    } catch {
+      toast.error("Sieťová chyba");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function verifySetup(e: React.FormEvent) {
+    e.preventDefault();
+    if (!verifyCode.trim()) return;
+    setBusy(true);
+    try {
+      const res = await fetch("/api/user/2fa/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: verifyCode.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error ?? "Overenie zlyhalo");
+        return;
+      }
+      setSetupData(null);
+      setBackupCodes(data.backupCodes ?? []);
+      toast.success("2FA je aktívne");
+      onChange();
+    } catch {
+      toast.error("Sieťová chyba");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function disable(e: React.FormEvent) {
+    e.preventDefault();
+    if (!disablePassword) return;
+    setBusy(true);
+    try {
+      const res = await fetch("/api/user/2fa/disable", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: disablePassword, code: disableCode.trim() || undefined }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error ?? "Vypnutie zlyhalo");
+        return;
+      }
+      toast.success("2FA vypnuté");
+      setDisableOpen(false);
+      setDisablePassword("");
+      setDisableCode("");
+      onChange();
+    } catch {
+      toast.error("Sieťová chyba");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function copySecret() {
+    if (!setupData) return;
+    try {
+      await navigator.clipboard.writeText(setupData.secret);
+      toast.success("Secret skopírovaný");
+    } catch {
+      toast.error("Kopírovanie zlyhalo");
+    }
+  }
+
+  function downloadBackupCodes() {
+    if (!backupCodes) return;
+    const content = [
+      "Unifyo — zalozne kody pre 2FA",
+      `Vygenerovane: ${new Date().toISOString()}`,
+      "",
+      "Kazdy kod je pouzitelny len raz. Uloz si ich na bezpecne miesto.",
+      "",
+      ...backupCodes,
+      "",
+    ].join("\n");
+    const blob = new Blob([content], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `unifyo-2fa-backup-codes-${new Date().toISOString().slice(0, 10)}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  return (
+    <Section
+      icon={Shield}
+      title="Dvojfaktorové overenie"
+      subtitle="Chráň prihlásenie aplikáciou autentifikátora (TOTP)"
+    >
+      {backupCodes && backupCodes.length > 0 ? (
+        <div
+          className="rounded-xl p-4 space-y-3"
+          style={{
+            background: "rgba(16,185,129,0.06)",
+            border: "1px solid rgba(16,185,129,0.3)",
+          }}
+        >
+          <div className="flex items-start gap-2">
+            <CheckCircle2 className="w-4 h-4 mt-0.5" style={{ color: "#10b981" }} />
+            <div>
+              <p className="text-sm font-semibold" style={{ color: D.text }}>
+                2FA je aktívne. Ulož si záložné kódy.
+              </p>
+              <p className="text-xs mt-0.5" style={{ color: D.muted }}>
+                Stiahni alebo si ich ulož — už sa nezobrazia.
+              </p>
+            </div>
+          </div>
+          <div
+            className="rounded-lg p-3 grid grid-cols-2 gap-1.5 font-mono text-sm"
+            style={{ background: "rgba(0,0,0,0.25)", border: `1px solid ${D.indigoBorder}`, color: D.text }}
+          >
+            {backupCodes.map((c) => (
+              <div key={c} className="tracking-widest">{c}</div>
+            ))}
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={downloadBackupCodes}
+              className="px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5"
+              style={{ background: D.indigoDim, border: `1px solid ${D.indigoBorder}`, color: D.text }}
+            >
+              <Download className="w-3.5 h-3.5" />
+              Stiahnuť ako .txt
+            </button>
+            <button
+              onClick={() => setBackupCodes(null)}
+              className="px-3 py-1.5 rounded-lg text-xs font-medium"
+              style={{
+                background: "rgba(16,185,129,0.15)",
+                border: "1px solid rgba(16,185,129,0.35)",
+                color: "#10b981",
+              }}
+            >
+              Uložil som si ich
+            </button>
+          </div>
+        </div>
+      ) : enabled ? (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <span
+              className="px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5"
+              style={{
+                background: "rgba(16,185,129,0.15)",
+                border: "1px solid rgba(16,185,129,0.35)",
+                color: "#10b981",
+              }}
+            >
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              Aktívne od {new Date(enabledAt!).toLocaleDateString("sk-SK")}
+            </span>
+          </div>
+          {!disableOpen ? (
+            <button
+              onClick={() => setDisableOpen(true)}
+              className="px-3 py-1.5 rounded-lg text-xs font-medium"
+              style={{
+                background: "rgba(244,63,94,0.12)",
+                border: "1px solid rgba(244,63,94,0.3)",
+                color: D.rose,
+              }}
+            >
+              Vypnúť 2FA
+            </button>
+          ) : (
+            <form onSubmit={disable} className="space-y-2">
+              <Field label="Heslo">
+                <input
+                  type="password"
+                  value={disablePassword}
+                  onChange={(e) => setDisablePassword(e.target.value)}
+                  autoComplete="current-password"
+                  required
+                  className="w-full px-3 py-2 rounded-lg text-sm outline-none"
+                  style={{ background: D.indigoDim, border: `1px solid ${D.indigoBorder}`, color: D.text }}
+                />
+              </Field>
+              <Field label="6-ciferný alebo záložný kód">
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={disableCode}
+                  onChange={(e) => setDisableCode(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg text-sm outline-none font-mono"
+                  style={{ background: D.indigoDim, border: `1px solid ${D.indigoBorder}`, color: D.text }}
+                />
+              </Field>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => { setDisableOpen(false); setDisablePassword(""); setDisableCode(""); }}
+                  disabled={busy}
+                  className="px-3 py-1.5 rounded-lg text-xs font-medium"
+                  style={{ background: D.indigoDim, border: `1px solid ${D.indigoBorder}`, color: D.text }}
+                >
+                  Zrušiť
+                </button>
+                <button
+                  type="submit"
+                  disabled={busy || !disablePassword}
+                  className="px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 disabled:opacity-40"
+                  style={{ background: "#dc2626", color: "white" }}
+                >
+                  {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <XCircle className="w-3.5 h-3.5" />}
+                  Potvrdiť vypnutie
+                </button>
+              </div>
+            </form>
+          )}
+        </div>
+      ) : setupData ? (
+        <div className="space-y-3">
+          <p className="text-xs" style={{ color: D.muted }}>
+            Naskenuj QR kód v aplikácii (Google Authenticator, 1Password, Authy…) a zadaj 6-ciferný kód.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 items-start">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={setupData.qrDataUrl}
+              alt="QR pre 2FA"
+              width={180}
+              height={180}
+              className="rounded-lg"
+              style={{ background: "white", padding: 8 }}
+            />
+            <div className="flex-1 space-y-2">
+              <Field label="Manuálny secret">
+                <div className="flex gap-2">
+                  <input
+                    readOnly
+                    value={setupData.secret}
+                    onFocus={(e) => e.currentTarget.select()}
+                    className="flex-1 px-3 py-2 rounded-lg text-xs font-mono outline-none"
+                    style={{ background: D.indigoDim, border: `1px solid ${D.indigoBorder}`, color: D.text }}
+                  />
+                  <button
+                    type="button"
+                    onClick={copySecret}
+                    className="px-2.5 rounded-lg text-xs font-medium flex items-center gap-1"
+                    style={{ background: D.indigoDim, border: `1px solid ${D.indigoBorder}`, color: D.text }}
+                  >
+                    <Copy className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </Field>
+              <form onSubmit={verifySetup} className="space-y-2">
+                <Field label="6-ciferný kód">
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    maxLength={6}
+                    value={verifyCode}
+                    onChange={(e) => setVerifyCode(e.target.value)}
+                    autoFocus
+                    placeholder="123456"
+                    className="w-full px-3 py-2 rounded-lg text-sm font-mono tracking-widest text-center outline-none"
+                    style={{ background: D.indigoDim, border: `1px solid ${D.indigoBorder}`, color: D.text }}
+                  />
+                </Field>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setSetupData(null)}
+                    className="px-3 py-1.5 rounded-lg text-xs font-medium"
+                    style={{ background: D.indigoDim, border: `1px solid ${D.indigoBorder}`, color: D.text }}
+                  >
+                    Zrušiť
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={busy || verifyCode.length !== 6}
+                    className="px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 disabled:opacity-40"
+                    style={{
+                      background: `linear-gradient(135deg,${D.indigo},${D.violet})`,
+                      color: "white",
+                    }}
+                  >
+                    {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                    Overiť a zapnúť
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          <p className="text-xs" style={{ color: D.muted }}>
+            Pri prihlásení budeš po hesle zadávať ešte 6-ciferný kód z autentifikátora.
+          </p>
+          <button
+            onClick={startSetup}
+            disabled={busy}
+            className="px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-2 disabled:opacity-50"
+            style={{
+              background: `linear-gradient(135deg,${D.indigo},${D.violet})`,
+              color: "white",
+              boxShadow: "0 0 14px rgba(99,102,241,0.35)",
+            }}
+          >
+            {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Shield className="w-4 h-4" />}
+            Zapnúť 2FA
+          </button>
         </div>
       )}
     </Section>

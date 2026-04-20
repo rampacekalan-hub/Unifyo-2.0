@@ -62,6 +62,16 @@ export default function Footer() {
                 {link.label}
               </Link>
             ))}
+            <Link href="/faq"
+              className="text-xs transition-colors duration-200 hover:text-white"
+              style={{ color: "#64748b" }}>
+              Často kladené otázky
+            </Link>
+            <Link href="/changelog"
+              className="text-xs transition-colors duration-200 hover:text-white"
+              style={{ color: "#64748b" }}>
+              Čo je nové
+            </Link>
             <Link href="/register"
               className="text-xs transition-colors duration-200"
               style={{ color: "#8b5cf6" }}>
