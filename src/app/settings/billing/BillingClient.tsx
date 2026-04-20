@@ -1,16 +1,20 @@
 "use client";
 // src/app/settings/billing/BillingClient.tsx
-// Client-side skeleton of the Pro/Basic/Enterprise plan selector. No
-// Stripe yet — the Pro CTA just signs the user up to the "billing"
-// waitlist slug so we can ping them at launch.
+// In-app billing page. Reads plan definitions directly from
+// `config.pricing` so prices/features can never drift from the public
+// pricing section. Stripe checkout is not wired yet — the Pro CTA
+// currently signs the user up to the "billing" waitlist slug.
 
 import { useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import {
-  Check, Sparkles, Crown, Building2, ChevronLeft, Loader2,
+  Check, Minus, Sparkles, Crown, Building2, ChevronLeft, Loader2, ArrowRight,
 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
+import { getSiteConfig } from "@/config/site-settings";
+
+const config = getSiteConfig();
 
 const D = {
   indigo: "#6366f1",
@@ -22,6 +26,20 @@ const D = {
   indigoDim: "rgba(99,102,241,0.08)",
   indigoBorder: "rgba(99,102,241,0.22)",
   emerald: "#10b981",
+};
+
+// Plan id → tier value persisted on the User row. Keep this in sync with
+// `membershipTier` mapping in the auth layer.
+const PLAN_TO_TIER: Record<string, string> = {
+  basic: "BASIC",
+  pro: "PREMIUM",
+  enterprise: "ENTERPRISE",
+};
+
+const PLAN_ICONS: Record<string, typeof Sparkles> = {
+  basic: Sparkles,
+  pro: Crown,
+  enterprise: Building2,
 };
 
 interface Props {
@@ -52,44 +70,68 @@ export default function BillingClient({ plan, tier, email }: Props) {
             Plán a fakturácia
           </h1>
           <p className="text-sm mt-1" style={{ color: D.muted }}>
-            Vyber si plán, ktorý ti sadne. Beta je zadarmo.
+            Ceny a funkcie sa zhodujú s verejným cenníkom. Počas bety je všetko zadarmo.
           </p>
         </div>
 
-        {/* Plan cards */}
+        {/* Plan cards — rendered from config.pricing so we never drift */}
         <div className="grid gap-4 md:grid-cols-3">
-          <PlanCard
-            name="Basic"
-            price="Zadarmo"
-            priceNote="Pre začiatočníkov"
-            icon={Sparkles}
-            current={currentPlan === "basic"}
-            features={[
-              "AI chat s dennými limitmi",
-              "CRM — kontakty a poznámky",
-              "Kalendár a úlohy",
-              "Základné notifikácie",
-            ]}
-            ctaLabel={currentPlan === "basic" ? "Aktuálny plán" : "Aktivovať"}
-            ctaDisabled
-          />
+          {config.pricing.map((p) => {
+            const isCurrent =
+              currentPlan === p.id ||
+              (PLAN_TO_TIER[p.id] !== undefined && tier === PLAN_TO_TIER[p.id]);
+            const Icon = PLAN_ICONS[p.id] ?? Sparkles;
 
-          <ProPlanCard email={email} currentTier={tier} />
+            // Pro gets the waitlist CTA; Enterprise opens mail; Basic is
+            // the default plan during beta so no CTA needed.
+            let cta: React.ReactNode;
+            if (p.id === "basic") {
+              cta = (
+                <button
+                  disabled
+                  className="w-full px-4 py-2.5 rounded-xl text-sm font-semibold disabled:opacity-60 disabled:cursor-not-allowed"
+                  style={{
+                    background: D.indigoDim,
+                    border: `1px solid ${D.indigoBorder}`,
+                    color: D.text,
+                  }}
+                >
+                  {isCurrent ? "Aktuálny plán" : "Default počas bety"}
+                </button>
+              );
+            } else if (p.id === "enterprise") {
+              cta = (
+                <Link
+                  href={`mailto:${config.links.contact.email}`}
+                  className="w-full px-4 py-2.5 rounded-xl text-sm font-semibold text-center inline-flex items-center justify-center gap-1.5"
+                  style={{
+                    background: D.indigoDim,
+                    border: `1px solid ${D.indigoBorder}`,
+                    color: D.text,
+                  }}
+                >
+                  {p.cta}
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+              );
+            } else {
+              cta = <ProWaitlistButton email={email} />;
+            }
 
-          <PlanCard
-            name="Enterprise"
-            price="Na mieru"
-            priceNote="Pre firmy a tímy"
-            icon={Building2}
-            features={[
-              "SSO & SCIM",
-              "Dedicated support",
-              "Custom SLA a DPA",
-              "On-prem / EU hosting",
-            ]}
-            ctaLabel="Kontakt"
-            ctaHref="/kontakt"
-          />
+            return (
+              <PlanCard
+                key={p.id}
+                name={p.name}
+                priceText={formatPrice(p)}
+                priceNote={p.description}
+                icon={Icon}
+                highlight={p.highlighted}
+                current={isCurrent}
+                features={p.features}
+                cta={cta}
+              />
+            );
+          })}
         </div>
 
         {/* Beta notice */}
@@ -112,31 +154,31 @@ export default function BillingClient({ plan, tier, email }: Props) {
   );
 }
 
-// ── Plan card (generic) ────────────────────────────────────────────
+function formatPrice(p: (typeof config.pricing)[number]): string {
+  if (!p.price || p.price <= 0) return "Zadarmo";
+  if (p.id === "enterprise") return "Na mieru";
+  return `${p.currency}${p.price}/${p.interval === "mesiac" ? "mes" : p.interval}`;
+}
+
+// ── Plan card (shared) ─────────────────────────────────────────────
 function PlanCard({
   name,
-  price,
+  priceText,
   priceNote,
   icon: Icon,
   features,
-  ctaLabel,
-  ctaHref,
-  ctaDisabled,
+  cta,
   current,
   highlight,
-  children,
 }: {
   name: string;
-  price: string;
+  priceText: string;
   priceNote?: string;
   icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>;
-  features: string[];
-  ctaLabel: string;
-  ctaHref?: string;
-  ctaDisabled?: boolean;
+  features: { text: string; included: boolean; tooltip?: string }[];
+  cta: React.ReactNode;
   current?: boolean;
   highlight?: boolean;
-  children?: React.ReactNode;
 }) {
   return (
     <div
@@ -161,18 +203,6 @@ function PlanCard({
           Aktuálny
         </span>
       )}
-      {highlight && !current && (
-        <span
-          className="absolute top-3 right-3 px-2 py-0.5 rounded-full text-[0.6rem] font-bold uppercase tracking-widest"
-          style={{
-            background: "rgba(34,211,238,0.15)",
-            color: D.sky,
-            border: "1px solid rgba(34,211,238,0.35)",
-          }}
-        >
-          Čoskoro
-        </span>
-      )}
 
       <div
         className="w-10 h-10 rounded-xl flex items-center justify-center mb-3"
@@ -185,55 +215,38 @@ function PlanCard({
       </div>
 
       <h3 className="text-lg font-bold" style={{ color: D.text }}>{name}</h3>
-      <p className="text-xs mb-3" style={{ color: D.mutedDark }}>{priceNote}</p>
+      {priceNote && (
+        <p className="text-xs mb-3" style={{ color: D.mutedDark }}>{priceNote}</p>
+      )}
 
       <div className="mb-4">
-        <span className="text-2xl font-black" style={{ color: D.text }}>{price}</span>
+        <span className="text-2xl font-black" style={{ color: D.text }}>{priceText}</span>
       </div>
 
       <ul className="space-y-2 mb-5 flex-1">
         {features.map((f) => (
-          <li key={f} className="flex items-start gap-2 text-xs" style={{ color: D.text }}>
-            <Check className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" style={{ color: D.emerald }} />
-            <span>{f}</span>
+          <li key={f.text} className="flex items-start gap-2 text-xs" style={{ color: f.included ? D.text : D.mutedDark }}>
+            {f.included ? (
+              <Check className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" style={{ color: D.emerald }} />
+            ) : (
+              <Minus className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" style={{ color: D.mutedDark }} />
+            )}
+            <span className={f.tooltip ? "underline decoration-dotted underline-offset-2" : ""} title={f.tooltip}>
+              {f.text}
+              {f.tooltip && !f.included ? ` · ${f.tooltip}` : ""}
+            </span>
           </li>
         ))}
       </ul>
 
-      {children ??
-        (ctaHref ? (
-          <Link
-            href={ctaHref}
-            className="w-full px-4 py-2.5 rounded-xl text-sm font-semibold text-center"
-            style={{
-              background: D.indigoDim,
-              border: `1px solid ${D.indigoBorder}`,
-              color: D.text,
-            }}
-          >
-            {ctaLabel}
-          </Link>
-        ) : (
-          <button
-            disabled={ctaDisabled}
-            className="w-full px-4 py-2.5 rounded-xl text-sm font-semibold disabled:opacity-60 disabled:cursor-not-allowed"
-            style={{
-              background: D.indigoDim,
-              border: `1px solid ${D.indigoBorder}`,
-              color: D.text,
-            }}
-          >
-            {ctaLabel}
-          </button>
-        ))}
+      {cta}
     </div>
   );
 }
 
-// ── Pro plan card with waitlist CTA ────────────────────────────────
-function ProPlanCard({ email, currentTier }: { email: string; currentTier: string }) {
+// ── Pro waitlist CTA (Stripe TODO) ─────────────────────────────────
+function ProWaitlistButton({ email }: { email: string }) {
   const [state, setState] = useState<"idle" | "loading" | "done" | "error">("idle");
-  const isPro = currentTier === "PREMIUM";
 
   const joinBeta = async () => {
     if (state === "loading" || state === "done") return;
@@ -258,38 +271,22 @@ function ProPlanCard({ email, currentTier }: { email: string; currentTier: strin
   };
 
   return (
-    <PlanCard
-      name="Pro"
-      price="€12/mes"
-      priceNote="Pre profesionálov"
-      icon={Crown}
-      highlight
-      current={isPro}
-      features={[
-        "Neobmedzené AI requesty",
-        "Pokročilá pamäť a kontext",
-        "Prioritná podpora",
-        "Všetky budúce Pro moduly",
-      ]}
-      ctaLabel=""
+    <button
+      onClick={joinBeta}
+      disabled={state === "loading" || state === "done"}
+      className="w-full px-4 py-2.5 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-70"
+      style={{
+        background: `linear-gradient(135deg,${D.indigo},${D.violet})`,
+        color: "white",
+        boxShadow: "0 0 18px rgba(99,102,241,0.4)",
+      }}
     >
-      <button
-        onClick={joinBeta}
-        disabled={state === "loading" || state === "done"}
-        className="w-full px-4 py-2.5 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-70"
-        style={{
-          background: `linear-gradient(135deg,${D.indigo},${D.violet})`,
-          color: "white",
-          boxShadow: "0 0 18px rgba(99,102,241,0.4)",
-        }}
-      >
-        {state === "loading" && <Loader2 className="w-4 h-4 animate-spin" />}
-        {state === "done"
-          ? "Si v poradí ✓"
-          : state === "loading"
-          ? "Prihlasujem…"
-          : "Čoskoro — zapojiť sa do betatestu"}
-      </button>
-    </PlanCard>
+      {state === "loading" && <Loader2 className="w-4 h-4 animate-spin" />}
+      {state === "done"
+        ? "Si v poradí ✓"
+        : state === "loading"
+        ? "Prihlasujem…"
+        : "Čoskoro — zapojiť sa do betatestu"}
+    </button>
   );
 }

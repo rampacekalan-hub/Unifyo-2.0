@@ -484,14 +484,18 @@ const siteConfig: SiteConfig = {
   },
 
   // ─── MODULES (Feature flags pre budúce moduly) ──────────────
+  // During the public beta every enabled module is available on every plan.
+  // The `requiredPlan` field is reserved for post-launch paywall gating —
+  // until Stripe is wired we keep it as "all" so the UI never gates a user
+  // out of a feature they can see on the pricing page.
   modules: {
-    dashboard:         { id: "dashboard",         enabled: true,  requiredPlan: "all",        path: "/dashboard" },
-    crm:               { id: "crm",               enabled: true,  requiredPlan: "pro",        path: "/dashboard/crm" },
-    calendar:          { id: "calendar",          enabled: true,  requiredPlan: "all",        path: "/dashboard/calendar" },
-    email:             { id: "email",             enabled: true,  requiredPlan: "all",        path: "/dashboard/email" },
-    calls:             { id: "calls",             enabled: false, requiredPlan: "pro",        path: "/dashboard/calls" },
-    analytics:         { id: "analytics",         enabled: false, requiredPlan: "pro",        path: "/dashboard/analytics" },
-    automationBuilder: { id: "automationBuilder", enabled: false, requiredPlan: "enterprise", path: "/dashboard/automation" },
+    dashboard:         { id: "dashboard",         enabled: true,  requiredPlan: "all", path: "/dashboard" },
+    crm:               { id: "crm",               enabled: true,  requiredPlan: "all", path: "/dashboard/crm" },
+    calendar:          { id: "calendar",          enabled: true,  requiredPlan: "all", path: "/dashboard/calendar" },
+    email:             { id: "email",             enabled: true,  requiredPlan: "all", path: "/dashboard/email" },
+    calls:             { id: "calls",             enabled: false, requiredPlan: "all", path: "/dashboard/calls" },
+    analytics:         { id: "analytics",         enabled: false, requiredPlan: "all", path: "/dashboard/analytics" },
+    automationBuilder: { id: "automationBuilder", enabled: false, requiredPlan: "all", path: "/dashboard/automation" },
   },
 
   // ─── DATA STRATEGY (Prisma schema mapping — pre AI kontext) ─
@@ -636,13 +640,16 @@ const siteConfig: SiteConfig = {
       highlighted: false,
       cta: "Začať s Basic",
       features: [
-        { text: "AI chat asistent", included: true },
-        { text: "Kalendár (Google & Outlook)", included: true },
-        { text: "Email manažment", included: true },
+        { text: "AI chat po slovensky", included: true },
+        { text: "Kalendár & úlohy", included: true },
+        { text: "CRM — kontakty, poznámky, história", included: true },
+        { text: "CSV import & export", included: true },
+        { text: "Zdieľanie cez verejný link", included: true },
+        { text: "2FA a správa zariadení", included: true },
+        { text: "GDPR export & zmazanie účtu", included: true },
         { text: "100 AI požiadaviek/mesiac", included: true },
-        { text: "GDPR súlad", included: true },
-        { text: "CRM & Pipeline", included: false },
-        { text: "Custom AI agenti", included: false },
+        { text: "Email manažment", included: false, tooltip: "Čoskoro — Q3 2026" },
+        { text: "Vlastní AI agenti", included: false },
         { text: "SLA & dedikovaná podpora", included: false },
       ],
     },
@@ -658,13 +665,15 @@ const siteConfig: SiteConfig = {
       cta: "Začať s Pro",
       features: [
         { text: "Všetko v Basic", included: true },
-        { text: "CRM & Pipeline", included: true },
-        { text: "Custom AI agenti (3)", included: true, tooltip: "Vytvorte až 3 vlastných AI agentov" },
         { text: "1 000 AI požiadaviek/mesiac", included: true },
-        { text: "Priority podpora", included: true },
+        { text: "Rozšírená pamäť a kontext", included: true },
+        { text: "Referral bonusy", included: true },
+        { text: "Prioritná podpora", included: true },
+        { text: "Vlastní AI agenti (3)", included: false, tooltip: "Čoskoro — Q3 2026" },
+        { text: "Email manažment", included: false, tooltip: "Čoskoro — Q3 2026" },
+        { text: "Hovory & prepisy", included: false, tooltip: "Čoskoro — Q4 2026" },
         { text: "Neobmedzené AI požiadavky", included: false },
         { text: "SLA & dedikovaná podpora", included: false },
-        { text: "Fakturácia SK/ČR formát", included: false },
       ],
     },
     {
@@ -679,10 +688,10 @@ const siteConfig: SiteConfig = {
       features: [
         { text: "Všetko v Pro", included: true },
         { text: "Neobmedzené AI požiadavky", included: true },
-        { text: "Neobmedzení AI agenti", included: true },
+        { text: "Neobmedzení AI agenti", included: true, tooltip: "Dostupné s príchodom modulu agentov" },
         { text: "SLA & dedikovaná podpora", included: true, tooltip: "Garantovaná odpoveď do 2 hodín" },
         { text: "Fakturácia SK/ČR formát", included: true },
-        { text: "GDPR súlad", included: true },
+        { text: "GDPR súlad & DPA", included: true },
         { text: "Priority podpora 24/7", included: true },
         { text: "Custom integrácie", included: true },
       ],

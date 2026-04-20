@@ -2,8 +2,20 @@
 
 import { motion } from "framer-motion";
 import { Calendar, Shield, BarChart3, Brain, Mail, Phone } from "lucide-react";
+import type { ComponentType, SVGProps } from "react";
 
-const features = [
+type Feature = {
+  icon: ComponentType<SVGProps<SVGSVGElement>>;
+  title: string;
+  desc: string;
+  accent: string;
+  bg: string;
+  border: string;
+  cta: string;
+  comingSoon?: string;
+};
+
+const features: Feature[] = [
   {
     icon: Brain,
     title: "AI Brain",
@@ -29,7 +41,8 @@ const features = [
     accent: "#67e8f9",
     bg: "rgba(103,232,249,0.06)",
     border: "rgba(103,232,249,0.12)",
-    cta: "Pripojiť Gmail",
+    cta: "Na ceste — Q3 2026",
+    comingSoon: "Q3 2026",
   },
   {
     icon: Phone,
@@ -38,7 +51,8 @@ const features = [
     accent: "#10b981",
     bg: "rgba(16,185,129,0.07)",
     border: "rgba(16,185,129,0.15)",
-    cta: "Zisti viac",
+    cta: "Na ceste — Q4 2026",
+    comingSoon: "Q4 2026",
   },
   {
     icon: BarChart3,
@@ -126,10 +140,24 @@ export default function BentoGrid() {
                   (e.currentTarget as HTMLDivElement).style.transform = "translateY(0)";
                 }}
               >
-                {/* Icon badge */}
-                <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
-                  style={{ background: `${f.accent}18`, border: `1px solid ${f.accent}30` }}>
-                  <f.icon className="w-5 h-5" style={{ color: f.accent }} />
+                {/* Icon badge + optional ComingSoon pill */}
+                <div className="flex items-center justify-between gap-2">
+                  <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
+                    style={{ background: `${f.accent}18`, border: `1px solid ${f.accent}30` }}>
+                    <f.icon className="w-5 h-5" style={{ color: f.accent }} />
+                  </div>
+                  {f.comingSoon && (
+                    <span
+                      className="text-[0.6rem] font-bold px-2 py-0.5 rounded-full uppercase tracking-widest"
+                      style={{
+                        background: `${f.accent}1a`,
+                        color: f.accent,
+                        border: `1px solid ${f.accent}50`,
+                      }}
+                    >
+                      Čoskoro · {f.comingSoon}
+                    </span>
+                  )}
                 </div>
 
                 <div>
