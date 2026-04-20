@@ -82,6 +82,9 @@ const DATETIME_STYLE: React.CSSProperties = {
   width: "100%",
 };
 
+// TODO: add admin analytics view — query AnalyticsEvent counts (24h/7d/30d)
+// and distinct-userId "active users" stats. Skipped in this pass because the
+// admin dashboard is large and a focused Analytics tab deserves its own PR.
 type NavSection = "overview" | "users" | "toggles" | "logs" | "neural" | "governance" | "sandbox" | "policy" | "roi" | "audit" | "explorer" | "plans" | "identity";
 type MembershipTier = "BASIC" | "PREMIUM" | "ENTERPRISE";
 

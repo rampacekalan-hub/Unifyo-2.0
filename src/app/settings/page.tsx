@@ -10,7 +10,9 @@ import {
   User, KeyRound, Bell, Sparkles, LogOut, Save, Loader2, Mail, Shield, Palette,
   Brain, Thermometer, MessageSquare, Camera, Trash2, Download, AlertTriangle,
   Monitor, Smartphone, Globe, CheckCircle2, XCircle, Upload,
+  Gift, Copy, Share2, CreditCard, ChevronRight,
 } from "lucide-react";
+import Link from "next/link";
 import AppLayout from "@/components/layout/AppLayout";
 import { loadPrefs, savePrefs, type AiPrefs, type ResponseStyle } from "@/lib/aiPrefs";
 import Avatar, { useAvatar } from "@/components/ui/Avatar";
@@ -188,6 +190,12 @@ export default function SettingsPage() {
 
         {/* ── Import CRM ── */}
         <CrmImportSection />
+
+        {/* ── Plán & fakturácia (link) ── */}
+        <BillingLinkRow />
+
+        {/* ── Referral ── */}
+        <ReferralSection />
 
         {/* ── Zmazať účet ── */}
         <DeleteAccountSection email={me?.email ?? ""} />
@@ -908,5 +916,224 @@ function SessionsSection() {
         Odhlásiť zo všetkých zariadení
       </button>
     </div>
+  );
+}
+
+// ── Billing link row ───────────────────────────────────────────────
+function BillingLinkRow() {
+  return (
+    <Link
+      href="/settings/billing"
+      className="block rounded-2xl p-5 transition-all hover:brightness-125"
+      style={{
+        background: "rgba(99,102,241,0.04)",
+        border: `1px solid ${D.indigoBorder}`,
+      }}
+    >
+      <div className="flex items-center gap-3">
+        <div
+          className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+          style={{
+            background: "linear-gradient(135deg, rgba(99,102,241,0.15), rgba(139,92,246,0.1))",
+            border: `1px solid ${D.indigoBorder}`,
+          }}
+        >
+          <CreditCard className="w-4 h-4" style={{ color: D.indigo }} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <h3 className="text-sm font-semibold" style={{ color: D.text }}>
+            Plán a fakturácia
+          </h3>
+          <p className="text-xs mt-0.5" style={{ color: D.muted }}>
+            Prehľad plánov a nadchádzajúcej Pro verzie
+          </p>
+        </div>
+        <ChevronRight className="w-4 h-4 flex-shrink-0" style={{ color: D.muted }} />
+      </div>
+    </Link>
+  );
+}
+
+// ── Referral section ───────────────────────────────────────────────
+interface ReferralRow {
+  email: string | null;
+  createdAt: string;
+  rewardedAt: string | null;
+}
+
+function ReferralSection() {
+  const [data, setData] = useState<{
+    code: string;
+    shareUrl: string;
+    referrals: ReferralRow[];
+    count: number;
+  } | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [canShare, setCanShare] = useState(false);
+
+  useEffect(() => {
+    // navigator.share is only available on secure contexts / mobile browsers.
+    if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
+      setCanShare(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const res = await fetch("/api/referral");
+        if (!alive) return;
+        if (res.ok) {
+          const json = await res.json();
+          setData(json);
+        }
+      } catch {
+        if (alive) toast.error("Nepodarilo sa načítať referral.");
+      } finally {
+        if (alive) setLoading(false);
+      }
+    })();
+    return () => { alive = false; };
+  }, []);
+
+  const copy = async () => {
+    if (!data) return;
+    try {
+      await navigator.clipboard.writeText(data.shareUrl);
+      toast.success("Odkaz skopírovaný 🎉");
+    } catch {
+      toast.error("Kopírovanie zlyhalo");
+    }
+  };
+
+  const share = async () => {
+    if (!data) return;
+    try {
+      await navigator.share({
+        title: "Unifyo",
+        text: "Skús Unifyo — AI pracovný priestor pre moderné tímy.",
+        url: data.shareUrl,
+      });
+    } catch {
+      // user cancelled — silent
+    }
+  };
+
+  return (
+    <Section
+      icon={Gift}
+      title="Pozvi kolegu — obaja získate 30 dní Pro zdarma."
+      subtitle="Zdieľaj svoj odkaz a odomknite si Pro pri spustení plateného plánu."
+    >
+      {loading ? (
+        <Skeleton />
+      ) : !data ? (
+        <p className="text-xs" style={{ color: D.muted }}>Nepodarilo sa načítať.</p>
+      ) : (
+        <div className="space-y-4">
+          {/* Share URL */}
+          <Field label="Tvoj pozývací odkaz">
+            <div className="flex gap-2">
+              <input
+                type="text"
+                readOnly
+                value={data.shareUrl}
+                onFocus={(e) => e.currentTarget.select()}
+                className="flex-1 px-3 py-2.5 rounded-lg text-sm font-mono outline-none"
+                style={{
+                  background: D.indigoDim,
+                  border: `1px solid ${D.indigoBorder}`,
+                  color: D.text,
+                }}
+              />
+              <button
+                onClick={copy}
+                className="px-3 py-2 rounded-lg text-xs font-medium flex items-center gap-1.5 whitespace-nowrap"
+                style={{
+                  background: `linear-gradient(135deg,${D.indigo},${D.violet})`,
+                  color: "white",
+                  boxShadow: "0 0 14px rgba(99,102,241,0.35)",
+                }}
+              >
+                <Copy className="w-3.5 h-3.5" />
+                Kopírovať
+              </button>
+              {canShare && (
+                <button
+                  onClick={share}
+                  className="px-3 py-2 rounded-lg text-xs font-medium flex items-center gap-1.5"
+                  style={{
+                    background: D.indigoDim,
+                    border: `1px solid ${D.indigoBorder}`,
+                    color: D.text,
+                  }}
+                >
+                  <Share2 className="w-3.5 h-3.5" />
+                  Zdieľať
+                </button>
+              )}
+            </div>
+          </Field>
+
+          {/* Referrals list */}
+          <div>
+            <div
+              className="text-[10px] font-bold uppercase tracking-widest mb-2"
+              style={{ color: D.mutedDark }}
+            >
+              Pozvaní ({data.count})
+            </div>
+            {data.referrals.length === 0 ? (
+              <div
+                className="rounded-xl p-4 text-xs text-center"
+                style={{
+                  background: "rgba(99,102,241,0.04)",
+                  border: `1px dashed ${D.indigoBorder}`,
+                  color: D.muted,
+                }}
+              >
+                Zatiaľ nikoho — zdieľaj odkaz.
+              </div>
+            ) : (
+              <ul className="space-y-1.5 max-h-60 overflow-y-auto pr-1">
+                {data.referrals.map((r, i) => {
+                  const rewarded = !!r.rewardedAt;
+                  return (
+                    <li
+                      key={i}
+                      className="flex items-center gap-2 py-2 px-3 rounded-lg"
+                      style={{ background: "rgba(99,102,241,0.05)" }}
+                    >
+                      <Mail className="w-3.5 h-3.5 flex-shrink-0" style={{ color: D.indigo }} />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs truncate" style={{ color: D.text }}>
+                          {r.email ?? "—"}
+                        </div>
+                        <div className="text-[10px]" style={{ color: D.mutedDark }}>
+                          {new Date(r.createdAt).toLocaleDateString("sk-SK", {
+                            day: "2-digit", month: "2-digit", year: "numeric",
+                          })}
+                        </div>
+                      </div>
+                      <span
+                        className="text-[9px] font-bold px-2 py-0.5 rounded-full tracking-wider uppercase"
+                        style={{
+                          background: rewarded ? "rgba(16,185,129,0.15)" : "rgba(34,211,238,0.1)",
+                          color: rewarded ? "#10b981" : D.sky,
+                          border: `1px solid ${rewarded ? "rgba(16,185,129,0.35)" : "rgba(34,211,238,0.25)"}`,
+                        }}
+                      >
+                        {rewarded ? "Rewarded" : "Pending"}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+        </div>
+      )}
+    </Section>
   );
 }

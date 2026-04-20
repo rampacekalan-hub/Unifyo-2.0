@@ -13,6 +13,7 @@ import { confirmWithUndo } from "@/lib/undoable";
 import SwipeableRow from "@/components/ui/SwipeableRow";
 import AppLayout from "@/components/layout/AppLayout";
 import EmptyIllustration from "@/components/ui/EmptyIllustration";
+import { track } from "@/lib/analytics";
 
 interface CrmNote {
   id: string;
@@ -144,6 +145,7 @@ function CRMPageInner() {
         }),
       });
       if (res.ok) {
+        track("contact_created");
         toast.success("Kontakt uložený");
         setForm({ name: "", email: "", phone: "", company: "" });
         setShowModal(false);
@@ -236,6 +238,7 @@ function CRMPageInner() {
       const imported = Number(data.imported ?? 0);
       const skipped = Number(data.skipped ?? 0);
       const errCount = Array.isArray(data.errors) ? data.errors.length : 0;
+      track("csv_import_completed", { imported, skipped, errors: errCount });
       const parts = [
         `Importovaných ${imported} ${imported === 1 ? "kontakt" : imported < 5 ? "kontakty" : "kontaktov"}`,
       ];

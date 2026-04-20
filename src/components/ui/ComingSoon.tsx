@@ -13,6 +13,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { ArrowLeft, Sparkles, BellRing, Check, Loader2 } from "lucide-react";
+import { track } from "@/lib/analytics";
 
 const D = {
   indigo: "#6366f1",
@@ -78,6 +79,7 @@ export default function ComingSoon({
         throw new Error(data.error || "Nepodarilo sa.");
       }
       localStorage.setItem(`waitlist:${feature}`, "1");
+      track("waitlist_joined", { feature });
       setState("done");
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : "Nepodarilo sa.");

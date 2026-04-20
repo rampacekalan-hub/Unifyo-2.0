@@ -11,7 +11,7 @@ import { requireSameOrigin } from "@/lib/csrf";
 import { getSiteConfig } from "@/config/site-settings";
 import { getSession } from "@/lib/auth";
 
-const FEATURES = ["email", "calls", "analytics", "automation"] as const;
+const FEATURES = ["email", "calls", "analytics", "automation", "billing"] as const;
 
 const schema = z.object({
   feature: z.enum(FEATURES),

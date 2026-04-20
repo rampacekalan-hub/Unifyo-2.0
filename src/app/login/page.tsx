@@ -9,6 +9,7 @@ import { Loader2, Eye, EyeOff } from "lucide-react";
 import { getSiteConfig } from "@/config/site-settings";
 import { toast } from "sonner";
 import AuthBrand, { GradientTitle } from "@/components/auth/AuthBrand";
+import { track } from "@/lib/analytics";
 
 const { branding, texts } = getSiteConfig();
 const B = branding.colors;
@@ -52,6 +53,7 @@ function LoginForm() {
       }
 
       toast.success("Prihlásenie úspešné");
+      track("login");
       router.push(from);
       router.refresh();
     } catch {

@@ -12,6 +12,7 @@ import {
 } from "@/lib/extraction-engine";
 import { chatActions, extractUserFacts, msgId, type ChatMessage } from "@/lib/chatStore";
 import { loadPrefs } from "@/lib/aiPrefs";
+import { track } from "@/lib/analytics";
 
 const { errorStates } = getSiteConfig().texts;
 
@@ -196,6 +197,7 @@ export async function sendChat(
     }
 
     void persistMessage(convId, "ai", finalText, tokensUsed);
+    track("ai_message_sent", { module: opts.module });
   } catch (err: unknown) {
     // AbortError = user clicked Stop or switched conversations — show a neutral
     // note instead of a scary red error bubble.

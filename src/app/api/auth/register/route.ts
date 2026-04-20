@@ -32,6 +32,11 @@ export async function POST(req: NextRequest) {
     }
 
     const { email, password, name } = result.data;
+    // referralCode is an optional sibling field — not part of registerSchema
+    // because the schema has a .refine() that makes .extend() awkward. Pull
+    // it straight off the raw body and sanitise.
+    const rawRef = typeof body?.referralCode === "string" ? body.referralCode.trim() : "";
+    const referralCode = rawRef && rawRef.length <= 32 ? rawRef : null;
 
     // Kontrola existujúceho usera
     const existing = await prisma.user.findUnique({ where: { email } });
@@ -80,6 +85,55 @@ export async function POST(req: NextRequest) {
       });
     } catch (e) {
       console.error("[register] welcome notification failed:", e);
+    }
+
+    // Referral crediting. An invalid/expired code must NEVER block signup —
+    // we log and move on. If valid, we create the Referral row and drop a
+    // notification on both sides.
+    if (referralCode) {
+      try {
+        const referrer = await prisma.user.findUnique({
+          where: { referralCode },
+          select: { id: true },
+        });
+        if (!referrer) {
+          console.warn("[register] referralCode not found:", referralCode);
+        } else if (referrer.id === user.id) {
+          // Impossible in practice (new id), but defensive.
+          console.warn("[register] self-referral ignored");
+        } else {
+          await prisma.referral.create({
+            data: {
+              referrerId: referrer.id,
+              referredUserId: user.id,
+            },
+          });
+          try {
+            await prisma.notification.createMany({
+              data: [
+                {
+                  userId: referrer.id,
+                  type: "referral",
+                  title: "Niekto sa pridal cez tvoj odkaz 🎉",
+                  body: "Keď spustíme Pro, dostanete obaja 30 dní zdarma.",
+                  href: "/settings",
+                },
+                {
+                  userId: user.id,
+                  type: "referral",
+                  title: "Vitaj — máš 30 dní Pro zdarma.",
+                  body: "Pridal si sa cez odkaz od kolegu. Bonus aktivujeme pri spustení plateného plánu.",
+                  href: "/settings/billing",
+                },
+              ],
+            });
+          } catch (e) {
+            console.error("[register] referral notifications failed:", e);
+          }
+        }
+      } catch (e) {
+        console.error("[register] referral crediting failed:", e);
+      }
     }
 
     // Fire off verification email — don't block signup on Resend latency.

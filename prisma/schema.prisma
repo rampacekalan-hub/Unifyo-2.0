@@ -47,6 +47,10 @@ model User {
   // Set when user clicks the verification link. Null means unverified;
   // UI shows a banner and some actions (e.g. paid plans) are gated.
   emailVerifiedAt DateTime?
+  // Short, unique, user-facing referral slug (base62, 6 chars). Generated
+  // lazily on first /api/referral call. Nullable so legacy users don't
+  // block the migration — they get a code the moment they hit the page.
+  referralCode    String?   @unique
 
   aiRequests    AiRequest[]
   dailyUsage    DailyUsage[]
@@ -59,6 +63,25 @@ model User {
   authTokens    AuthToken[]
   waitlist      WaitlistSignup[]
   notifications Notification[]
+  referralsGiven    Referral[] @relation("referrer")
+  referralsReceived Referral[] @relation("referred")
+}
+
+// ── Referrals ────────────────────────────────────────────────────
+// One row = one successful signup through a referral link. The
+// `referredUserId` is unique — a new user can only be credited to a
+// single referrer. `rewardedAt` is flipped when we later grant the
+// 30-day Pro bonus (done elsewhere once billing goes live).
+model Referral {
+  id             String    @id @default(cuid())
+  referrerId     String
+  referrer       User      @relation("referrer", fields: [referrerId], references: [id], onDelete: Cascade)
+  referredUserId String    @unique
+  referred       User      @relation("referred", fields: [referredUserId], references: [id], onDelete: Cascade)
+  createdAt      DateTime  @default(now())
+  rewardedAt     DateTime?
+
+  @@index([referrerId, createdAt])
 }
 
 // ── In-app notifications (bell icon center) ──────────────────────
@@ -333,6 +356,23 @@ model RateLimitHit {
   createdAt DateTime @default(now())
 
   @@index([key, createdAt])
+}
+
+// ── Analytics events (self-hosted, GDPR-friendly) ────────────────
+// Minimal event collector. IP je skrátený o posledný oktet pred uložením.
+// No PII by design — props je voľný Json pre konkrétnu udalosť, ale klient
+// helper by tam nemal posielať e-maily či mená.
+model AnalyticsEvent {
+  id        String   @id @default(cuid())
+  userId    String?
+  name      String
+  props     Json?
+  ip        String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([name, createdAt])
+  @@index([userId, createdAt])
 }
 
 // Waitlist — užívateľ (alebo anon email) sa prihlási na notifikáciu

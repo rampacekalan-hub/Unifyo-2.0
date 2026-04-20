@@ -1,14 +1,15 @@
 "use client";
 // src/app/register/page.tsx
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Loader2, Eye, EyeOff, Check, X } from "lucide-react";
+import { Loader2, Eye, EyeOff, Check, X, Gift } from "lucide-react";
 import { getSiteConfig } from "@/config/site-settings";
 import { toast } from "sonner";
 import AuthBrand, { GradientTitle } from "@/components/auth/AuthBrand";
+import { track } from "@/lib/analytics";
 
 const { branding, texts, validation } = getSiteConfig();
 const B = branding.colors;
@@ -29,7 +30,18 @@ function PasswordRule({ ok, text }: { ok: boolean; text: string }) {
 }
 
 export default function RegisterPage() {
+  // useSearchParams must sit below a Suspense boundary so that the route
+  // can still prerender statically — wrapper below satisfies that.
+  return (
+    <Suspense fallback={null}>
+      <RegisterPageInner />
+    </Suspense>
+  );
+}
+
+function RegisterPageInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -37,6 +49,16 @@ export default function RegisterPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
+  // Referral code from ?ref= — sanitised to 4-32 chars, alphanumeric.
+  // Stored in state so it survives re-renders and is submitted with the form.
+  const [referralCode, setReferralCode] = useState<string>("");
+
+  useEffect(() => {
+    const raw = searchParams?.get("ref");
+    if (!raw) return;
+    const cleaned = raw.replace(/[^A-Za-z0-9]/g, "").slice(0, 32);
+    if (cleaned.length >= 4) setReferralCode(cleaned);
+  }, [searchParams]);
 
   const hasUpper = /[A-Z]/.test(password);
   const hasNumber = /[0-9]/.test(password);
@@ -58,7 +80,13 @@ export default function RegisterPage() {
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: name || undefined, email, password, confirmPassword }),
+        body: JSON.stringify({
+          name: name || undefined,
+          email,
+          password,
+          confirmPassword,
+          referralCode: referralCode || undefined,
+        }),
       });
 
       const data = await res.json();
@@ -70,6 +98,7 @@ export default function RegisterPage() {
       }
 
       toast.success("Účet vytvorený! Vitajte v Unifyo.");
+      track("signup");
       router.push("/dashboard");
       router.refresh();
     } catch {
@@ -107,7 +136,26 @@ export default function RegisterPage() {
             className="text-lg font-black tracking-tight mb-5"
           />
 
+          {referralCode && (
+            <div
+              className="mb-4 rounded-xl px-3 py-2.5 text-xs flex items-start gap-2"
+              style={{
+                background: "rgba(16,185,129,0.08)",
+                border: "1px solid rgba(16,185,129,0.28)",
+                color: "#86efac",
+              }}
+            >
+              <Gift className="w-4 h-4 mt-0.5 flex-shrink-0" />
+              <span>
+                Pridal si sa cez odkaz od kolegu — dostaneš <strong>30 dní Pro zdarma.</strong>
+              </span>
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-4">
+            {referralCode && (
+              <input type="hidden" name="referralCode" value={referralCode} readOnly />
+            )}
             {/* Meno */}
             <div>
               <label className="block text-xs font-medium mb-1.5" style={{ color: B.textMuted }}>

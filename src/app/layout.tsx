@@ -6,6 +6,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { getSiteConfig } from "@/config/site-settings";
 import CookieConsent from "@/components/ui/CookieConsent";
+import PageViewTracker from "@/components/analytics/PageViewTracker";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -68,6 +69,7 @@ export default function RootLayout({
         >
           <TooltipProvider>
             {children}
+            <PageViewTracker />
             <CookieConsent />
             <Toaster richColors position="bottom-right" theme="dark" />
           </TooltipProvider>

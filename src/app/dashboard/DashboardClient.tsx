@@ -12,6 +12,8 @@ import NotificationBell from "@/components/ui/NotificationBell";
 import UsageChip from "@/components/ui/UsageChip";
 import CommandPalette from "@/components/ui/CommandPalette";
 import OnboardingChecklist from "@/components/ui/OnboardingChecklist";
+import TodayWidget from "@/components/ui/TodayWidget";
+import ActivityTimeline from "@/components/ui/ActivityTimeline";
 import { getSiteConfig } from "@/config/site-settings";
 import { useChatStore, chatActions } from "@/lib/chatStore";
 import { sendChat, regenerateLast } from "@/lib/chatEngine";
@@ -425,6 +427,12 @@ export default function DashboardClient({ user }: DashboardClientProps) {
           >
             {/* Onboarding checklist — self-hides once all 5 steps complete or dismissed */}
             <OnboardingChecklist />
+            {/* Today + 7-day activity — each widget self-hides while loading,
+                so they never flash an empty shell. Side-by-side on md+, stacked on mobile. */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <TodayWidget />
+              <ActivityTimeline />
+            </div>
             {showGreeting && (
               <>
                 <motion.div

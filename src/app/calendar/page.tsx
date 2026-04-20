@@ -12,6 +12,7 @@ import Link from "next/link";
 import { confirmWithUndo } from "@/lib/undoable";
 import AppLayout from "@/components/layout/AppLayout";
 import EmptyIllustration from "@/components/ui/EmptyIllustration";
+import { track } from "@/lib/analytics";
 
 interface Task {
   id: string;
@@ -164,6 +165,7 @@ function CalendarPageInner() {
         }),
       });
       if (res.ok) {
+        track("task_created");
         toast.success("Úloha pridaná");
         setForm({ title: "", date: form.date, time: "", description: "" });
         setShowModal(false);
@@ -184,6 +186,7 @@ function CalendarPageInner() {
         body: JSON.stringify({ id: task.id, done: !task.done }),
       });
       if (res.ok) {
+        if (!task.done) track("task_completed");
         setTasks((prev) => prev.map((t) => t.id === task.id ? { ...t, done: !t.done } : t));
         if (selectedTask?.id === task.id) setSelectedTask({ ...task, done: !task.done });
       }
