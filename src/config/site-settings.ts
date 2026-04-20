@@ -570,7 +570,7 @@ const siteConfig: SiteConfig = {
       badge: "Nová éra práce — Unifyo AI je tu",
       headline: "Zabudni na chaos.",
       headlineAccent: "AI robí prácu za teba.",
-      subheadline: "Jeden AI asistent po slovensky — kalendár, emaily, CRM aj hovory. Ušetri hodiny denne. Začni zadarmo.",
+      subheadline: "AI asistent po slovensky — kalendár, úlohy a CRM na jednom mieste. Emaily a hovory už na ceste. Začni zadarmo.",
       cta: "Začať zadarmo — žiadna karta",
       ctaSecondary: "Pozrieť ceny",
     },

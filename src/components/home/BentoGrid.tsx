@@ -18,8 +18,8 @@ type Feature = {
 const features: Feature[] = [
   {
     icon: Brain,
-    title: "AI Brain",
-    desc: "Lokálna AI ktorá sa učí z každej interakcie. Rozumie slovenčine a češtine, pamätá si kontext.",
+    title: "AI asistent po slovensky",
+    desc: "Rozumie slovenčine a češtine, pamätá si tvoje kontakty, úlohy a kontext. Hostované v EÚ, žiadne dáta mimo tvojho účtu.",
     accent: "#8b5cf6",
     bg: "rgba(139,92,246,0.07)",
     border: "rgba(139,92,246,0.15)",
@@ -27,12 +27,12 @@ const features: Feature[] = [
   },
   {
     icon: Calendar,
-    title: "Inteligentný kalendár",
-    desc: "Integrácia s Google a Outlook. AI automaticky navrhuje časy stretnutí bez konfliktov.",
+    title: "Kalendár & úlohy",
+    desc: "Denný a týždenný prehľad úloh, drag & drop preplánovanie, AI navrhne časy bez konfliktov. Google a Outlook sync na ceste.",
     accent: "#06b6d4",
     bg: "rgba(6,182,212,0.07)",
     border: "rgba(6,182,212,0.15)",
-    cta: "Prepojiť kalendár",
+    cta: "Otvoriť kalendár",
   },
   {
     icon: Mail,
@@ -57,16 +57,16 @@ const features: Feature[] = [
   {
     icon: BarChart3,
     title: "CRM & Pipeline",
-    desc: "Správa kontaktov a obchodných príležitostí. AI navrhuje ďalší krok pre každý deal.",
+    desc: "Kontakty, poznámky a história komunikácie. Deal pipeline s fázami (Lead → Won) a AI návrhmi ďalšieho kroku.",
     accent: "#a78bfa",
     bg: "rgba(167,139,250,0.07)",
     border: "rgba(167,139,250,0.15)",
-    cta: "Spravovať pipeline",
+    cta: "Otvoriť CRM",
   },
   {
     icon: Shield,
     title: "GDPR & Bezpečnosť",
-    desc: "End-to-end šifrovanie, súlad s GDPR, slovenské a európske právne požiadavky.",
+    desc: "Hostované v EÚ (Hetzner DE), TLS, 2FA, audit log prihlásení, GDPR export a zmazanie účtu. Field-level šifrovanie Q3 2026.",
     accent: "#34d399",
     bg: "rgba(52,211,153,0.06)",
     border: "rgba(52,211,153,0.12)",
