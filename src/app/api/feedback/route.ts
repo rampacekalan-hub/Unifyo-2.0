@@ -9,6 +9,7 @@ import { getSession } from "@/lib/auth";
 import { requireSameOrigin } from "@/lib/csrf";
 import { prisma } from "@/lib/prisma";
 import { rateLimit } from "@/lib/rate-limit";
+import { sendGenericEmail } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
 
@@ -53,6 +54,34 @@ export async function POST(req: NextRequest) {
       userAgent,
     },
   });
+
+  // Notify the owner — fire-and-forget so a slow SMTP doesn't block
+  // the widget. Email goes to ADMIN_EMAIL (or info@unifyo.online as a
+  // safe default). Body stays terse so we can read it on a phone.
+  const to = process.env.ADMIN_EMAIL ?? "info@unifyo.online";
+  const user = session?.userId
+    ? await prisma.user
+        .findUnique({ where: { id: session.userId }, select: { email: true, name: true } })
+        .catch(() => null)
+    : null;
+  const ratingEmoji = rating ? ["😡","🙁","😐","🙂","😍"][rating - 1] : "—";
+  const subject = `[${kind.toUpperCase()}] Feedback od ${user?.email ?? "anonyma"}`;
+  const text = [
+    `Typ: ${kind}`,
+    `Od: ${user?.name ?? "—"} <${user?.email ?? "anonym"}>`,
+    `URL: ${page ?? "—"}`,
+    `Rating: ${ratingEmoji}${rating ? ` (${rating}/5)` : ""}`,
+    "",
+    "Správa:",
+    message,
+    "",
+    "Admin: https://unifyo.online/admin/feedback",
+  ].join("\n");
+  const html = `<pre style="font:13px ui-monospace,Menlo;white-space:pre-wrap;padding:16px;background:#f8fafc;border-radius:8px">${text
+    .replace(/&/g,"&amp;").replace(/</g,"&lt;")}</pre>`;
+  sendGenericEmail({ to, subject, html, text, tag: "feedback" }).catch((e) =>
+    console.error("[feedback:email]", e),
+  );
 
   return NextResponse.json({ ok: true });
 }

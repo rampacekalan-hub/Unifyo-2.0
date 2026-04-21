@@ -96,21 +96,14 @@ export default function AutomationPage() {
   const toggle = async (id: RuleId) => {
     const next = { ...enabled, [id]: !enabled[id] };
     setEnabled(next);
-    // Persist via the onboarding complete endpoint which accepts
-    // partial prefs — reuses the existing upsert path.
     try {
-      const me = await fetch("/api/user/me").then((r) => r.json());
-      const prefs = me?.user?.preferences ?? {};
-      const updated = {
-        ...prefs,
-        automations: next,
-      };
-      const res = await fetch("/api/onboarding/complete", {
-        method: "POST",
+      const res = await fetch("/api/user/preferences", {
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ preferences: updated }),
+        body: JSON.stringify({ automations: next }),
       });
       if (!res.ok) throw new Error();
+      toast.success(next[id] ? "Zapnuté" : "Vypnuté");
     } catch {
       setEnabled(enabled); // revert
       toast.error("Uloženie zlyhalo");

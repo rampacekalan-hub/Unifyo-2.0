@@ -229,22 +229,60 @@ export default function IntegrationsClient({ google: initial }: { google: Google
           </div>
         </div>
 
-        {/* Coming-soon placeholders */}
-        <div
-          className="rounded-2xl p-5 opacity-60"
-          style={{
-            background: "rgba(10,12,24,0.35)",
-            border: `1px dashed ${D.indigoBorder}`,
-          }}
-        >
-          <h3 className="text-sm font-bold mb-2" style={{ color: D.text }}>
-            Čoskoro
+        {/* Planned integrations — let users see what's coming and
+            signal interest. Clicking "Chcem túto" records a waitlist
+            entry so we prioritise by demand. */}
+        <div>
+          <h3 className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: D.muted }}>
+            Plánované integrácie — klikni „Chcem túto" a pošlem ti e-mail keď budú live
           </h3>
-          <ul className="text-xs space-y-1.5" style={{ color: D.muted }}>
-            <li>• Microsoft 365 (Outlook + Teams kalendár) — Q3 2026</li>
-            <li>• Zoom / Meet / Teams meeting capture — Q3 2026</li>
-            <li>• Stripe platby — čoskoro</li>
-          </ul>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <PlannedIntegration
+              name="Microsoft Outlook"
+              description="E-mail + kontakty zo súkromného alebo firemného Outlook účtu."
+              feature="outlook"
+              gradient="linear-gradient(135deg, #0072C6, #004E8C)"
+              letter="O"
+            />
+            <PlannedIntegration
+              name="Microsoft Teams"
+              description="Kalendár meetingov a AI prepis hovorov."
+              feature="teams"
+              gradient="linear-gradient(135deg, #4B53BC, #7B83EB)"
+              letter="T"
+            />
+            <PlannedIntegration
+              name="Trello"
+              description="Synchronizuj karty a boardy s Unifyo pipeline."
+              feature="trello"
+              gradient="linear-gradient(135deg, #0079BF, #026AA7)"
+              letter="T"
+            />
+            <PlannedIntegration
+              name="Slack"
+              description="Notifikácie o nových dealoch a úlohách priamo do Slacku."
+              feature="slack"
+              gradient="linear-gradient(135deg, #4A154B, #611F69)"
+              letter="S"
+            />
+            <PlannedIntegration
+              name="Zoom"
+              description="Nahrávky meetingov prepísané Whisperom + AI zhrnutie."
+              feature="zoom"
+              gradient="linear-gradient(135deg, #2D8CFF, #0B5CFF)"
+              letter="Z"
+            />
+            <PlannedIntegration
+              name="Apple Kalendár (iCloud)"
+              description="Dvojsmerná synchronizácia cez CalDAV."
+              feature="icloud"
+              gradient="linear-gradient(135deg, #555555, #222222)"
+              letter=""
+            />
+          </div>
+          <p className="text-[0.65rem] mt-4" style={{ color: D.mutedDark }}>
+            Tvoja požiadavka mi príde ako feedback — rozhoduje sa podľa počtu hlasov.
+          </p>
         </div>
       </div>
     </AppLayout>
@@ -257,6 +295,72 @@ function Perm({ icon: Icon, text }: { icon: typeof Mail; text: string }) {
       <Icon className="w-3.5 h-3.5 flex-shrink-0" style={{ color: D.indigo }} />
       <span>{text}</span>
     </li>
+  );
+}
+
+function PlannedIntegration({
+  name, description, feature, gradient, letter,
+}: {
+  name: string; description: string; feature: string; gradient: string; letter: string;
+}) {
+  const [voted, setVoted] = useState(false);
+  const [pending, setPending] = useState(false);
+
+  const requestIt = async () => {
+    setPending(true);
+    try {
+      const res = await fetch("/api/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          kind: "idea",
+          message: `Chcem integráciu: ${name} (${feature})`,
+        }),
+      });
+      if (!res.ok) throw new Error();
+      setVoted(true);
+      toast.success("Vďaka! Mám to v požiadavkách.");
+    } catch {
+      toast.error("Nepodarilo sa odoslať");
+    } finally {
+      setPending(false);
+    }
+  };
+
+  return (
+    <div
+      className="rounded-2xl p-4 flex items-start gap-3"
+      style={{ background: "rgba(10,12,24,0.4)", border: `1px solid ${D.indigoBorder}` }}
+    >
+      <div
+        className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 text-sm font-bold text-white"
+        style={{ background: gradient }}
+      >
+        {letter}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <h3 className="text-sm font-semibold" style={{ color: D.text }}>{name}</h3>
+          <span className="text-[0.6rem] font-semibold uppercase px-1.5 py-0.5 rounded"
+            style={{ background: "rgba(245,158,11,0.15)", color: "#f59e0b" }}>
+            Plánované
+          </span>
+        </div>
+        <p className="text-[0.7rem] mt-1" style={{ color: D.muted }}>{description}</p>
+        <button
+          onClick={requestIt}
+          disabled={voted || pending}
+          className="mt-2 text-[0.7rem] font-semibold px-2.5 py-1 rounded-md disabled:opacity-60"
+          style={{
+            background: voted ? "rgba(16,185,129,0.15)" : "rgba(99,102,241,0.14)",
+            color: voted ? "#10b981" : D.indigo,
+            border: `1px solid ${voted ? "rgba(16,185,129,0.35)" : D.indigoBorder}`,
+          }}
+        >
+          {voted ? "✓ Zaznamenané" : pending ? "Posielam…" : "+ Chcem túto"}
+        </button>
+      </div>
+    </div>
   );
 }
 

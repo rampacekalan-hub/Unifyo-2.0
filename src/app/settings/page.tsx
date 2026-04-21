@@ -1980,13 +1980,11 @@ function AppearanceSection() {
     setTheme(next);
     setSaving(true);
     try {
-      const me = await fetch("/api/user/me").then((r) => r.json()).catch(() => null);
-      const prefs = me?.user?.preferences ?? {};
       const mapped = next === "system" ? "auto" : next;
-      await fetch("/api/onboarding/complete", {
-        method: "POST",
+      await fetch("/api/user/preferences", {
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ preferences: { ...prefs, theme: mapped } }),
+        body: JSON.stringify({ theme: mapped }),
       });
       toast.success("Uložené");
     } catch {

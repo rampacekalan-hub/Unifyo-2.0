@@ -13,13 +13,21 @@ const SMTP_PASSWORD = process.env.SMTP_PASSWORD;
 const FROM = process.env.EMAIL_FROM || "Unifyo <info@unifyo.online>";
 const APP_URL = (process.env.APP_URL || "https://unifyo.online").replace(/\/$/, "");
 
+// Hetzner's outbound firewall blocks port 465 (SMTPS) by default — we
+// observed silent 60s timeouts on register + digest emails. Port 587
+// with STARTTLS works. We force 587 whenever the env says 465 so old
+// configs keep working without a redeploy dance.
+const EFFECTIVE_PORT = SMTP_PORT === 465 ? 587 : SMTP_PORT;
 const transport: Transporter | null =
   SMTP_HOST && SMTP_USER && SMTP_PASSWORD
     ? nodemailer.createTransport({
         host: SMTP_HOST,
-        port: SMTP_PORT,
-        secure: SMTP_PORT === 465, // 465 = SSL; 587 = STARTTLS
+        port: EFFECTIVE_PORT,
+        secure: EFFECTIVE_PORT === 465,   // 465 = SSL, 587 = STARTTLS
+        requireTLS: EFFECTIVE_PORT === 587,
         auth: { user: SMTP_USER, pass: SMTP_PASSWORD },
+        connectionTimeout: 15_000,
+        socketTimeout: 20_000,
       })
     : null;
 

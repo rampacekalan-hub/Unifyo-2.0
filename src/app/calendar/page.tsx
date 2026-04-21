@@ -24,6 +24,10 @@ interface Task {
   time: string | null; // HH:MM
   done: boolean;
   createdAt: string;
+  // When set, this row originated from Google Calendar — we show it
+  // with a different accent and disable edit/delete.
+  googleEventId?: string;
+  htmlLink?: string;
 }
 
 const D = {
@@ -94,11 +98,47 @@ function CalendarPageInner() {
   const loadTasks = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/calendar/tasks");
-      if (res.ok) {
-        const data = await res.json();
-        setTasks(data);
+      // Local tasks + Google events in parallel. Google is optional —
+      // 409 (not connected) silently drops. This replaces the old
+      // flow where Google events only appeared in a tiny top widget.
+      const [tasksRes, gcalRes] = await Promise.all([
+        fetch("/api/calendar/tasks"),
+        fetch("/api/gcal/events").catch(() => null),
+      ]);
+      const local: Task[] = tasksRes.ok ? await tasksRes.json() : [];
+      let google: Task[] = [];
+      if (gcalRes && gcalRes.ok) {
+        const json = (await gcalRes.json()) as {
+          events?: Array<{
+            id: string;
+            summary: string;
+            description?: string;
+            start: string;
+            end: string;
+            htmlLink?: string;
+            allDay: boolean;
+          }>;
+        };
+        google = (json.events ?? []).map((e) => {
+          // Google gives us ISO datetime (all-day = date only). We
+          // want YYYY-MM-DD + HH:MM for the existing grid logic.
+          const isAllDay = e.allDay || !/T/.test(e.start);
+          const date = e.start.slice(0, 10);
+          const time = isAllDay ? null : e.start.slice(11, 16);
+          return {
+            id: `g:${e.id}`,
+            title: e.summary ?? "(bez názvu)",
+            description: e.description ?? null,
+            date,
+            time,
+            done: false,
+            createdAt: e.start,
+            googleEventId: e.id,
+            htmlLink: e.htmlLink,
+          };
+        });
       }
+      setTasks([...local, ...google]);
     } catch {
       toast.error("Nepodarilo sa načítať úlohy");
     } finally {
@@ -181,6 +221,12 @@ function CalendarPageInner() {
   }
 
   async function toggleDone(task: Task) {
+    if (task.googleEventId) {
+      // Google events are read-only here. User should complete them in
+      // Google Calendar (or click the external-link icon).
+      toast.info("Udalosť z Google Kalendára uprav priamo v Googli.");
+      return;
+    }
     try {
       const res = await fetch("/api/calendar/tasks", {
         method: "PATCH",
@@ -201,6 +247,10 @@ function CalendarPageInner() {
   async function moveTaskToDate(taskId: string, newDate: string) {
     const current = tasks.find((t) => t.id === taskId);
     if (!current || current.date === newDate) return;
+    if (current.googleEventId) {
+      toast.info("Google udalosti neprehadzuj — uprav ich v Googli.");
+      return;
+    }
     // Optimistic UI.
     setTasks((prev) => prev.map((t) => t.id === taskId ? { ...t, date: newDate } : t));
     try {
@@ -237,6 +287,10 @@ function CalendarPageInner() {
   };
 
   async function handleDelete(id: string) {
+    if (id.startsWith("g:")) {
+      toast.info("Udalosť z Google Kalendára zmažeš len v Googli.");
+      return;
+    }
     const snapshot = tasks;
     const wasSelected = selectedTask?.id === id;
     setTasks((prev) => prev.filter((t) => t.id !== id));
