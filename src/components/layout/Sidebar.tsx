@@ -101,6 +101,22 @@ export default function Sidebar({ user, liveToggles }: SidebarProps) {
     try {
       await fetch("/api/auth/logout", { method: "POST" });
     } catch {}
+    // Wipe client-side caches so the next login on this browser starts
+    // clean. (UserPrefsProvider also detects user-switch, but clearing
+    // explicitly on logout prevents even a millisecond of stale state.)
+    try {
+      const keys: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (!k) continue;
+        if (k.startsWith("unifyo.") && k !== "unifyo.cookie-consent.v1" && k !== "unifyo.onboarding.v1") {
+          keys.push(k);
+        }
+        if (k.startsWith("waitlist:")) keys.push(k);
+        if (k === "onboarding_dismissed") keys.push(k);
+      }
+      keys.forEach((k) => localStorage.removeItem(k));
+    } catch {}
     router.push("/login");
     router.refresh();
   }

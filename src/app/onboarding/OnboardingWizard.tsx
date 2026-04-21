@@ -16,10 +16,10 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Sparkles, Check, ArrowRight, ArrowLeft, Mail, CalendarDays, Users,
-  LayoutDashboard, Bot, Phone, CheckCircle2, Bell, Sun, Moon, Monitor,
-  Building2, Target, Loader2, X,
+  LayoutDashboard, Bot, Phone, CheckCircle2, Bell,
+  Building2, Target, Loader2, X, Rocket, Crown,
 } from "lucide-react";
-import type { AppId, ThemeMode, UserPrefs } from "@/lib/userPrefs";
+import type { AppId, UserPrefs } from "@/lib/userPrefs";
 import { DEFAULT_USER_PREFS, INDUSTRIES, GOALS } from "@/lib/userPrefs";
 
 const D = {
@@ -487,34 +487,10 @@ function StepPrefs({ prefs, setPrefs }: { prefs: UserPrefs; setPrefs: (p: UserPr
         })}
       </div>
 
-      {/* Theme */}
-      <div className="mb-5">
-        <span className="text-xs font-semibold mb-2 block" style={{ color: D.muted }}>Vzhľad</span>
-        <div className="grid grid-cols-3 gap-2">
-          {([
-            { id: "dark",  label: "Tmavý",  Icon: Moon },
-            { id: "light", label: "Svetlý", Icon: Sun },
-            { id: "auto",  label: "Auto",   Icon: Monitor },
-          ] as Array<{ id: ThemeMode; label: string; Icon: React.ElementType }>).map((t) => {
-            const active = prefs.theme === t.id;
-            const Icon = t.Icon;
-            return (
-              <button
-                key={t.id}
-                onClick={() => setPrefs({ ...prefs, theme: t.id })}
-                className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs transition"
-                style={{
-                  background: active ? "rgba(139,92,246,0.15)" : "rgba(5,7,15,0.4)",
-                  border: `1px solid ${active ? D.borderActive : D.border}`,
-                  color: active ? D.text : D.muted,
-                }}
-              >
-                <Icon className="w-3.5 h-3.5" /> {t.label}
-              </button>
-            );
-          })}
-        </div>
-      </div>
+      {/* Theme — intentionally omitted from onboarding. Light-mode
+          styling hasn't been built yet (every component uses hard-coded
+          dark tokens). Showing a picker here would be a lie. The
+          settings page still has the control with a "beta" label. */}
 
       {/* Notifications */}
       <div>
@@ -573,10 +549,10 @@ function ToggleRow({
 
 /* ─────────────── Step 5 — Plan ─────────────── */
 function StepPlan() {
-  const [redirecting, setRedirecting] = useState<null | "pro">(null);
+  const [redirecting, setRedirecting] = useState<null | "pro" | "enterprise">(null);
   const [err, setErr] = useState<string | null>(null);
 
-  const goCheckout = async (plan: "pro") => {
+  const goCheckout = async (plan: "pro" | "enterprise") => {
     setRedirecting(plan);
     setErr(null);
     try {
@@ -598,68 +574,75 @@ function StepPlan() {
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
       <h1 className="text-2xl font-bold mb-2" style={{ color: D.text }}>Vyber si plán</h1>
       <p className="text-sm mb-6" style={{ color: D.muted }}>
-        Začni zadarmo, upgradni keď AI prekročí limit. Žiadna karta teraz.
+        Začni zadarmo a upgradni keď prekročíš limit. Žiadna karta teraz — platíš až pri Pro/Enterprise.
       </p>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         {/* Basic */}
-        <div
-          className="p-4 rounded-2xl"
-          style={{ background: "rgba(5,7,15,0.5)", border: `1px solid ${D.border}` }}
-        >
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-xs font-bold tracking-widest uppercase" style={{ color: D.muted }}>Basic</span>
-            <span className="text-xs" style={{ color: D.emerald }}>✓ Predvolene</span>
-          </div>
-          <p className="text-2xl font-bold mb-3" style={{ color: D.text }}>Zadarmo</p>
-          <ul className="text-xs space-y-1.5" style={{ color: D.muted }}>
-            <li>• AI asistent (limitovane)</li>
-            <li>• CRM + Kalendár + Email</li>
-            <li>• 1 Google účet</li>
-          </ul>
-          <p className="mt-4 text-[0.7rem]" style={{ color: D.mutedDark }}>
-            Pokračuj kliknutím <strong>Dokončiť a spustiť</strong>.
-          </p>
-        </div>
+        <PlanCard
+          tier="basic"
+          Icon={Sparkles}
+          title="Basic"
+          price="Zadarmo"
+          accent={D.emerald}
+          badge="Predvolene"
+          features={[
+            "AI asistent (100 správ / deň)",
+            "CRM + Kalendár + Email",
+            "1 Google účet",
+            "5 hovorov / mesiac (AI prepis)",
+          ]}
+          ctaLabel="Pokračovať zadarmo"
+          disabled={redirecting !== null}
+        />
 
         {/* Pro */}
-        <div
-          className="p-4 rounded-2xl relative"
-          style={{
-            background: "linear-gradient(135deg, rgba(139,92,246,0.14), rgba(99,102,241,0.10))",
-            border: `1px solid ${D.borderActive}`,
-            boxShadow: "0 0 30px rgba(139,92,246,0.18)",
-          }}
-        >
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-xs font-bold tracking-widest uppercase" style={{ color: D.violet }}>Pro</span>
-            <span className="text-[0.6rem] px-1.5 py-0.5 rounded-md" style={{ background: `${D.amber}22`, color: D.amber }}>
-              Odporúčané
-            </span>
-          </div>
-          <p className="text-2xl font-bold mb-3" style={{ color: D.text }}>
-            €19 <span className="text-xs font-normal" style={{ color: D.muted }}>/mesiac</span>
-          </p>
-          <ul className="text-xs space-y-1.5 mb-4" style={{ color: D.muted }}>
-            <li>• Neobmedzený AI chat</li>
-            <li>• Hovory s AI prepisom</li>
-            <li>• Priority support</li>
-          </ul>
-          <button
-            onClick={() => goCheckout("pro")}
-            disabled={redirecting !== null}
-            className="w-full px-3 py-2.5 rounded-xl text-xs font-semibold transition flex items-center justify-center gap-1.5"
-            style={{
-              background: `linear-gradient(135deg,${D.indigo},${D.violet})`,
-              color: "white",
-              boxShadow: `0 0 20px ${D.violet}55`,
-            }}
-          >
-            {redirecting === "pro" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
-            Upgradovať na Pro
-          </button>
-        </div>
+        <PlanCard
+          tier="pro"
+          Icon={Rocket}
+          title="Pro"
+          price="€19"
+          period="/mesiac"
+          accent={D.violet}
+          badge="Odporúčané"
+          features={[
+            "Neobmedzený AI chat",
+            "Neobmedzené hovory + prepis",
+            "Automatizácie",
+            "Priority support",
+          ]}
+          ctaLabel={redirecting === "pro" ? "Presmerúvam…" : "Upgrade na Pro"}
+          ctaLoading={redirecting === "pro"}
+          onCta={() => goCheckout("pro")}
+          highlighted
+          disabled={redirecting !== null}
+        />
+
+        {/* Enterprise */}
+        <PlanCard
+          tier="enterprise"
+          Icon={Crown}
+          title="Enterprise"
+          price="€49"
+          period="/mesiac"
+          accent={D.amber}
+          badge="Pre tímy"
+          features={[
+            "Všetko z Pro",
+            "Až 10 členov tímu",
+            "Custom integrácie",
+            "Dedicated success manager",
+          ]}
+          ctaLabel={redirecting === "enterprise" ? "Presmerúvam…" : "Upgrade na Enterprise"}
+          ctaLoading={redirecting === "enterprise"}
+          onCta={() => goCheckout("enterprise")}
+          disabled={redirecting !== null}
+        />
       </div>
+
+      <p className="mt-5 text-[0.7rem] text-center" style={{ color: D.mutedDark }}>
+        Basic ostane tvoj plán keď klikneš <strong>Dokončiť a spustiť</strong>. Pro/Enterprise otvorí Stripe.
+      </p>
 
       {err && (
         <p className="mt-3 text-xs flex items-center gap-1.5" style={{ color: "#fca5a5" }}>
@@ -667,5 +650,85 @@ function StepPlan() {
         </p>
       )}
     </motion.div>
+  );
+}
+
+function PlanCard({
+  Icon, title, price, period, accent, badge, features, ctaLabel, ctaLoading,
+  onCta, highlighted, disabled,
+}: {
+  tier: string;
+  Icon: React.ElementType;
+  title: string;
+  price: string;
+  period?: string;
+  accent: string;
+  badge?: string;
+  features: string[];
+  ctaLabel: string;
+  ctaLoading?: boolean;
+  onCta?: () => void;
+  highlighted?: boolean;
+  disabled?: boolean;
+}) {
+  return (
+    <div
+      className="p-4 rounded-2xl relative flex flex-col"
+      style={{
+        background: highlighted
+          ? `linear-gradient(135deg, ${accent}1a, rgba(99,102,241,0.10))`
+          : "rgba(5,7,15,0.5)",
+        border: `1px solid ${highlighted ? `${accent}77` : D.border}`,
+        boxShadow: highlighted ? `0 0 28px ${accent}33` : undefined,
+      }}
+    >
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-1.5">
+          <Icon className="w-4 h-4" style={{ color: accent }} />
+          <span className="text-xs font-bold tracking-widest uppercase" style={{ color: D.text }}>
+            {title}
+          </span>
+        </div>
+        {badge && (
+          <span
+            className="text-[0.6rem] px-1.5 py-0.5 rounded-md font-semibold"
+            style={{ background: `${accent}22`, color: accent }}
+          >
+            {badge}
+          </span>
+        )}
+      </div>
+      <p className="text-2xl font-bold mb-3" style={{ color: D.text }}>
+        {price}
+        {period && <span className="text-xs font-normal" style={{ color: D.muted }}> {period}</span>}
+      </p>
+      <ul className="text-xs space-y-1.5 mb-4 flex-1" style={{ color: D.muted }}>
+        {features.map((f, i) => (
+          <li key={i} className="flex items-start gap-1.5">
+            <Check className="w-3 h-3 mt-0.5 flex-shrink-0" style={{ color: accent }} />
+            <span>{f}</span>
+          </li>
+        ))}
+      </ul>
+      {onCta ? (
+        <button
+          onClick={onCta}
+          disabled={disabled}
+          className="w-full px-3 py-2.5 rounded-xl text-xs font-semibold transition flex items-center justify-center gap-1.5 disabled:opacity-50"
+          style={{
+            background: `linear-gradient(135deg,${D.indigo},${accent})`,
+            color: "white",
+            boxShadow: `0 0 18px ${accent}55`,
+          }}
+        >
+          {ctaLoading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+          {ctaLabel}
+        </button>
+      ) : (
+        <p className="text-[0.7rem] text-center py-2.5" style={{ color: D.mutedDark }}>
+          {ctaLabel}
+        </p>
+      )}
+    </div>
   );
 }

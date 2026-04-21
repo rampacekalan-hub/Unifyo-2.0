@@ -1,24 +1,261 @@
 "use client";
-import { Zap } from "lucide-react";
+// src/app/automation/page.tsx
+// Automation Fáza A — 3 built-in recipes the user can enable and
+// trigger manually. Cron-based runner lands later; for now the
+// toggles persist to User.preferences and "Run now" hits the API so
+// the user can see the automation actually do its thing.
+
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
+import {
+  Zap, Mail, AlertTriangle, UserPlus, Play, Loader2, Check, Clock,
+} from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
-import ComingSoon from "@/components/ui/ComingSoon";
+
+const D = {
+  indigo: "#6366f1",
+  violet: "#8b5cf6",
+  emerald: "#10b981",
+  amber: "#f59e0b",
+  text: "#eef2ff",
+  muted: "#94a3b8",
+  mutedDark: "#64748b",
+  border: "rgba(99,102,241,0.22)",
+};
+
+type RuleId = "daily-digest" | "stale-deal" | "new-sender-to-crm";
+
+interface Rule {
+  id: RuleId;
+  title: string;
+  description: string;
+  Icon: React.ElementType;
+  color: string;
+  runnable: boolean;
+  runLabel: string;
+}
+
+const RULES: Rule[] = [
+  {
+    id: "daily-digest",
+    title: "Ranný súhrn do e-mailu",
+    description: "Každé ráno o 8:00 e-mail s dnešnými úlohami, otvorenými dealmi a novými kontaktmi.",
+    Icon: Mail,
+    color: D.violet,
+    runnable: true,
+    runLabel: "Poslať testovací súhrn",
+  },
+  {
+    id: "stale-deal",
+    title: "Upozornenie na zaseknutý deal",
+    description: "Ak sa deal nehýbe 14 dní, dostaneš e-mail s tipom na ďalší krok.",
+    Icon: AlertTriangle,
+    color: D.amber,
+    runnable: true,
+    runLabel: "Skontrolovať hneď",
+  },
+  {
+    id: "new-sender-to-crm",
+    title: "Nový odosielateľ z Gmailu do CRM",
+    description: "Keď ti napíše niekto, kto ešte nie je v CRM, pridá sa automaticky ako kontakt.",
+    Icon: UserPlus,
+    color: D.emerald,
+    runnable: false,
+    runLabel: "Beží na pozadí",
+  },
+];
 
 export default function AutomationPage() {
+  const [enabled, setEnabled] = useState<Record<RuleId, boolean>>({
+    "daily-digest": false,
+    "stale-deal": false,
+    "new-sender-to-crm": false,
+  });
+  const [running, setRunning] = useState<RuleId | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch("/api/user/me");
+        if (res.ok) {
+          const data = await res.json();
+          const a = data?.user?.preferences?.automations ?? {};
+          setEnabled({
+            "daily-digest": !!a["daily-digest"],
+            "stale-deal": !!a["stale-deal"],
+            "new-sender-to-crm": !!a["new-sender-to-crm"],
+          });
+        }
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  const toggle = async (id: RuleId) => {
+    const next = { ...enabled, [id]: !enabled[id] };
+    setEnabled(next);
+    // Persist via the onboarding complete endpoint which accepts
+    // partial prefs — reuses the existing upsert path.
+    try {
+      const me = await fetch("/api/user/me").then((r) => r.json());
+      const prefs = me?.user?.preferences ?? {};
+      const updated = {
+        ...prefs,
+        automations: next,
+      };
+      const res = await fetch("/api/onboarding/complete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ preferences: updated }),
+      });
+      if (!res.ok) throw new Error();
+    } catch {
+      setEnabled(enabled); // revert
+      toast.error("Uloženie zlyhalo");
+    }
+  };
+
+  const runNow = async (id: RuleId) => {
+    setRunning(id);
+    try {
+      const res = await fetch("/api/automation/run", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail ?? data.error ?? "run_failed");
+      toast.success(data.result || "Hotovo");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Spustenie zlyhalo");
+    } finally {
+      setRunning(null);
+    }
+  };
+
   return (
     <AppLayout title="Automatizácia" subtitle="Automatizácia —">
-      <ComingSoon
-        title="Automatizácia"
-        icon={Zap}
-        feature="automation"
-        eta="Q4 2026"
-        progress={10}
-        description="Workflow engine — nechaj AI spúšťať úlohy automaticky podľa pravidiel."
-        features={[
-          "Triggery: nový kontakt, zmena dealu, deadline úlohy",
-          "Akcie: poslať email, vytvoriť úlohu, notifikovať",
-          "AI-generované šablóny workflowov",
-        ]}
-      />
+      <div className="p-4 md:p-8 max-w-3xl mx-auto space-y-4">
+        {/* Hero */}
+        <div
+          className="rounded-3xl p-6 relative overflow-hidden"
+          style={{
+            background: "linear-gradient(135deg, rgba(245,158,11,0.12), rgba(139,92,246,0.10))",
+            border: `1px solid ${D.border}`,
+          }}
+        >
+          <div className="flex items-start gap-3">
+            <div
+              className="w-11 h-11 rounded-2xl flex items-center justify-center flex-shrink-0"
+              style={{ background: `linear-gradient(135deg,${D.amber},${D.violet})`, boxShadow: "0 0 20px rgba(245,158,11,0.35)" }}
+            >
+              <Zap className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h1 className="text-xl font-bold mb-1" style={{ color: D.text }}>
+                Automatizácie (Fáza A)
+              </h1>
+              <p className="text-xs" style={{ color: D.muted }}>
+                3 pripravené recepty. Zapni, čo ti pomáha. Cron spúšťa denne; &ldquo;Spusti teraz&rdquo; ti to pošle ihneď.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Rules */}
+        {loading ? (
+          <div className="flex items-center justify-center py-14">
+            <Loader2 className="w-5 h-5 animate-spin" style={{ color: D.muted }} />
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {RULES.map((r) => {
+              const Icon = r.Icon;
+              const on = enabled[r.id];
+              return (
+                <div
+                  key={r.id}
+                  className="rounded-2xl p-4 flex gap-3 items-start"
+                  style={{
+                    background: "rgba(10,12,24,0.6)",
+                    border: `1px solid ${on ? `${r.color}55` : D.border}`,
+                  }}
+                >
+                  <div
+                    className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                    style={{ background: `${r.color}22` }}
+                  >
+                    <Icon className="w-4 h-4" style={{ color: r.color }} />
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="text-sm font-semibold" style={{ color: D.text }}>
+                        {r.title}
+                      </h3>
+                      {on && (
+                        <span className="text-[0.6rem] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded-md flex items-center gap-0.5"
+                          style={{ background: "rgba(16,185,129,0.15)", color: D.emerald }}>
+                          <Check className="w-2.5 h-2.5" /> Aktívna
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs mt-1" style={{ color: D.muted }}>{r.description}</p>
+                    <div className="flex items-center gap-2 mt-2.5 flex-wrap">
+                      {r.runnable && (
+                        <button
+                          onClick={() => runNow(r.id)}
+                          disabled={running !== null}
+                          className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[0.7rem] font-semibold"
+                          style={{
+                            background: `${r.color}22`,
+                            color: r.color,
+                            border: `1px solid ${r.color}55`,
+                          }}
+                        >
+                          {running === r.id ? (
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                          ) : (
+                            <Play className="w-3 h-3" />
+                          )}
+                          {r.runLabel}
+                        </button>
+                      )}
+                      {!r.runnable && (
+                        <span className="flex items-center gap-1.5 text-[0.7rem]" style={{ color: D.mutedDark }}>
+                          <Clock className="w-3 h-3" /> {r.runLabel}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Toggle */}
+                  <button
+                    onClick={() => toggle(r.id)}
+                    className="relative rounded-full transition flex-shrink-0"
+                    style={{
+                      width: 36, height: 20,
+                      background: on ? r.color : "rgba(255,255,255,0.1)",
+                    }}
+                    aria-label={on ? "Vypnúť" : "Zapnúť"}
+                  >
+                    <div
+                      className="absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all"
+                      style={{ left: on ? 18 : 2 }}
+                    />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        <p className="text-[0.65rem] text-center" style={{ color: D.mutedDark }}>
+          V ďalšej verzii pribudne vlastný builder — nastav si triggery a akcie podľa seba.
+        </p>
+      </div>
     </AppLayout>
   );
 }

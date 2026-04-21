@@ -21,6 +21,9 @@ const USER_SELECT = {
   // Per-user UX preferences (theme, enabledApps, notifications…).
   // Consumer is UserPrefsProvider which normalises/defaults the shape.
   preferences: true,
+  // Server-side avatar (dataURL) — replaces the previous localStorage
+  // implementation. When null, UI falls back to initials.
+  avatarDataUrl: true,
 } as const;
 
 export async function GET(req: NextRequest) {

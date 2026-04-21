@@ -33,6 +33,12 @@ interface SendArgs {
   tag?: string;
 }
 
+// Exposed for ad-hoc transactional sends (automation digest, etc.).
+// Internal senders keep using the non-exported `send` directly.
+export async function sendGenericEmail(args: SendArgs): Promise<void> {
+  return send(args);
+}
+
 async function send({ to, subject, html, text, tag }: SendArgs): Promise<void> {
   if (!transport) {
     // Dev fallback — visible in terminal so you can copy the link.

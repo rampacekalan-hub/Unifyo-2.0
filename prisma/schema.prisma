@@ -64,6 +64,10 @@ model User {
   onboardingCompletedAt DateTime?
   company               String?
   industry              String?
+  // Server-side avatar — dataURL (<= 30KB thumbnail). We used to keep
+  // this in localStorage but that leaks across account switches on a
+  // shared browser. Null = fall back to initials.
+  avatarDataUrl         String?   @db.Text
   // Free-form JSON for per-user UX preferences — theme, timezone,
   // enabledApps[], notifications etc. Shape is intentionally loose so
   // we can evolve it without migrations. See src/lib/userPrefs.ts.
