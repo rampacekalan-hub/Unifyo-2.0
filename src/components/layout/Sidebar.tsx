@@ -44,10 +44,10 @@ const D = {
 };
 
 const GLASS: React.CSSProperties = {
-  background: "rgba(10,12,24,0.85)",
+  background: "var(--app-surface)",
   backdropFilter: "blur(28px)",
   WebkitBackdropFilter: "blur(28px)",
-  borderRight: `1px solid ${D.indigoBorder}`,
+  borderRight: `1px solid var(--app-border)`,
 };
 
 // ── Unified module list ───────────────────────────────────────────

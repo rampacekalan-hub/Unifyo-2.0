@@ -240,7 +240,10 @@ const NeuralBackground = forwardRef<NeuralBackgroundHandle, NeuralBackgroundProp
           height: "100%",
           zIndex: 0,
           pointerEvents: "none",
-          opacity: cfgRef.current.opacity,
+          // Multiply by the app-level decor opacity — lets light mode
+          // dim the floating bubbles to near-invisible without having
+          // to pass a prop down through AppLayout.
+          opacity: `calc(${cfgRef.current.opacity} * var(--app-decor-opacity, 1))`,
         }}
       />
     );

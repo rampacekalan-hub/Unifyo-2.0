@@ -48,7 +48,30 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/* ── App-level semantic tokens (dark default) ─────────────────────
+   Introduced for the light-mode migration. Components that previously
+   hardcoded `#05070f` / `#eef2ff` / etc. inline can switch to
+   `var(--app-bg)` / `var(--app-text)` and they'll follow the active
+   theme. Full retrofit is incremental — AppLayout / Sidebar / the
+   dashboard shell are switched; interior modals / drawers still use
+   their local dark palette but they render on top of the switched
+   shell so a light mode session feels light overall. */
 :root {
+  /* App shell */
+  --app-bg:            #05070f;
+  --app-bg-elevated:   rgba(10,12,24,0.55);
+  --app-surface:       rgba(10,12,24,0.85);
+  --app-surface-2:     rgba(5,7,15,0.6);
+  --app-text:          #eef2ff;
+  --app-text-muted:    #94a3b8;
+  --app-text-subtle:   #64748b;
+  --app-border:        rgba(99,102,241,0.22);
+  --app-border-strong: rgba(139,92,246,0.45);
+  --app-glow:          rgba(99,102,241,0.28);
+  /* Whether the neural decorative background renders. `0` hides it in
+     light mode where it just looks like noise. */
+  --app-decor-opacity: 1;
+
   --background: #05070f;
   --foreground: #eef2ff;
   --card: #0c0f1a;
@@ -92,6 +115,40 @@
   --ai-border-hover: rgba(139,92,246,0.3);
   --ai-glow: rgba(124,58,237,0.25);
   --ai-glow-cyan: rgba(6,182,212,0.2);
+}
+
+/* ── Light theme — applied when next-themes sets class="light" ──
+   next-themes adds this class when the user picks Light in Settings,
+   or when they're on Auto and their OS is light. */
+html.light {
+  --app-bg:            #f8fafc;
+  --app-bg-elevated:   rgba(255,255,255,0.9);
+  --app-surface:       rgba(255,255,255,0.95);
+  --app-surface-2:     rgba(241,245,249,0.9);
+  --app-text:          #0f172a;
+  --app-text-muted:    #475569;
+  --app-text-subtle:   #94a3b8;
+  --app-border:        rgba(99,102,241,0.18);
+  --app-border-strong: rgba(99,102,241,0.42);
+  --app-glow:          rgba(99,102,241,0.14);
+  --app-decor-opacity: 0.15;
+
+  --background:        #f8fafc;
+  --foreground:        #0f172a;
+  --card:              #ffffff;
+  --card-foreground:   #0f172a;
+  --popover:           #ffffff;
+  --popover-foreground:#0f172a;
+  --muted:             #f1f5f9;
+  --muted-foreground:  #64748b;
+  --border:            rgba(99,102,241,0.18);
+  --input:             rgba(99,102,241,0.10);
+  --sidebar:           #ffffff;
+  --sidebar-foreground:#0f172a;
+  --sidebar-accent:    #eef2ff;
+  --sidebar-accent-foreground: #0f172a;
+  --sidebar-border:    rgba(99,102,241,0.18);
+  color-scheme: light;
 }
 
 .dark {

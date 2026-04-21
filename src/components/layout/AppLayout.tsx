@@ -70,7 +70,7 @@ export default function AppLayout({ children, subtitle, user }: AppLayoutProps) 
   return (
     <div
       className="flex h-screen overflow-hidden"
-      style={{ background: "#05070f", color: D.text }}
+      style={{ background: "var(--app-bg)", color: "var(--app-text)" }}
     >
       <NeuralBackground />
 
@@ -82,8 +82,8 @@ export default function AppLayout({ children, subtitle, user }: AppLayoutProps) 
         <header
           className="h-16 flex items-center justify-between pl-16 md:pl-6 pr-4 md:pr-6 flex-shrink-0"
           style={{
-            borderBottom: `1px solid ${D.indigoBorder}`,
-            background: "rgba(5,7,15,0.55)",
+            borderBottom: `1px solid var(--app-border)`,
+            background: "var(--app-bg-elevated)",
             backdropFilter: "blur(24px)",
           }}
         >
