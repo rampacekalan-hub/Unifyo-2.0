@@ -12,6 +12,8 @@ import {
   Lock, LogOut, ShieldAlert, Menu, X, Settings as SettingsIcon, LayoutDashboard,
 } from "lucide-react";
 import Avatar from "@/components/ui/Avatar";
+import { usePrefs } from "@/lib/prefsContext";
+import type { AppId } from "@/lib/userPrefs";
 
 export interface SidebarUser {
   id?: string;
@@ -49,6 +51,10 @@ const GLASS: React.CSSProperties = {
 };
 
 // ── Unified module list ───────────────────────────────────────────
+// `appId` ties the module to a slot in `UserPrefs.enabledApps` — when
+// set, the user can hide the module from Settings / onboarding.
+// `always:true` modules (Prehľad, Analytika, Nastavenia) ignore the
+// preference and stay visible regardless.
 interface ModuleDef {
   id: string;
   label: string;
@@ -56,24 +62,40 @@ interface ModuleDef {
   icon: React.ElementType;
   enabled?: boolean;
   pro?: boolean;
+  appId?: AppId;
+  always?: boolean;
 }
 
 const MODULES: ModuleDef[] = [
-  { id: "overview",  label: "Prehľad",    href: "/dashboard-overview", icon: LayoutDashboard },
-  { id: "dashboard", label: "AI Chat",    href: "/dashboard", icon: Bot },
-  { id: "crm",       label: "CRM",        href: "/crm",       icon: BarChart3 },
-  { id: "pipeline",  label: "Pipeline",   href: "/pipeline",  icon: Kanban },
-  { id: "calendar",  label: "Kalendár",   href: "/calendar",  icon: Calendar },
-  { id: "email",     label: "Email",      href: "/email",     icon: Mail },
-  { id: "calls",     label: "Hovory",     href: "/calls",     icon: Phone },
-  { id: "analytics", label: "Analytika",  href: "/analytics", icon: BarChart3 },
-  { id: "automation",label: "Automation", href: "/automation",icon: Zap },
-  { id: "settings",  label: "Nastavenia", href: "/settings",  icon: SettingsIcon },
+  { id: "overview",  label: "Prehľad",    href: "/dashboard-overview", icon: LayoutDashboard, always: true },
+  { id: "dashboard", label: "AI Chat",    href: "/dashboard", icon: Bot,      appId: "dashboard" },
+  { id: "crm",       label: "CRM",        href: "/crm",       icon: BarChart3, appId: "crm" },
+  { id: "pipeline",  label: "Pipeline",   href: "/pipeline",  icon: Kanban,    appId: "pipeline" },
+  { id: "calendar",  label: "Kalendár",   href: "/calendar",  icon: Calendar,  appId: "calendar" },
+  { id: "email",     label: "Email",      href: "/email",     icon: Mail,      appId: "email" },
+  { id: "calls",     label: "Hovory",     href: "/calls",     icon: Phone,     appId: "calls" },
+  { id: "analytics", label: "Analytika",  href: "/analytics", icon: BarChart3, always: true },
+  { id: "automation",label: "Automation", href: "/automation",icon: Zap,       appId: "automation" },
+  { id: "settings",  label: "Nastavenia", href: "/settings",  icon: SettingsIcon, always: true },
 ];
 
 export default function Sidebar({ user, liveToggles }: SidebarProps) {
   const pathname = usePathname() ?? "";
   const router = useRouter();
+  const { prefs } = usePrefs();
+
+  // Filter modules by user prefs — `always:true` overrides to prevent
+  // the user from losing their escape hatch (Prehľad / Nastavenia).
+  // If they're on the active route for a "hidden" module, we still
+  // show it so the breadcrumb doesn't disappear mid-session.
+  const enabled = new Set<AppId>(prefs.enabledApps);
+  const visibleModules = MODULES.filter((m) => {
+    if (m.always) return true;
+    if (!m.appId) return true;
+    if (enabled.has(m.appId)) return true;
+    if (pathname.startsWith(m.href)) return true; // keep current route visible
+    return false;
+  });
 
   async function handleLogout() {
     try {
@@ -121,7 +143,7 @@ export default function Sidebar({ user, liveToggles }: SidebarProps) {
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto py-4 px-3">
-        {MODULES.map((mod) => {
+        {visibleModules.map((mod) => {
           const Icon = mod.icon;
           const liveEnabled =
             liveToggles && mod.id in liveToggles ? liveToggles[mod.id] : undefined;

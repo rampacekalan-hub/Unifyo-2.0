@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
+import { toast } from "sonner";
 import {
   Users, Activity, ToggleLeft, ToggleRight,
   Terminal, LogOut, ShieldAlert, Zap, TrendingUp,
@@ -1502,7 +1503,8 @@ export default function AdminClient({ adminEmail, users: initUsers, stats, recen
                               body: JSON.stringify({ purge: true, userId: purgeUserId }),
                             });
                             const d = await res.json();
-                            if (d.success) { alert(`Zmazaných ${d.deleted} memories.`); setPurgeUserId(""); }
+                            if (d.success) { toast.success(`Zmazaných ${d.deleted} memories.`); setPurgeUserId(""); }
+                            else { toast.error(d.error ?? "Mazanie zlyhalo"); }
                           } finally { setPurging(false); }
                         }}
                         disabled={purging || !purgeUserId.trim()}

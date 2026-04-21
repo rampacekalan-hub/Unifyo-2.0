@@ -8,6 +8,7 @@ import { getSiteConfig } from "@/config/site-settings";
 import CookieConsent from "@/components/ui/CookieConsent";
 import PageViewTracker from "@/components/analytics/PageViewTracker";
 import InstallPrompt from "@/components/ui/InstallPrompt";
+import UserPrefsProvider from "@/lib/prefsContext";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -69,16 +70,18 @@ export default function RootLayout({
         <ThemeProvider
           attribute="class"
           defaultTheme="dark"
-          enableSystem={false}
+          enableSystem
           disableTransitionOnChange
         >
-          <TooltipProvider>
-            {children}
-            <PageViewTracker />
-            <CookieConsent />
-            <InstallPrompt />
-            <Toaster richColors position="bottom-right" theme="dark" />
-          </TooltipProvider>
+          <UserPrefsProvider>
+            <TooltipProvider>
+              {children}
+              <PageViewTracker />
+              <CookieConsent />
+              <InstallPrompt />
+              <Toaster richColors position="bottom-right" theme="dark" />
+            </TooltipProvider>
+          </UserPrefsProvider>
         </ThemeProvider>
       </body>
     </html>

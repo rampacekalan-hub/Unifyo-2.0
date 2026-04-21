@@ -18,6 +18,9 @@ const USER_SELECT = {
   // Onboarding gate — AppLayout reads this to decide whether to bounce
   // to /onboarding on first load.
   onboardingCompletedAt: true,
+  // Per-user UX preferences (theme, enabledApps, notifications…).
+  // Consumer is UserPrefsProvider which normalises/defaults the shape.
+  preferences: true,
 } as const;
 
 export async function GET(req: NextRequest) {

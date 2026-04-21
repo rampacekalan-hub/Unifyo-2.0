@@ -8,6 +8,7 @@ import CommandPalette from "@/components/ui/CommandPalette";
 import UsageChip from "@/components/ui/UsageChip";
 import ShortcutsModal from "@/components/ui/ShortcutsModal";
 import OnboardingTour from "@/components/onboarding/OnboardingTour";
+import FeedbackWidget from "@/components/ui/FeedbackWidget";
 import EmailVerifyBanner from "@/components/ui/EmailVerifyBanner";
 import Sidebar, { type SidebarUser } from "@/components/layout/Sidebar";
 import MobileBottomNav from "@/components/layout/MobileBottomNav";
@@ -119,6 +120,7 @@ export default function AppLayout({ children, subtitle, user }: AppLayoutProps) 
         <CommandPalette />
         <ShortcutsModal />
         <OnboardingTour />
+        <FeedbackWidget />
       </main>
 
       {/* Mobile-only bottom nav — overlays main on small screens */}

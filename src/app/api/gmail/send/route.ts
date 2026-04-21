@@ -4,6 +4,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth";
 import { requireSameOrigin } from "@/lib/csrf";
+import { rateLimit } from "@/lib/rate-limit";
 import { getValidAccessToken, sendGmail } from "@/lib/google";
 
 export async function POST(req: NextRequest) {
@@ -11,6 +12,10 @@ export async function POST(req: NextRequest) {
   if (csrf) return csrf;
   const { session, response } = await requireAuth(req);
   if (response) return response;
+  // Gmail spam mitigation — 30 sends / hour / IP is enough for humans,
+  // blocks bulk abuse via hijacked session.
+  const rl = await rateLimit(req, { maxRequests: 30, windowMs: 3600_000 }, "gmail-send");
+  if (rl) return rl;
 
   let body: { to?: string; subject?: string; body?: string };
   try {

@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth";
 import { requireSameOrigin } from "@/lib/csrf";
+import { rateLimit } from "@/lib/rate-limit";
 import { prisma } from "@/lib/prisma";
 import {
   ensureStripeCustomer,
@@ -19,6 +20,10 @@ export async function POST(req: NextRequest) {
   if (csrf) return csrf;
   const { session, response } = await requireAuth(req);
   if (response) return response;
+  // Guard against stripe-customer-spam — 20 checkout creates per hour
+  // per IP is a lot for a real person; anything more is a bot.
+  const rl = await rateLimit(req, { maxRequests: 20, windowMs: 3600_000 }, "billing-checkout");
+  if (rl) return rl;
 
   if (!isStripeConfigured()) {
     return NextResponse.json({ error: "Platby nie sú nakonfigurované" }, { status: 503 });

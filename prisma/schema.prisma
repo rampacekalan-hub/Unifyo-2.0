@@ -86,6 +86,54 @@ model User {
   shareLinks        ShareLink[]
   googleIntegration GoogleIntegration?
   stripeSubscription StripeSubscription?
+  callRecordings    CallRecording[]
+  feedbackItems     Feedback[]
+}
+
+// ── User feedback — floating widget captures → admin reviews ────────
+// Kind lets us filter later ("bugs in the last 7 days" etc). Page is
+// the URL where the user was when they opened the widget — diagnostic
+// context. We keep it deliberately simple so users don't hesitate.
+model Feedback {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  kind      String   @default("general") // "bug" | "idea" | "praise" | "general"
+  message   String   @db.Text
+  page      String?
+  userAgent String?
+  rating    Int?     // 1..5, optional emoji scale
+  status    String   @default("NEW") // NEW | SEEN | ACTIONED | ARCHIVED
+  createdAt DateTime @default(now())
+  @@index([status, createdAt])
+}
+
+// ── Call recordings (Fáza A: upload + Whisper + AI summary) ────────
+// Users upload an audio file (mp3/m4a/wav). We run Whisper to get the
+// Slovak transcript, then GPT to produce a structured summary
+// (keyPoints, actionItems). `status` progresses UPLOADED → TRANSCRIBING
+// → DONE (or FAILED). The raw file lives on disk at `filePath`; the
+// DB row is the source of truth for everything downstream.
+model CallRecording {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title         String
+  originalName  String
+  mimeType      String
+  sizeBytes     Int
+  durationSec   Int?     // filled from Whisper response when known
+  filePath      String   // relative path inside UPLOADS_DIR
+  status        String   @default("UPLOADED") // UPLOADED | TRANSCRIBING | DONE | FAILED
+  transcript    String?  @db.Text
+  summary       String?  @db.Text
+  keyPoints     Json?    // string[]
+  actionItems   Json?    // Array<{ title: string; ownerHint?: string }>
+  errorMessage  String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  @@index([userId, createdAt])
+  @@index([status])
 }
 
 // ── Stripe subscription (billing state mirror) ──────────────

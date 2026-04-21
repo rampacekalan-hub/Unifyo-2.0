@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { toast } from "sonner";
 import { Brain, FileText, Plus, Pencil, Trash2, Check, X, Loader2, ChevronDown, ChevronUp, Lock } from "lucide-react";
 
 interface Memory {
@@ -117,7 +118,7 @@ export default function PersonalToolkit({ membershipTier }: { membershipTier: st
         setPolForm({ name: "", rule: "" });
         setPolEditing(null);
       } else {
-        alert(d.error ?? "Chyba");
+        toast.error(d.error ?? "Chyba");
       }
     } finally { setPolSaving(false); }
   }

@@ -99,7 +99,11 @@ function RegisterPageInner() {
 
       toast.success("Účet vytvorený! Vitajte v Unifyo.");
       track("signup");
-      router.push("/dashboard");
+      // Fresh signups go straight into the onboarding wizard — this
+      // is their first impression, not an empty chat screen. AppLayout
+      // also redirects un-onboarded users, but routing here directly
+      // avoids a flash of the dashboard before the bounce.
+      router.push("/onboarding");
       router.refresh();
     } catch {
       toast.error("Sieťová chyba. Skúste to neskôr.");
