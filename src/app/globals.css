@@ -121,17 +121,19 @@
    next-themes adds this class when the user picks Light in Settings,
    or when they're on Auto and their OS is light. */
 html.light {
-  --app-bg:            #f8fafc;
-  --app-bg-elevated:   rgba(255,255,255,0.9);
-  --app-surface:       rgba(255,255,255,0.95);
-  --app-surface-2:     rgba(241,245,249,0.9);
+  /* Warm off-white, avoids the slight blue cast of #f8fafc */
+  --app-bg:            #fafaf9;
+  --app-bg-elevated:   rgba(255,255,255,0.92);
+  --app-surface:       rgba(255,255,255,0.96);
+  --app-surface-2:     rgba(245,245,244,0.94);
   --app-text:          #0f172a;
-  --app-text-muted:    #475569;
-  --app-text-subtle:   #94a3b8;
-  --app-border:        rgba(99,102,241,0.18);
-  --app-border-strong: rgba(99,102,241,0.42);
-  --app-glow:          rgba(99,102,241,0.14);
-  --app-decor-opacity: 0.15;
+  --app-text-muted:    #52525b;
+  --app-text-subtle:   #a1a1aa;
+  /* Indigo-leaning border so it reads as accent, not greyscale */
+  --app-border:        rgba(79,70,229,0.16);
+  --app-border-strong: rgba(79,70,229,0.40);
+  --app-glow:          rgba(79,70,229,0.12);
+  --app-decor-opacity: 0.10;
 
   --background:        #f8fafc;
   --foreground:        #0f172a;
