@@ -36,13 +36,21 @@ export async function GET(req: NextRequest) {
   // `<token>.<userId>`. Both must match or we bail.
   const cookieStore = await cookies();
   const stateCookie = cookieStore.get("unifyo_google_oauth_state")?.value;
+  const returnHint = cookieStore.get("unifyo_google_oauth_return")?.value;
+  const fromOnboarding = returnHint === "onboarding";
   cookieStore.delete("unifyo_google_oauth_state");
+  cookieStore.delete("unifyo_google_oauth_return");
+  const errBase = fromOnboarding ? "/onboarding?step=3" : "/settings/integrations";
+  const errSep = fromOnboarding ? "&" : "?";
+  const okPath = fromOnboarding
+    ? "/onboarding?step=3&google=connected"
+    : "/settings/integrations?connected=google";
   if (!stateCookie) {
-    return redirectTo("/settings/integrations?error=state_expired");
+    return redirectTo(`${errBase}${errSep}error=state_expired`);
   }
   const [stateToken, userId] = state.split(".");
   if (!stateToken || !userId || stateToken !== stateCookie) {
-    return redirectTo("/settings/integrations?error=state_mismatch");
+    return redirectTo(`${errBase}${errSep}error=state_mismatch`);
   }
 
   // Exchange code → tokens.
@@ -51,14 +59,14 @@ export async function GET(req: NextRequest) {
     tokens = await exchangeCodeForTokens(code);
   } catch (e) {
     console.error("[google:callback] token exchange failed", e);
-    return redirectTo("/settings/integrations?error=token_exchange");
+    return redirectTo(`${errBase}${errSep}error=token_exchange`);
   }
 
   if (!tokens.refresh_token) {
     // Happens if the user previously consented and Google skipped the
     // offline-access grant. We force prompt=consent on /start to avoid
     // this — if we still end up here the Google app needs re-verification.
-    return redirectTo("/settings/integrations?error=no_refresh_token");
+    return redirectTo(`${errBase}${errSep}error=no_refresh_token`);
   }
 
   // Verify identity on Google's side. `userinfo.email` scope is requested
@@ -68,7 +76,7 @@ export async function GET(req: NextRequest) {
     info = await fetchGoogleUserInfo(tokens.access_token);
   } catch (e) {
     console.error("[google:callback] userinfo failed", e);
-    return redirectTo("/settings/integrations?error=userinfo");
+    return redirectTo(`${errBase}${errSep}error=userinfo`);
   }
 
   // Confirm the user still exists (edge case: account deleted mid-flow).
@@ -99,8 +107,8 @@ export async function GET(req: NextRequest) {
     });
   } catch (e) {
     console.error("[google:callback] upsert failed", e);
-    return redirectTo("/settings/integrations?error=db_error");
+    return redirectTo(`${errBase}${errSep}error=db_error`);
   }
 
-  return redirectTo("/settings/integrations?connected=google");
+  return redirectTo(okPath);
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import NeuralBackground from "@/components/ui/NeuralBackground";
 import FloatingAIWidget from "@/components/ui/FloatingAIWidget";
 import CommandPalette from "@/components/ui/CommandPalette";
@@ -31,6 +31,7 @@ const D = {
 
 export default function AppLayout({ children, subtitle, user }: AppLayoutProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const [fetchedUser, setFetchedUser] = useState<SidebarUser | null>(user ?? null);
 
   useEffect(() => {
@@ -40,13 +41,24 @@ export default function AppLayout({ children, subtitle, user }: AppLayoutProps) 
       try {
         const res = await fetch("/api/user/me");
         const data = await res.json();
-        if (alive && data?.user) setFetchedUser(data.user);
+        if (alive && data?.user) {
+          setFetchedUser(data.user);
+          // Bounce un-onboarded users to the wizard — except when they're
+          // already there, or on a public/legal page. `/settings` is fine
+          // too: a user editing their name shouldn't be pulled away.
+          if (
+            data.user.onboardingCompletedAt == null &&
+            !pathname?.startsWith("/onboarding")
+          ) {
+            router.replace("/onboarding");
+          }
+        }
       } catch {}
     })();
     return () => {
       alive = false;
     };
-  }, [user]);
+  }, [user, pathname, router]);
 
   const activeUser = user ?? fetchedUser;
   const displayTitle =

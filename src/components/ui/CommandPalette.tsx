@@ -10,6 +10,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Search, LayoutDashboard, Users, CalendarDays, Mail, Settings, LogOut,
   MessageSquarePlus, UserPlus, CalendarPlus, Command, ArrowRight, History,
+  CreditCard, Link2, Phone, Briefcase, Send, Plug,
 } from "lucide-react";
 import { chatActions } from "@/lib/chatStore";
 
@@ -145,9 +146,16 @@ export default function CommandPalette() {
     { id: "nav:crm",       label: "Prejsť do CRM",         icon: Users,           group: "Navigácia", onSelect: () => { router.push("/crm"); close(); } },
     { id: "nav:calendar",  label: "Prejsť do Kalendára",   icon: CalendarDays,    group: "Navigácia", onSelect: () => { router.push("/calendar"); close(); } },
     { id: "nav:email",     label: "Prejsť do Emailov",     icon: Mail,            group: "Navigácia", onSelect: () => { router.push("/email"); close(); } },
+    { id: "nav:pipeline",  label: "Prejsť do Pipeline",    icon: Briefcase,       group: "Navigácia", onSelect: () => { router.push("/pipeline"); close(); } },
+    { id: "nav:calls",     label: "Prejsť do Hovorov",     icon: Phone,           group: "Navigácia", onSelect: () => { router.push("/calls"); close(); } },
+    { id: "nav:billing",   label: "Plán a fakturácia",     icon: CreditCard,      group: "Navigácia", keywords: "stripe predplatné upgrade", onSelect: () => { router.push("/settings/billing"); close(); } },
+    { id: "nav:integ",     label: "Integrácie",            icon: Plug,            group: "Navigácia", keywords: "gmail google calendar", onSelect: () => { router.push("/settings/integrations"); close(); } },
     { id: "act:newchat",   label: "Nový rozhovor",          hint: "Vyčistí chat",   icon: MessageSquarePlus, group: "Akcie", onSelect: () => { chatActions.newConversation(); router.push("/dashboard"); close(); } },
     { id: "act:newcontact",label: "Nový kontakt v CRM",     hint: "Otvorí CRM",     icon: UserPlus,          group: "Akcie", onSelect: () => { router.push("/crm?new=1"); close(); } },
     { id: "act:newtask",   label: "Nová úloha v Kalendári", hint: "Otvorí Kalendár",icon: CalendarPlus,      group: "Akcie", onSelect: () => { router.push("/calendar?new=1"); close(); } },
+    { id: "act:compose",   label: "Napísať nový e-mail",    hint: "Gmail compose",  icon: Send,              group: "Akcie", keywords: "mail nový poslať", onSelect: () => { router.push("/email?compose=1"); close(); } },
+    { id: "act:newdeal",   label: "Nový deal v Pipeline",   hint: "Obchodná príležitosť", icon: Briefcase,   group: "Akcie", onSelect: () => { router.push("/pipeline?new=1"); close(); } },
+    { id: "act:connectg",  label: "Pripojiť Google účet",   hint: "Gmail + Kalendár", icon: Link2,           group: "Akcie", keywords: "oauth gmail calendar pripoj", onSelect: () => { window.location.href = "/api/integrations/google/start"; close(); } },
     { id: "nav:settings",  label: "Nastavenia",             icon: Settings, group: "Navigácia", onSelect: () => { router.push("/settings"); close(); } },
     { id: "act:logout",    label: "Odhlásiť sa",            icon: LogOut,   group: "Akcie", onSelect: async () => { await fetch("/api/auth/logout", { method: "POST" }); router.push("/login"); close(); } },
   ], [router, close]);

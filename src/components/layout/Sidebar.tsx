@@ -19,6 +19,9 @@ export interface SidebarUser {
   name?: string | null;
   role?: string;
   membershipTier?: string;
+  // Null until the user finishes the onboarding wizard — AppLayout
+  // reads this to redirect first-timers to /onboarding.
+  onboardingCompletedAt?: string | null;
 }
 
 interface SidebarProps {

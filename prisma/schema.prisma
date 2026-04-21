@@ -59,6 +59,16 @@ model User {
   twoFactorEnabledAt    DateTime?
   twoFactorBackupCodes  String[]  @default([])
 
+  // Onboarding — null until the user finishes (or skips) the first-run
+  // wizard. Middleware/app-layout redirects to `/onboarding` when null.
+  onboardingCompletedAt DateTime?
+  company               String?
+  industry              String?
+  // Free-form JSON for per-user UX preferences — theme, timezone,
+  // enabledApps[], notifications etc. Shape is intentionally loose so
+  // we can evolve it without migrations. See src/lib/userPrefs.ts.
+  preferences           Json?
+
   aiRequests    AiRequest[]
   dailyUsage    DailyUsage[]
   neuralMemory  NeuralMemory[]

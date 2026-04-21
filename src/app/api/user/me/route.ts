@@ -15,6 +15,9 @@ const USER_SELECT = {
   emailVerifiedAt: true,
   twoFactorEnabledAt: true,
   createdAt: true,
+  // Onboarding gate — AppLayout reads this to decide whether to bounce
+  // to /onboarding on first load.
+  onboardingCompletedAt: true,
 } as const;
 
 export async function GET(req: NextRequest) {

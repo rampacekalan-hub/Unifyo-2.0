@@ -38,6 +38,18 @@ export async function GET(req: NextRequest) {
     maxAge: 600, // 10 min to complete consent
   });
 
+  // Optional `?from=onboarding` — callback redirects into the wizard
+  // instead of /settings/integrations. Anything else is ignored (we
+  // don't accept arbitrary `next` URLs to avoid open-redirect risk).
+  const from = req.nextUrl.searchParams.get("from") === "onboarding" ? "onboarding" : "settings";
+  cookieStore.set("unifyo_google_oauth_return", from, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: 600,
+  });
+
   // Stash the userId in the state too so callback can tie this flow back
   // to the correct user even if the session cookie has rotated.
   const statePayload = `${stateToken}.${session.userId}`;
