@@ -105,7 +105,9 @@ export default function SettingsPage() {
   return (
     <AppLayout title="Nastavenia" subtitle="Nastavenia —">
       <div className="p-4 md:p-8 max-w-3xl mx-auto space-y-4">
+        <SettingsSubnav />
         {/* ── Profil ── */}
+        <div id="profil" className="scroll-mt-24" />
         <Section
           icon={User}
           title="Profil"
@@ -212,6 +214,7 @@ export default function SettingsPage() {
         </Section>
 
         {/* ── Zmena hesla ── */}
+        <div id="bezpecnost" className="scroll-mt-24" />
         <ChangePasswordSection />
 
         {/* ── 2FA ── */}
@@ -221,27 +224,33 @@ export default function SettingsPage() {
         />
 
         {/* ── AI preferencie ── */}
+        <div id="ai" className="scroll-mt-24" />
         <AiPrefsSection />
 
         {/* ── Notifikácie ── */}
+        <div id="notifikacie" className="scroll-mt-24" />
         <Section icon={Bell} title="Notifikácie" subtitle="Email, push, pripomienky úloh" comingSoon />
 
         {/* ── Vzhľad ── */}
+        <div id="vzhlad" className="scroll-mt-24" />
         <Section icon={Palette} title="Vzhľad" subtitle="Téma, farebný akcent, hustota" comingSoon />
 
         {/* ── Prihlásenia & bezpečnosť ── */}
         <SessionsSection />
 
         {/* ── Export údajov ── */}
+        <div id="data" className="scroll-mt-24" />
         <DataExportSection />
 
         {/* ── Import CRM ── */}
         <CrmImportSection />
 
         {/* ── Plán & fakturácia (link) ── */}
+        <div id="plan" className="scroll-mt-24" />
         <BillingLinkRow />
 
         {/* ── Integrácie (Google, Microsoft, …) ── */}
+        <div id="integracie" className="scroll-mt-24" />
         <ExternalLinkRow
           href="/settings/integrations"
           icon={Link2}
@@ -1884,5 +1893,74 @@ function TwoFactorSection({
         </div>
       )}
     </Section>
+  );
+}
+
+// ── Top section-nav — sticky pill bar with quick jumps ─────────────
+// Uses native hash navigation (scrolls via CSS `scroll-mt-*` on the
+// anchor divs above). IntersectionObserver highlights the active
+// section as the user scrolls.
+function SettingsSubnav() {
+  const SECTIONS: Array<{ id: string; label: string; Icon: React.ElementType }> = [
+    { id: "profil",      label: "Profil",       Icon: User },
+    { id: "bezpecnost",  label: "Bezpečnosť",   Icon: Shield },
+    { id: "ai",          label: "AI",           Icon: Sparkles },
+    { id: "notifikacie", label: "Notifikácie",  Icon: Bell },
+    { id: "vzhlad",      label: "Vzhľad",       Icon: Palette },
+    { id: "integracie",  label: "Integrácie",   Icon: Link2 },
+    { id: "plan",        label: "Plán",         Icon: CreditCard },
+    { id: "data",        label: "Dáta",         Icon: Download },
+  ];
+
+  const [active, setActive] = useState<string>("profil");
+
+  useEffect(() => {
+    const els = SECTIONS.map((s) => document.getElementById(s.id)).filter(
+      (x): x is HTMLElement => !!x,
+    );
+    if (els.length === 0) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        const hit = entries
+          .filter((e) => e.isIntersecting)
+          .sort((a, b) => (a.target as HTMLElement).offsetTop - (b.target as HTMLElement).offsetTop)[0];
+        if (hit) setActive(hit.target.id);
+      },
+      { rootMargin: "-20% 0px -70% 0px", threshold: 0 },
+    );
+    els.forEach((el) => io.observe(el));
+    return () => io.disconnect();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return (
+    <div
+      className="sticky top-0 z-20 -mx-4 md:mx-0 px-4 md:px-0 py-2 mb-2"
+      style={{ background: "rgba(5,7,15,0.72)", backdropFilter: "blur(18px)" }}
+    >
+      <div
+        className="flex items-center gap-1.5 overflow-x-auto no-scrollbar rounded-xl p-1.5"
+        style={{ background: "rgba(10,12,24,0.7)", border: `1px solid ${D.indigoBorder}` }}
+      >
+        {SECTIONS.map((s) => {
+          const isActive = active === s.id;
+          const Icon = s.Icon;
+          return (
+            <a
+              key={s.id}
+              href={`#${s.id}`}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition flex-shrink-0"
+              style={{
+                background: isActive ? "rgba(139,92,246,0.18)" : "transparent",
+                color: isActive ? D.text : D.muted,
+                border: `1px solid ${isActive ? "rgba(139,92,246,0.45)" : "transparent"}`,
+              }}
+            >
+              <Icon className="w-3.5 h-3.5" /> {s.label}
+            </a>
+          );
+        })}
+      </div>
+    </div>
   );
 }

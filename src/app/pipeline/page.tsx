@@ -97,6 +97,19 @@ export default function PipelinePage() {
   const [dragId, setDragId] = useState<string | null>(null);
   const [dragOverStage, setDragOverStage] = useState<Stage | null>(null);
 
+  // Auto-open the New Deal modal when we arrive from a ?new=1 link
+  // (command palette, onboarding CTA). We pre-fill stage=LEAD since
+  // that's where 95 % of new deals start.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const sp = new URLSearchParams(window.location.search);
+    if (sp.get("new") === "1") {
+      setShowNew({ stage: "LEAD" });
+      // Clean the URL so a refresh doesn't re-open the modal.
+      window.history.replaceState(null, "", window.location.pathname);
+    }
+  }, []);
+
   const load = useCallback(async () => {
     try {
       const [d, c] = await Promise.all([
@@ -218,6 +231,42 @@ export default function PipelinePage() {
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <Loader2 className="w-5 h-5 animate-spin" style={{ color: D.muted }} />
+          </div>
+        ) : deals.length === 0 ? (
+          <div
+            className="rounded-2xl flex flex-col items-center justify-center py-16 px-6 text-center"
+            style={{
+              background: "rgba(10,12,24,0.5)",
+              border: `1px dashed ${D.border}`,
+            }}
+          >
+            <div
+              className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4"
+              style={{
+                background: "linear-gradient(135deg, rgba(99,102,241,0.18), rgba(139,92,246,0.12))",
+                border: `1px solid ${D.border}`,
+              }}
+            >
+              <Plus className="w-6 h-6" style={{ color: "#8b5cf6" }} />
+            </div>
+            <h3 className="text-base font-semibold mb-1.5" style={{ color: "#eef2ff" }}>
+              Zatiaľ žiadne dealy
+            </h3>
+            <p className="text-xs max-w-sm mb-4" style={{ color: D.muted }}>
+              Pipeline drží tvoje obchodné príležitosti od prvého kontaktu po uzavretie.
+              Pridaj prvý — stačí názov, zvyšok doplníš neskôr.
+            </p>
+            <button
+              onClick={() => setShowNew({ stage: "LEAD" })}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold"
+              style={{
+                background: `linear-gradient(135deg, #6366f1, #8b5cf6)`,
+                color: "white",
+                boxShadow: "0 0 16px rgba(139,92,246,0.4)",
+              }}
+            >
+              <Plus className="w-3.5 h-3.5" /> Vytvoriť prvý deal
+            </button>
           </div>
         ) : (
           <div className="flex gap-3 overflow-x-auto pb-4 flex-1 min-h-[400px]">
