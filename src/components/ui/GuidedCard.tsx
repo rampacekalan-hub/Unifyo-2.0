@@ -5,7 +5,7 @@
 
 import { useState, useEffect, useRef, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { User, CalendarCheck, Check, X, Pencil, Loader2 } from "lucide-react";
+import { User, CalendarCheck, Check, X, Loader2 } from "lucide-react";
 
 export interface GuidedDraft {
   contact: Record<string, string>; // Meno, Email, Telefón, Firma, Poznámka
@@ -175,49 +175,47 @@ export default function GuidedCard({ draft, onChange, onConfirm, onDismiss }: Pr
           WebkitBackdropFilter: "blur(18px)",
         }}
       >
-        {/* Header */}
+        {/* Header — tells the user exactly what the card does.
+            Previously it said "Sprievodca · 0/9 polí" which left
+            users guessing what this widget is for. */}
         <div
-          className="flex items-center justify-between px-4 py-3"
+          className="px-4 py-3"
           style={{ borderBottom: `1px solid ${D.border}` }}
         >
-          <div className="flex items-center gap-2">
-            <motion.div
-              className="w-1.5 h-1.5 rounded-full"
-              style={{ background: D.sky }}
-              animate={{ boxShadow: ["0 0 4px #22d3ee", "0 0 10px #22d3ee", "0 0 4px #22d3ee"] }}
-              transition={{ duration: 2, repeat: Infinity }}
-            />
-            <span
-              className="text-[0.65rem] font-semibold uppercase tracking-widest"
-              style={{ color: D.sky }}
-            >
-              Sprievodca
-            </span>
-            <span
-              className="text-[0.6rem] px-1.5 py-0.5 rounded-md font-medium"
-              style={{ background: "rgba(34,211,238,0.12)", color: D.sky, border: `1px solid ${D.borderSky}` }}
-            >
-              {progress.filled}/{progress.total} polí
-            </span>
-          </div>
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => setEditing((e) => !e)}
-              className="p-1.5 rounded-lg transition-colors"
-              style={{ color: D.muted }}
-              aria-label="Upraviť"
-              title="Upraviť polia"
-            >
-              <Pencil className="w-3.5 h-3.5" />
-            </button>
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-start gap-2">
+              <motion.div
+                className="w-6 h-6 rounded-lg flex items-center justify-center mt-0.5"
+                style={{
+                  background: "linear-gradient(135deg, rgba(99,102,241,0.3), rgba(139,92,246,0.3))",
+                  border: `1px solid ${D.border}`,
+                }}
+                animate={{ boxShadow: ["0 0 4px #8b5cf6", "0 0 12px #8b5cf6", "0 0 4px #8b5cf6"] }}
+                transition={{ duration: 2, repeat: Infinity }}
+              >
+                <Check className="w-3.5 h-3.5 text-white" />
+              </motion.div>
+              <div>
+                <p className="text-xs font-bold" style={{ color: D.text }}>
+                  {hasContact && hasTask
+                    ? "Pridať kontakt a naplánovať úlohu?"
+                    : hasContact
+                    ? "Pridať tento kontakt do CRM?"
+                    : "Naplánovať túto úlohu?"}
+                </p>
+                <p className="text-[0.65rem] mt-0.5" style={{ color: D.muted }}>
+                  Skontroluj údaje a klikni <strong style={{ color: D.text }}>Uložiť</strong>.
+                </p>
+              </div>
+            </div>
             <button
               onClick={onDismiss}
-              className="p-1.5 rounded-lg transition-colors"
+              className="p-1.5 rounded-lg transition-colors flex-shrink-0"
               style={{ color: D.muted }}
-              aria-label="Zrušiť"
-              title="Zrušiť"
+              aria-label="Zavrieť bez uloženia"
+              title="Zavrieť bez uloženia"
             >
-              <X className="w-3.5 h-3.5" />
+              <X className="w-4 h-4" />
             </button>
           </div>
         </div>

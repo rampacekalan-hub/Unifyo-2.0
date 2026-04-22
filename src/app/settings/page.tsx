@@ -227,6 +227,7 @@ export default function SettingsPage() {
         {/* ── AI preferencie ── */}
         <div id="ai" className="scroll-mt-24" />
         <AiPrefsSection />
+        <PrivacyInfoSection />
 
         {/* ── Notifikácie ── */}
         <div id="notifikacie" className="scroll-mt-24" />
@@ -2041,6 +2042,69 @@ function AppearanceSection() {
           niektoré modály zostávajú zatiaľ tmavé.
         </p>
       )}
+    </Section>
+  );
+}
+
+// ── Privacy info — explains exactly where data goes ─────────────────
+// Owner asked for this explicitly. Honest disclosure beats a vague
+// "secure" badge. We describe each destination (DB, Google, Stripe,
+// OpenAI) and what crosses the wire.
+function PrivacyInfoSection() {
+  const rows: Array<{ where: string; what: string; note: string; color: string }> = [
+    {
+      where: "Unifyo DB (Hetzner, EU)",
+      what: "Kontakty, úlohy, dealy, poznámky, konverzácie, e-mail tokeny.",
+      note: "Šifrované pri prenose (HTTPS). Nikto okrem teba to nevidí, okrem nás pri hlásenej chybe — ak to povolíš.",
+      color: "#10b981",
+    },
+    {
+      where: "OpenAI API",
+      what: "Iba aktuálna správa + tvoj posledný kontext (CRM výňatok, posledných 12 správ).",
+      note: "OpenAI tvoje dáta NEPOUŽÍVA na tréning (enterprise API). Nikdy tam nejde databáza celá.",
+      color: "#8b5cf6",
+    },
+    {
+      where: "Google (Gmail, Calendar)",
+      what: "Len keď si prepojil účet. Tokeny šifrované, používané iba pre tvoje zobrazenie.",
+      note: "Môžeš kedykoľvek odpojiť — tokeny zrušíme aj na Google strane.",
+      color: "#38bdf8",
+    },
+    {
+      where: "Stripe",
+      what: "Iba platobné údaje pri upgrade na Pro/Enterprise. Unifyo tvoju kartu nikdy nevidí.",
+      note: "Stripe je PCI-DSS certifikovaný.",
+      color: "#f59e0b",
+    },
+  ];
+  return (
+    <Section icon={Shield} title="Súkromie a dáta" subtitle="Kam čo ide — bez marketingu">
+      <div className="space-y-2">
+        {rows.map((r) => (
+          <div
+            key={r.where}
+            className="rounded-xl p-3"
+            style={{
+              background: "rgba(99,102,241,0.04)",
+              border: `1px solid ${r.color}33`,
+            }}
+          >
+            <div className="flex items-center gap-2 mb-1">
+              <span className="w-1.5 h-1.5 rounded-full" style={{ background: r.color }} />
+              <span className="text-xs font-semibold" style={{ color: D.text }}>{r.where}</span>
+            </div>
+            <p className="text-[0.7rem]" style={{ color: D.muted }}>
+              <strong style={{ color: D.text }}>Čo:</strong> {r.what}
+            </p>
+            <p className="text-[0.65rem] mt-0.5" style={{ color: D.mutedDark }}>
+              {r.note}
+            </p>
+          </div>
+        ))}
+      </div>
+      <p className="mt-3 text-[0.65rem]" style={{ color: D.mutedDark }}>
+        Chceš úplne lokálny model (bez OpenAI)? Pripravujeme variant s Ollama — napíš cez Feedback.
+      </p>
     </Section>
   );
 }

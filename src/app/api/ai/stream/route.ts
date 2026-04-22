@@ -81,13 +81,15 @@ export async function POST(req: NextRequest) {
   // this was missing and the model only saw anonymised memories.
   const businessContext = await buildUserBusinessContext(session.userId).catch(() => "");
 
-  // Pull the last 6 messages from the same conversation so the model
-  // can see what we just said. Without this every turn is amnesic.
+  // Pull the last 12 messages from the same conversation so the model
+  // can see what we just said. Was 6; users complained about amnesia
+  // after a handful of turns. 12 keeps us well under the token budget
+  // even when individual messages are ~200 tokens each.
   const history = conversationId
     ? await prisma.conversationMsg.findMany({
         where: { conversationId, conversation: { userId: session.userId } },
         orderBy: { createdAt: "desc" },
-        take: 6,
+        take: 12,
         select: { role: true, content: true },
       }).catch(() => [])
     : [];

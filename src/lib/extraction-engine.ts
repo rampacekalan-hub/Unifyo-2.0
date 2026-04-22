@@ -774,6 +774,16 @@ export function extractActionCards(text: string): ActionCard[] {
     return [];
   }
 
+  // EMAIL-INTENT GATE: "napíš e-mail / navrhni email / follow-up /
+  // pošli mu / reply". Email drafts aren't contacts and aren't
+  // calendar entries — they get their own CTA (EmailDraftCTA in
+  // DashboardClient). Surfacing a GuidedCard here confuses the user
+  // ("prečo chce odo mňa meno, ja ho chcem iba poslať?").
+  const isEmailIntent = /\b(email|e-?mail|mail|sprava|správa|napíš|navrhni|draft|follow[\s-]?up|odpove[ďz]|pošli[\s](?:mu|jej|e-?mail|mail|správu))\b/i.test(text);
+  if (aiCards.length === 0 && isEmailIntent) {
+    return [];
+  }
+
   // Detect entities in raw text using fallback analysis
   const { name: contactName, confidence } = forceEntityExtraction(text);
   const dateInfo = normalizeDate(text);
