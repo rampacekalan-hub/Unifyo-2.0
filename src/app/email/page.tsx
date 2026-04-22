@@ -272,9 +272,22 @@ export default function EmailPage() {
             message={active}
             onClose={() => setActive(null)}
             onReply={() => {
+              // Build a quoted reply: sender → To, "Re: …" subject,
+              // a blank line for the new message, then the original
+              // body prefixed with "> " so the recipient has context.
+              const replyTo = extractAddress(active.from);
+              const subject = active.subject.startsWith("Re:")
+                ? active.subject
+                : `Re: ${active.subject}`;
+              const originalBody = (active.text || active.snippet || "").trim();
+              const quoted = originalBody
+                ? "\n\n---\n" +
+                  `Dňa ${new Date(active.date).toLocaleString("sk-SK")} napísal ${stripAddress(active.from)}:\n` +
+                  originalBody.split("\n").map((l) => `> ${l}`).join("\n")
+                : "";
+              setPrefill({ to: replyTo, subject, body: quoted });
               setActive(null);
               setComposing(true);
-              // TODO: pre-fill Compose with reply subject & recipient.
             }}
           />
         )}
@@ -540,6 +553,27 @@ function ComposeModal({
     }
   }
 
+  const [savingDraft, setSavingDraft] = useState(false);
+  async function saveDraft() {
+    if (savingDraft || (!subject.trim() && !body.trim())) return;
+    setSavingDraft(true);
+    try {
+      const res = await fetch("/api/gmail/draft", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ to, subject, body }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.hint || json.error || `HTTP ${res.status}`);
+      toast.success("Uložené do Gmail Drafts — nájdeš ho aj v Gmail appke.");
+      onClose();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Uloženie zlyhalo");
+    } finally {
+      setSavingDraft(false);
+    }
+  }
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
@@ -585,10 +619,24 @@ function ComposeModal({
           <div className="flex items-center gap-2">
             <button
               onClick={onClose}
-              className="flex-1 text-xs font-semibold px-3 py-2 rounded-xl"
+              className="text-xs font-semibold px-3 py-2 rounded-xl"
               style={{ background: "rgba(148,163,184,0.08)", color: D.muted, border: `1px solid ${D.indigoBorder}` }}
             >
               Zrušiť
+            </button>
+            <button
+              onClick={saveDraft}
+              disabled={savingDraft || sending || (!subject.trim() && !body.trim())}
+              className="text-xs font-semibold px-3 py-2 rounded-xl inline-flex items-center gap-1.5 disabled:opacity-50"
+              style={{
+                background: "rgba(99,102,241,0.08)",
+                color: D.indigo,
+                border: `1px solid ${D.indigoBorder}`,
+              }}
+              title="Uložiť ako koncept v Gmail Drafts"
+            >
+              {savingDraft ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileText className="w-3.5 h-3.5" />}
+              Uložiť koncept
             </button>
             <button
               onClick={submit}
@@ -614,6 +662,11 @@ function stripAddress(h: string): string {
   // "Ján Novák <jan@x.sk>" → "Ján Novák"; fallback to address
   const m = h.match(/^(.*?)\s*<.+>$/);
   return m?.[1]?.trim() || h;
+}
+function extractAddress(h: string): string {
+  // "Ján Novák <jan@x.sk>" → "jan@x.sk"; fallback to whole string.
+  const m = h.match(/<([^>]+)>/);
+  return m?.[1]?.trim() || h.trim();
 }
 function formatDate(iso: string): string {
   const d = new Date(iso);

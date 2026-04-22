@@ -11,6 +11,7 @@ import {
   Plus, TrendingUp, Clock, CheckCircle2,
 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
+import FocusWidget from "@/components/dashboard/FocusWidget";
 
 const D = {
   indigo: "#6366f1",
@@ -140,6 +141,8 @@ export default function DashboardOverviewPage() {
   return (
     <AppLayout title="Prehľad" subtitle="Prehľad —">
       <div className="p-4 md:p-6 space-y-4 md:space-y-6">
+        {/* Focus widget — deterministic "what to do right now" pick */}
+        <FocusWidget />
         {/* Welcome */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}

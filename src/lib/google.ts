@@ -343,6 +343,48 @@ export async function listGoogleCalendars(
     }));
 }
 
+/** Save a draft to the user's Gmail Drafts folder. Same MIME encoding
+ *  as sendGmail, different endpoint — Google stores it untouched so
+ *  the user can review in the Gmail web/mobile app and send from
+ *  there. This is the "belt" for our "braces" flow: AI proposes, we
+ *  optionally stash the proposal as a real draft, user sends whenever. */
+export async function saveGmailDraft(
+  accessToken: string,
+  opts: { to: string; subject: string; body: string },
+): Promise<{ id: string; threadId?: string }> {
+  const headerLines = [
+    `To: ${opts.to}`,
+    `Subject: ${encodeSubject(opts.subject)}`,
+    "MIME-Version: 1.0",
+    'Content-Type: text/plain; charset="UTF-8"',
+    "Content-Transfer-Encoding: 7bit",
+  ];
+  const raw = `${headerLines.join("\r\n")}\r\n\r\n${opts.body}`;
+  const rawB64 = Buffer.from(raw, "utf-8")
+    .toString("base64")
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
+
+  const res = await fetch(
+    "https://gmail.googleapis.com/gmail/v1/users/me/drafts",
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ message: { raw: rawB64 } }),
+    },
+  );
+  if (!res.ok) {
+    const err = await res.text().catch(() => "");
+    throw new Error(`gmail draft failed: ${res.status}:${err.slice(0, 200)}`);
+  }
+  const json = (await res.json()) as { id: string; message?: { threadId?: string } };
+  return { id: json.id, threadId: json.message?.threadId };
+}
+
 /** Send a plain-text email via the authenticated user's Gmail account.
  *  Returns the created message id. */
 export async function sendGmail(
