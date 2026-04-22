@@ -75,7 +75,7 @@ export default function Footer() {
             <Link href="/register"
               className="text-xs transition-colors duration-200"
               style={{ color: "#8b5cf6" }}>
-              Začať zadarmo →
+              Skúsiť Unifyo →
             </Link>
           </div>
 

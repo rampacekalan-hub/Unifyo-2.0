@@ -247,9 +247,9 @@ html.light {
   }
 }
 
-/* Subtle backdrop for content sections */
+/* Subtle backdrop for content sections — follows the active theme */
 .section-bg {
-  background: rgba(5,7,15,0.65);
+  background: var(--app-surface-2);
   backdrop-filter: blur(0px);
 }
 

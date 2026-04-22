@@ -605,8 +605,8 @@ const siteConfig: SiteConfig = {
       badge: "Nová éra práce — Unifyo AI je tu",
       headline: "Zabudni na chaos.",
       headlineAccent: "AI robí prácu za teba.",
-      subheadline: "AI asistent po slovensky — kalendár, úlohy a CRM na jednom mieste. Emaily a hovory už na ceste. Začni zadarmo.",
-      cta: "Začať zadarmo — žiadna karta",
+      subheadline: "AI asistent po slovensky — kalendár, úlohy a CRM na jednom mieste. Emaily a hovory už na ceste. Začni hneď.",
+      cta: "Skúsiť Unifyo",
       ctaSecondary: "Pozrieť ceny",
     },
     about: {
@@ -621,7 +621,7 @@ const siteConfig: SiteConfig = {
       loginTitle: "Vitajte späť",
       loginSubtitle: "Prihláste sa do svojho účtu",
       registerTitle: "Vytvorte si účet",
-      registerSubtitle: "Začnite s Unifyo ešte dnes — zadarmo",
+      registerSubtitle: "Začnite s Unifyo ešte dnes",
     },
     dashboard: {
       welcome: "Všetky systémy sú online.",

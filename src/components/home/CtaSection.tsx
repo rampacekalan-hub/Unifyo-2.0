@@ -15,8 +15,8 @@ export default function CtaSection() {
           transition={{ duration: 0.6, ease: [0.21, 0.47, 0.32, 0.98] }}
           className="relative rounded-3xl px-6 py-12 sm:p-16 text-center overflow-hidden"
           style={{
-            background: "linear-gradient(135deg, rgba(124,58,237,0.12) 0%, rgba(12,15,26,0.9) 50%, rgba(6,182,212,0.08) 100%)",
-            border: "1px solid rgba(139,92,246,0.18)",
+            background: "linear-gradient(135deg, color-mix(in oklab, var(--brand-primary) 14%, transparent) 0%, var(--app-surface) 55%, color-mix(in oklab, var(--brand-accent) 10%, transparent) 100%)",
+            border: "1px solid var(--app-border)",
             backdropFilter: "blur(24px)",
             WebkitBackdropFilter: "blur(24px)",
           }}
@@ -36,7 +36,7 @@ export default function CtaSection() {
 
           <div className="relative z-10">
             <div className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-semibold mb-6"
-              style={{ background: "rgba(139,92,246,0.1)", border: "1px solid rgba(139,92,246,0.2)", color: "#c4b5fd" }}>
+              style={{ background: "var(--brand-primary-soft)", border: "1px solid color-mix(in oklab, var(--brand-primary) 35%, transparent)", color: "var(--brand-primary)" }}>
               <Sparkles className="w-3 h-3" />
               Začni ešte dnes
             </div>
@@ -56,28 +56,30 @@ export default function CtaSection() {
 
             <p className="mb-10 max-w-lg mx-auto" style={{ fontSize: "1rem", color: "var(--app-text-muted)", lineHeight: 1.8 }}>
               Unifyo AI spravuje tvoj čas, komunikáciu aj biznis.
-              Začni s bezplatným plánom — bez kreditnej karty.
+              Plány od 8,99 €/mes · Zruš kedykoľvek.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <Link
                 href="/register"
-                className="inline-flex items-center justify-center gap-2 px-8 py-3.5 rounded-xl font-semibold text-sm text-white transition-all duration-200 active:scale-[0.97]"
+                data-press
+                className="inline-flex items-center justify-center gap-2 px-8 py-3.5 rounded-xl font-semibold text-sm text-white transition-all duration-200"
                 style={{
-                  background: "linear-gradient(135deg, #7c3aed, #5b21b6)",
+                  background: "var(--brand-gradient)",
                   boxShadow: "0 0 0 1px rgba(139,92,246,0.3), 0 4px 32px rgba(124,58,237,0.35)",
                 }}
               >
-                Začať zadarmo
+                Skúsiť Unifyo
                 <ArrowRight className="w-4 h-4" />
               </Link>
               <Link
                 href="/login"
+                data-press
                 className="inline-flex items-center justify-center px-8 py-3.5 rounded-xl font-medium text-sm transition-all duration-200"
                 style={{
-                  background: "rgba(255,255,255,0.05)",
-                  border: "1px solid rgba(139,92,246,0.2)",
-                  color: "#c4b5fd",
+                  background: "var(--app-surface-2)",
+                  border: "1px solid var(--app-border)",
+                  color: "var(--app-text)",
                 }}
               >
                 Už mám účet →

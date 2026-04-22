@@ -236,6 +236,34 @@ export default function HeroSection() {
           </Link>
         </motion.div>
 
+        {/* Trust bar — concrete promises, no fake testimonials.
+            Three dots + labels right under the CTAs, uses brand tokens
+            so they read clean in both themes. */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.32 }}
+          style={{
+            marginTop: "28px",
+            display: "flex",
+            flexWrap: "wrap",
+            justifyContent: "center",
+            gap: "18px 28px",
+            fontSize: "0.82rem",
+            color: "var(--app-text-muted)",
+          }}
+        >
+          {[
+            { label: "GDPR · EÚ hosting", dot: "var(--brand-success)" },
+            { label: "Po slovensky", dot: "var(--brand-primary)" },
+            { label: "Bez záväzku · storno kedykoľvek", dot: "var(--brand-accent)" },
+          ].map((t) => (
+            <span key={t.label} style={{ display: "inline-flex", alignItems: "center", gap: "7px" }}>
+              <span style={{ width: 6, height: 6, borderRadius: "50%", background: t.dot, boxShadow: `0 0 6px ${t.dot}` }} />
+              {t.label}
+            </span>
+          ))}
+        </motion.div>
+
       </motion.div>
 
       {/* ── Chat Demo ── */}
@@ -371,7 +399,7 @@ export default function HeroSection() {
               </div>
               <div style={{
                 width: "30px", height: "30px", borderRadius: "50%", flexShrink: 0,
-                background: "rgba(255,255,255,0.06)",
+                background: "var(--app-surface-2)",
                 border: "1px solid rgba(255,255,255,0.1)",
                 display: "flex", alignItems: "center", justifyContent: "center",
                 fontSize: "0.55rem", color: "#9ca3af", fontWeight: 700,

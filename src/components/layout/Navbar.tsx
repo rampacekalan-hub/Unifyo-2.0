@@ -107,7 +107,7 @@ export default function Navbar() {
               background: "var(--brand-gradient)",
               boxShadow: "0 0 0 1px rgba(139,92,246,0.3), 0 2px 16px rgba(124,58,237,0.25)",
             }}>
-            Začať zadarmo
+            Skúsiť Unifyo
           </Link>
         </div>
 
@@ -177,7 +177,7 @@ export default function Navbar() {
                 <Link href="/register" onClick={() => setMobileOpen(false)}
                   className="text-center text-sm text-white font-semibold py-3 rounded-xl"
                   style={{ background: "var(--brand-gradient)", boxShadow: "0 4px 16px rgba(124,58,237,0.3)" }}>
-                  Začať zadarmo →
+                  Skúsiť Unifyo →
                 </Link>
               </div>
             </div>

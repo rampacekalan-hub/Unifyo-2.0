@@ -124,13 +124,13 @@ export default function PricingSection() {
                 <div
                   className="relative flex flex-col h-full rounded-2xl p-6 transition-all duration-300"
                   style={isHighlighted ? {
-                    background: "linear-gradient(160deg, rgba(139,92,246,0.1) 0%, rgba(12,15,26,0.95) 60%, rgba(6,182,212,0.05) 100%)",
+                    background: "linear-gradient(160deg, color-mix(in oklab, var(--brand-primary) 10%, transparent) 0%, var(--app-surface) 60%, color-mix(in oklab, var(--brand-accent) 5%, transparent) 100%)",
                     border: "1px solid rgba(139,92,246,0.3)",
                     backdropFilter: "blur(16px)",
                     WebkitBackdropFilter: "blur(16px)",
                     boxShadow: "0 0 0 1px rgba(139,92,246,0.1), 0 8px 40px rgba(124,58,237,0.12)",
                   } : {
-                    background: "rgba(12,15,26,0.6)",
+                    background: "var(--app-surface-2)",
                     border: "1px solid rgba(139,92,246,0.1)",
                     backdropFilter: "blur(12px)",
                     WebkitBackdropFilter: "blur(12px)",
@@ -210,7 +210,7 @@ export default function PricingSection() {
                             <TooltipContent
                               className="text-xs max-w-[200px] leading-relaxed"
                               style={{
-                                background: "#0c0f1a",
+                                background: "var(--app-surface)",
                                 border: "1px solid rgba(139,92,246,0.2)",
                                 color: "#9ca3af",
                               }}>
@@ -236,7 +236,7 @@ export default function PricingSection() {
                       color: "#fff",
                       boxShadow: "0 0 0 1px rgba(139,92,246,0.3), 0 4px 20px rgba(124,58,237,0.3)",
                     } : {
-                      background: "rgba(255,255,255,0.04)",
+                      background: "var(--app-surface-2)",
                       border: "1px solid rgba(139,92,246,0.15)",
                       color: "var(--app-text-muted)",
                     }}
