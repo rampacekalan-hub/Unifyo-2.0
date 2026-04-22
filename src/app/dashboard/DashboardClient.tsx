@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect, useState, useCallback } from "react";
+import React, { useRef, useEffect, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { Bot, Send, Loader2, AlertTriangle, X, Check, Square, Copy, Sparkles, RefreshCw, ArrowDown } from "lucide-react";
@@ -538,6 +538,14 @@ export default function DashboardClient({ user }: DashboardClientProps) {
                                 transition={{ duration: 0.9, repeat: Infinity, ease: "easeInOut" }}
                               />
                             )}
+                            {/* Email-draft CTA — if the AI's reply looks
+                                like an email draft (Predmet: + body),
+                                surface a one-click "Odoslať cez Gmail"
+                                button that opens Compose pre-filled.
+                                AI never actually sends on its own. */}
+                            {msg.role === "ai" && msg.content && msg.id !== streamingId && (
+                              <EmailDraftCTA aiText={msg.content} />
+                            )}
                           </>
                         )}
                       </div>
@@ -700,4 +708,59 @@ export default function DashboardClient({ user }: DashboardClientProps) {
       <CommandPalette />
     </div>
   );
+}
+
+// ── Email-draft CTA ────────────────────────────────────────────────
+// Heuristic parser for when the AI replies with an email draft.
+// Looks for "Predmet:" + "Dobrý deň" / "Vážený" / "Ahoj" patterns —
+// if we find them, render a "Otvoriť v Gmail Compose" button that
+// deep-links to /email?compose=1&subject=…&body=… so the user can
+// review and send. AI itself never sends the mail.
+function EmailDraftCTA({ aiText }: { aiText: string }) {
+  const draft = React.useMemo(() => parseEmailDraft(aiText), [aiText]);
+  if (!draft) return null;
+  const params = new URLSearchParams();
+  if (draft.subject) params.set("subject", draft.subject);
+  if (draft.body) params.set("body", draft.body);
+  params.set("compose", "1");
+  return (
+    <div
+      className="mt-3 p-3 rounded-xl flex items-center gap-2 flex-wrap"
+      style={{
+        background: "rgba(14,165,233,0.08)",
+        border: "1px solid rgba(14,165,233,0.35)",
+      }}
+    >
+      <span className="text-[11px] font-semibold" style={{ color: "#38bdf8" }}>
+        ✉️ Návrh e-mailu
+      </span>
+      <span className="text-[11px]" style={{ color: "var(--app-text-muted)" }}>
+        — otvor v Gmail Compose, skontroluj a pošli.
+      </span>
+      <a
+        href={`/email?${params}`}
+        className="ml-auto text-[11px] font-semibold px-3 py-1.5 rounded-lg"
+        style={{
+          background: "linear-gradient(135deg,#0ea5e9,#6366f1)",
+          color: "white",
+        }}
+      >
+        Otvoriť v Compose →
+      </a>
+    </div>
+  );
+}
+
+function parseEmailDraft(text: string): { subject: string; body: string } | null {
+  // Quick reject — saves the regex work on every AI turn.
+  if (!/predmet\s*[:：]/i.test(text) && !/subject\s*[:：]/i.test(text)) return null;
+  const m = text.match(/(?:predmet|subject)\s*[:：]\s*(.+?)(?:\n|$)/i);
+  const subject = m?.[1]?.trim() ?? "";
+  // Body = everything after the subject line up to the next "Chcete…" style meta-question.
+  const subjectIdx = m ? text.indexOf(m[0]) + m[0].length : 0;
+  let body = text.slice(subjectIdx).trim();
+  // Strip AI meta-question lines at the end ("Chcete aby som…", "Chceš ho poslať?")
+  body = body.replace(/\n\s*(chce[sš]|chce[tť]e|mám|želáte)[^\n]*\??\s*$/gi, "").trim();
+  if (!subject && body.length < 40) return null;
+  return { subject: subject || "Bez predmetu", body };
 }

@@ -128,6 +128,25 @@ export default function EmailPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [folder]);
 
+  // `?compose=1&to=…&subject=…&body=…` — lets the dashboard / AI
+  // hand the user an already-drafted e-mail. The user still has to
+  // click "Odoslať" in the modal, so this can never silently send.
+  const [prefill, setPrefill] = useState<{ to?: string; subject?: string; body?: string } | null>(null);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const sp = new URLSearchParams(window.location.search);
+    if (sp.get("compose") === "1") {
+      setPrefill({
+        to: sp.get("to") ?? undefined,
+        subject: sp.get("subject") ?? undefined,
+        body: sp.get("body") ?? undefined,
+      });
+      setComposing(true);
+      // Clean the URL so a refresh doesn't re-open the modal.
+      window.history.replaceState(null, "", "/email");
+    }
+  }, []);
+
   return (
     <AppLayout title="Email" subtitle="Email —">
       <div className="p-4 md:p-6 max-w-5xl mx-auto">
@@ -237,9 +256,11 @@ export default function EmailPage() {
 
         {composing && (
           <ComposeModal
-            onClose={() => setComposing(false)}
+            prefill={prefill ?? undefined}
+            onClose={() => { setComposing(false); setPrefill(null); }}
             onSent={() => {
               setComposing(false);
+              setPrefill(null);
               toast.success("E-mail odoslaný");
               load();
             }}
@@ -488,10 +509,16 @@ function MessageOverlay({
   );
 }
 
-function ComposeModal({ onClose, onSent }: { onClose: () => void; onSent: () => void }) {
-  const [to, setTo] = useState("");
-  const [subject, setSubject] = useState("");
-  const [body, setBody] = useState("");
+function ComposeModal({
+  onClose, onSent, prefill,
+}: {
+  onClose: () => void;
+  onSent: () => void;
+  prefill?: { to?: string; subject?: string; body?: string };
+}) {
+  const [to, setTo] = useState(prefill?.to ?? "");
+  const [subject, setSubject] = useState(prefill?.subject ?? "");
+  const [body, setBody] = useState(prefill?.body ?? "");
   const [sending, setSending] = useState(false);
 
   async function submit() {

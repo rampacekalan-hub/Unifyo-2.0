@@ -785,7 +785,13 @@ export function extractActionCards(text: string): ActionCard[] {
   // task keyword. Samotná zmienka "poistenie" (intent keyword) NEMÁ
   // stačiť, inak sa pri každej vete o poistení vytvorí fake stretnutie.
   const hasExplicitSchedule = hasDate || hasTimeKw || hasTaskKw;
-  const hasPerson = contactName && confidence >= 90; // Strict threshold
+  // Explicit add-contact commands ("pridaj kontakt …", "ulož kontakt …")
+  // bypass the confidence threshold — the user's intent is unambiguous.
+  // Without this, "Pridaj kontakt Peter Novák, tel 0950…" would need a
+  // 90%+ match and often fall through, leaving the user's command
+  // silently unprocessed.
+  const isExplicitAddContact = /\b(prida[jť]|ulož|zaznam(enaj)?|uložiť|nastav)\s+(?:kontakt|klienta|osobu)\b/i.test(text);
+  const hasPerson = contactName && (confidence >= 90 || (isExplicitAddContact && confidence >= 40));
 
   // Architecture Check: Do we have both cards when we should?
   const hasCRM = aiCards.some(c => c.targetModule === "crm");

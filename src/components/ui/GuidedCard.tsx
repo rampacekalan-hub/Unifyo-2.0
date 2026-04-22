@@ -96,7 +96,11 @@ function SectionRow({
 
 export default function GuidedCard({ draft, onChange, onConfirm, onDismiss }: Props) {
   const [saving, setSaving] = useState(false);
-  const [editing, setEditing] = useState(false);
+  // Default to edit mode so users see the fields they can tweak
+  // + the big "Uložiť" button from the first render. The old compact
+  // mode hid the form behind a pencil icon and confused users who
+  // expected a classic form.
+  const [editing, setEditing] = useState(true);
 
   // ── Flash-animate fields that just became filled (AI added them) ──
   const prevRef = useRef<GuidedDraft | null>(null);
@@ -327,8 +331,8 @@ export default function GuidedCard({ draft, onChange, onConfirm, onDismiss }: Pr
           className="flex items-center justify-between gap-2 px-4 py-2.5"
           style={{ borderTop: `1px solid ${D.border}`, background: "rgba(5,7,15,0.35)" }}
         >
-          <span className="text-[0.65rem]" style={{ color: D.muted }}>
-            AI dopĺňa polia počas rozhovoru
+          <span className="text-[0.7rem] font-semibold" style={{ color: D.sky }}>
+            ← Uprav polia a klikni &quot;Uložiť&quot;
           </span>
           <div className="flex items-center gap-2">
             <button
@@ -342,19 +346,19 @@ export default function GuidedCard({ draft, onChange, onConfirm, onDismiss }: Pr
             <button
               onClick={handleConfirm}
               disabled={saving || (!hasContact && !hasTask)}
-              className="px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 disabled:opacity-50"
+              className="px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-1.5 disabled:opacity-50"
               style={{
                 background: `linear-gradient(135deg, ${D.indigo}, ${D.violet})`,
                 color: "white",
-                boxShadow: "0 0 14px rgba(99,102,241,0.38)",
+                boxShadow: "0 0 18px rgba(99,102,241,0.55)",
               }}
             >
               {saving ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
-                <Check className="w-3.5 h-3.5" />
+                <Check className="w-4 h-4" />
               )}
-              {saving ? "Ukladám…" : "Potvrdiť a uložiť"}
+              {saving ? "Ukladám…" : "Uložiť"}
             </button>
           </div>
         </div>
