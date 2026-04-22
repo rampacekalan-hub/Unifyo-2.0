@@ -36,11 +36,11 @@ interface Contact {
 const D = {
   indigo: "#6366f1",
   violet: "#8b5cf6",
-  indigoBorder: "rgba(99,102,241,0.22)",
+  indigoBorder: "var(--app-border)",
   indigoDim: "rgba(99,102,241,0.08)",
-  text: "#eef2ff",
-  muted: "#94a3b8",
-  mutedDark: "#64748b",
+  text: "var(--app-text)",
+  muted: "var(--app-text-muted)",
+  mutedDark: "var(--app-text-subtle)",
 };
 
 export default function CRMPage() {

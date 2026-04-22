@@ -18,10 +18,10 @@ const D = {
   emerald: "#10b981",
   amber: "#f59e0b",
   rose: "#f43f5e",
-  text: "#eef2ff",
-  muted: "#94a3b8",
-  mutedDark: "#64748b",
-  border: "rgba(99,102,241,0.22)",
+  text: "var(--app-text)",
+  muted: "var(--app-text-muted)",
+  mutedDark: "var(--app-text-subtle)",
+  border: "var(--app-border)",
 };
 
 interface Summary {
@@ -124,7 +124,7 @@ function StatCard({
     <div
       className="rounded-2xl p-4"
       style={{
-        background: "rgba(10,12,24,0.6)",
+        background: "var(--app-surface)",
         border: `1px solid ${D.border}`,
       }}
     >
@@ -159,7 +159,7 @@ function Panel({
   return (
     <section
       className="rounded-2xl p-5"
-      style={{ background: "rgba(10,12,24,0.6)", border: `1px solid ${D.border}` }}
+      style={{ background: "var(--app-surface)", border: `1px solid ${D.border}` }}
     >
       <h3 className="text-[0.7rem] font-semibold uppercase tracking-widest mb-3 flex items-center gap-1.5" style={{ color: accent }}>
         <Icon className="w-3.5 h-3.5" /> {title}

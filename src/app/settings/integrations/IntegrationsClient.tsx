@@ -23,11 +23,11 @@ import AppLayout from "@/components/layout/AppLayout";
 const D = {
   indigo: "#6366f1",
   violet: "#8b5cf6",
-  text: "#eef2ff",
-  muted: "#94a3b8",
-  mutedDark: "#64748b",
+  text: "var(--app-text)",
+  muted: "var(--app-text-muted)",
+  mutedDark: "var(--app-text-subtle)",
   indigoDim: "rgba(99,102,241,0.08)",
-  indigoBorder: "rgba(99,102,241,0.22)",
+  indigoBorder: "var(--app-border)",
   emerald: "#10b981",
   red: "#ef4444",
 };
@@ -111,7 +111,7 @@ export default function IntegrationsClient({ google: initial }: { google: Google
         <div
           className="rounded-2xl p-5 md:p-6"
           style={{
-            background: "rgba(10,12,24,0.55)",
+            background: "var(--app-surface)",
             border: `1px solid ${D.indigoBorder}`,
           }}
         >
@@ -330,7 +330,7 @@ function PlannedIntegration({
   return (
     <div
       className="rounded-2xl p-4 flex items-start gap-3"
-      style={{ background: "rgba(10,12,24,0.4)", border: `1px solid ${D.indigoBorder}` }}
+      style={{ background: "var(--app-surface-2)", border: `1px solid ${D.indigoBorder}` }}
     >
       <div
         className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 text-sm font-bold text-white"

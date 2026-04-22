@@ -40,10 +40,10 @@ interface Contact {
 const D = {
   indigo: "#6366f1",
   violet: "#8b5cf6",
-  text: "#eef2ff",
-  muted: "#94a3b8",
-  mutedDark: "#64748b",
-  border: "rgba(99,102,241,0.22)",
+  text: "var(--app-text)",
+  muted: "var(--app-text-muted)",
+  mutedDark: "var(--app-text-subtle)",
+  border: "var(--app-border)",
   dim: "rgba(99,102,241,0.08)",
 };
 
@@ -236,7 +236,7 @@ export default function PipelinePage() {
           <div
             className="rounded-2xl flex flex-col items-center justify-center py-16 px-6 text-center"
             style={{
-              background: "rgba(10,12,24,0.5)",
+              background: "var(--app-surface-2)",
               border: `1px dashed ${D.border}`,
             }}
           >

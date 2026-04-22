@@ -32,11 +32,11 @@ interface GmailMessageSummary {
 const D = {
   indigo: "#6366f1",
   violet: "#8b5cf6",
-  text: "#eef2ff",
-  muted: "#94a3b8",
-  mutedDark: "#64748b",
+  text: "var(--app-text)",
+  muted: "var(--app-text-muted)",
+  mutedDark: "var(--app-text-subtle)",
   indigoDim: "rgba(99,102,241,0.08)",
-  indigoBorder: "rgba(99,102,241,0.22)",
+  indigoBorder: "var(--app-border)",
 };
 
 type LoadState =
@@ -103,7 +103,7 @@ export default function EmailPage() {
                 }}
                 className="flex items-center gap-2 rounded-xl px-3 py-1.5"
                 style={{
-                  background: "rgba(10,12,24,0.5)",
+                  background: "var(--app-surface-2)",
                   border: `1px solid ${D.indigoBorder}`,
                 }}
               >
@@ -169,7 +169,7 @@ function LoadingCard() {
   return (
     <div
       className="rounded-2xl p-8 flex items-center justify-center gap-3"
-      style={{ background: "rgba(10,12,24,0.4)", border: `1px solid ${D.indigoBorder}` }}
+      style={{ background: "var(--app-surface-2)", border: `1px solid ${D.indigoBorder}` }}
     >
       <Loader2 className="w-4 h-4 animate-spin" style={{ color: D.indigo }} />
       <span className="text-xs" style={{ color: D.muted }}>
@@ -183,7 +183,7 @@ function NotConnectedCard() {
   return (
     <div
       className="rounded-2xl p-8 text-center"
-      style={{ background: "rgba(10,12,24,0.5)", border: `1px solid ${D.indigoBorder}` }}
+      style={{ background: "var(--app-surface-2)", border: `1px solid ${D.indigoBorder}` }}
     >
       <div
         className="w-14 h-14 mx-auto rounded-2xl flex items-center justify-center mb-4"
@@ -247,7 +247,7 @@ function InboxList({ messages }: { messages: GmailMessageSummary[] }) {
     return (
       <div
         className="rounded-2xl p-8 text-center text-xs"
-        style={{ background: "rgba(10,12,24,0.4)", border: `1px solid ${D.indigoBorder}`, color: D.muted }}
+        style={{ background: "var(--app-surface-2)", border: `1px solid ${D.indigoBorder}`, color: D.muted }}
       >
         Inbox je prázdny. ✨
       </div>
@@ -256,7 +256,7 @@ function InboxList({ messages }: { messages: GmailMessageSummary[] }) {
   return (
     <ul
       className="rounded-2xl overflow-hidden"
-      style={{ background: "rgba(10,12,24,0.5)", border: `1px solid ${D.indigoBorder}` }}
+      style={{ background: "var(--app-surface-2)", border: `1px solid ${D.indigoBorder}` }}
     >
       {messages.map((m, i) => (
         <li
@@ -349,14 +349,14 @@ function ComposeModal({ onClose, onSent }: { onClose: () => void; onSent: () => 
             onChange={(e) => setTo(e.target.value)}
             placeholder="Komu (email@…)"
             className="w-full text-xs px-3 py-2 rounded-lg outline-none"
-            style={{ background: "rgba(10,12,24,0.6)", border: `1px solid ${D.indigoBorder}`, color: D.text }}
+            style={{ background: "var(--app-surface)", border: `1px solid ${D.indigoBorder}`, color: D.text }}
           />
           <input
             value={subject}
             onChange={(e) => setSubject(e.target.value)}
             placeholder="Predmet"
             className="w-full text-xs px-3 py-2 rounded-lg outline-none"
-            style={{ background: "rgba(10,12,24,0.6)", border: `1px solid ${D.indigoBorder}`, color: D.text }}
+            style={{ background: "var(--app-surface)", border: `1px solid ${D.indigoBorder}`, color: D.text }}
           />
           <textarea
             value={body}
@@ -364,7 +364,7 @@ function ComposeModal({ onClose, onSent }: { onClose: () => void; onSent: () => 
             placeholder="Správa…"
             rows={8}
             className="w-full text-xs px-3 py-2 rounded-lg outline-none resize-none"
-            style={{ background: "rgba(10,12,24,0.6)", border: `1px solid ${D.indigoBorder}`, color: D.text }}
+            style={{ background: "var(--app-surface)", border: `1px solid ${D.indigoBorder}`, color: D.text }}
           />
           <div className="flex items-center gap-2">
             <button

@@ -19,10 +19,10 @@ const D = {
   emerald: "#10b981",
   amber: "#f59e0b",
   rose: "#f43f5e",
-  text: "#eef2ff",
-  muted: "#94a3b8",
-  mutedDark: "#64748b",
-  indigoBorder: "rgba(99,102,241,0.22)",
+  text: "var(--app-text)",
+  muted: "var(--app-text-muted)",
+  mutedDark: "var(--app-text-subtle)",
+  indigoBorder: "var(--app-border)",
   indigoDim: "rgba(99,102,241,0.08)",
 };
 

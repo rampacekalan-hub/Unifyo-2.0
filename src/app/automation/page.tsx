@@ -17,10 +17,10 @@ const D = {
   violet: "#8b5cf6",
   emerald: "#10b981",
   amber: "#f59e0b",
-  text: "#eef2ff",
-  muted: "#94a3b8",
-  mutedDark: "#64748b",
-  border: "rgba(99,102,241,0.22)",
+  text: "var(--app-text)",
+  muted: "var(--app-text-muted)",
+  mutedDark: "var(--app-text-subtle)",
+  border: "var(--app-border)",
 };
 
 type RuleId = "daily-digest" | "stale-deal" | "new-sender-to-crm";
@@ -172,7 +172,7 @@ export default function AutomationPage() {
                   key={r.id}
                   className="rounded-2xl p-4 flex gap-3 items-start"
                   style={{
-                    background: "rgba(10,12,24,0.6)",
+                    background: "var(--app-surface)",
                     border: `1px solid ${on ? `${r.color}55` : D.border}`,
                   }}
                 >

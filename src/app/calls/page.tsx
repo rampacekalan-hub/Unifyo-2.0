@@ -21,10 +21,10 @@ const D = {
   emerald: "#10b981",
   amber: "#f59e0b",
   rose: "#f43f5e",
-  text: "#eef2ff",
-  muted: "#94a3b8",
-  mutedDark: "#64748b",
-  border: "rgba(99,102,241,0.22)",
+  text: "var(--app-text)",
+  muted: "var(--app-text-muted)",
+  mutedDark: "var(--app-text-subtle)",
+  border: "var(--app-border)",
 };
 
 interface CallRow {
@@ -208,7 +208,7 @@ export default function CallsPage() {
         {/* List */}
         <div
           className="rounded-2xl p-4 sm:p-5"
-          style={{ background: "rgba(10,12,24,0.6)", border: `1px solid ${D.border}` }}
+          style={{ background: "var(--app-surface)", border: `1px solid ${D.border}` }}
         >
           <h2 className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: D.muted }}>
             Tvoje hovory
@@ -228,7 +228,7 @@ export default function CallsPage() {
                     onClick={() => openDetail(r.id)}
                     className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-left transition"
                     style={{
-                      background: "rgba(5,7,15,0.6)",
+                      background: "var(--app-surface-2)",
                       border: `1px solid ${D.border}`,
                     }}
                   >
@@ -329,13 +329,13 @@ function CallDetailOverlay({
         transition={{ type: "tween", duration: 0.25 }}
         className="fixed right-0 top-0 bottom-0 z-[81] w-full sm:max-w-xl overflow-y-auto"
         style={{
-          background: "rgba(10,12,24,0.97)",
+          background: "var(--app-surface)",
           borderLeft: `1px solid ${D.border}`,
         }}
       >
         <div
           className="sticky top-0 z-10 flex items-center justify-between px-5 py-4"
-          style={{ background: "rgba(10,12,24,0.95)", borderBottom: `1px solid ${D.border}`, backdropFilter: "blur(18px)" }}
+          style={{ background: "var(--app-surface)", borderBottom: `1px solid ${D.border}`, backdropFilter: "blur(18px)" }}
         >
           <div className="min-w-0 flex-1 pr-3">
             <h2 className="text-sm font-semibold truncate" style={{ color: D.text }}>{row.title}</h2>
@@ -430,7 +430,7 @@ function Panel({
   return (
     <section
       className="rounded-2xl p-4"
-      style={{ background: "rgba(5,7,15,0.6)", border: `1px solid ${D.border}` }}
+      style={{ background: "var(--app-surface-2)", border: `1px solid ${D.border}` }}
     >
       <h3 className="text-[0.7rem] font-semibold uppercase tracking-widest mb-2 flex items-center gap-1.5" style={{ color: D.muted }}>
         <Icon className="w-3.5 h-3.5" /> {title}

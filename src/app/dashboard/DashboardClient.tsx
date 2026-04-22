@@ -52,12 +52,12 @@ interface DashboardClientProps {
 const D = {
   indigo:       "#6366f1",
   indigoDim:    "rgba(99,102,241,0.10)",
-  indigoBorder: "rgba(99,102,241,0.20)",
+  indigoBorder: "var(--app-border)",
   indigoGlow:   "rgba(99,102,241,0.28)",
   violet:       "#8b5cf6",
   sky:          "#38bdf8",
-  text:         "#eef2ff",
-  muted:        "#6b7280",
+  text:         "var(--app-text)",
+  muted:        "var(--app-text-muted)",
 };
 
 // ── Sample prompts on empty chat ──────────────────────────────
@@ -345,7 +345,7 @@ export default function DashboardClient({ user }: DashboardClientProps) {
   const showGreeting = messages.length === 0;
 
   return (
-    <div className="flex h-screen overflow-hidden" style={{ background: "#05070f", color: "#eef2ff" }}>
+    <div className="flex h-screen overflow-hidden" style={{ background: "var(--app-bg)", color: "var(--app-text)" }}>
       <NeuralBackground themeEngine={config.branding.themeEngine} />
 
       {/* ── SIDEBAR (shared) ── */}
@@ -657,7 +657,7 @@ export default function DashboardClient({ user }: DashboardClientProps) {
                 disabled={loading}
                 aria-label="Správa pre AI"
                 className="flex-1 bg-transparent text-sm outline-none"
-                style={{ color: "#eef2ff", caretColor: "#8b5cf6" }} />
+                style={{ color: "var(--app-text)", caretColor: "#8b5cf6" }} />
               {loading ? (
                 <button
                   onClick={() => chatActions.abortStream()}
