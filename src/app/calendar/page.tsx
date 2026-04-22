@@ -326,13 +326,13 @@ function CalendarPageInner() {
 
   return (
     <AppLayout title="Kalendár">
-      <div className="flex flex-col lg:flex-row h-full p-4 md:p-6 gap-4 md:gap-6">
+      <div className="flex flex-col lg:flex-row h-full p-3 md:p-5 gap-3 md:gap-5">
         {/* ── Calendar grid ── */}
-        <div className="flex-1 min-w-0">
-          {/* Color legend — helps users distinguish local tasks from
-              Google events now that both render in the same grid. */}
+        <div className="flex-1 min-w-0 flex flex-col min-h-0">
+          {/* Compact one-line legend on top, inline to save vertical
+              space. Owner flagged that the grid didn't fit on screen. */}
           <CalendarLegend />
-          <div className="flex items-center justify-between mb-4 md:mb-6 flex-wrap gap-2">
+          <div className="flex items-center justify-between mb-2 md:mb-3 flex-wrap gap-2 flex-shrink-0">
             <div className="flex items-center gap-2 md:gap-4">
               <button
                 onClick={() => {
@@ -439,22 +439,29 @@ function CalendarPageInner() {
           </div>
 
           {viewMode === "month" ? (
-            <>
-              <div className="grid grid-cols-7 gap-1 mb-2">
+            <div className="flex-1 min-h-0 flex flex-col">
+              <div className="grid grid-cols-7 gap-1 mb-1 flex-shrink-0">
                 {["Po", "Ut", "St", "Št", "Pi", "So", "Ne"].map((day) => (
-                  <div key={day} className="text-center py-2 text-xs md:text-sm font-medium" style={{ color: D.muted }}>
+                  <div key={day} className="text-center py-1 text-[10px] md:text-xs font-semibold uppercase tracking-wider" style={{ color: D.mutedDark }}>
                     {day}
                   </div>
                 ))}
               </div>
 
-              <div className="grid grid-cols-7 gap-1">
+              {/* Grid fills all remaining vertical space. Each row is
+                  an equal fraction of the container height — cells
+                  shrink on laptops, grow on big screens, never overflow. */}
+              <div
+                className="grid grid-cols-7 gap-1 flex-1 min-h-0"
+                style={{
+                  gridAutoRows: "minmax(0, 1fr)",
+                }}
+              >
                 {Array.from({ length: startingDay }).map((_, i) => (
                   <div
                     key={`empty-${i}`}
-                    className="rounded-lg md:rounded-xl"
+                    className="rounded-lg"
                     style={{
-                      minHeight: 88,
                       background: "transparent",
                       border: `1px dashed ${D.indigoBorder}`,
                     }}
@@ -473,12 +480,12 @@ function CalendarPageInner() {
                       onDragOver={(e) => handleDragOver(e, iso)}
                       onDragLeave={() => setDragOverIso((v) => v === iso ? null : v)}
                       onDrop={(e) => handleDrop(e, iso)}
-                      className="rounded-lg md:rounded-xl p-1.5 md:p-2 cursor-pointer relative overflow-hidden flex flex-col"
+                      className="rounded-lg p-1 md:p-1.5 cursor-pointer relative overflow-hidden flex flex-col"
                       style={{
-                        // Minimum height keeps cells readable — was
-                        // aspect-square which on wide screens squashed
-                        // to 18px tall.
-                        minHeight: 88,
+                        // Row uses minmax(0, 1fr) so this h-auto fills
+                        // exactly 1/6 of the grid's vertical space —
+                        // calendar always fits on one screen.
+                        minHeight: 0,
                         background: isDragOver
                           ? "rgba(139,92,246,0.25)"
                           : isToday
@@ -558,7 +565,7 @@ function CalendarPageInner() {
                   );
                 })}
               </div>
-            </>
+            </div>
           ) : (
             // ── Week view ──────────────────────────────────────────
             (() => {
@@ -909,25 +916,18 @@ function CalendarPageInner() {
 // Kept self-contained here because it only makes sense next to the
 // grid that uses those colors.
 function CalendarLegend() {
+  // Compact inline legend — saves vertical real-estate so the month
+  // grid can fit the viewport without scrolling.
   const items = [
-    { color: "#8b5cf6", label: "Moje úlohy" },
-    { color: "#0ea5e9", label: "Google Kalendár" },
+    { color: "#8b5cf6", label: "Úlohy" },
+    { color: "#0ea5e9", label: "Google" },
     { color: "#10b981", label: "Hotové" },
   ];
   return (
-    <div
-      className="flex items-center gap-3 mb-3 px-3 py-2 rounded-xl flex-wrap"
-      style={{
-        background: "var(--app-surface-2)",
-        border: `1px solid ${D.indigoBorder}`,
-      }}
-    >
-      <span className="text-[10px] uppercase tracking-widest" style={{ color: D.mutedDark }}>
-        Farby
-      </span>
+    <div className="flex items-center gap-3 mb-2 flex-shrink-0">
       {items.map((it) => (
-        <span key={it.label} className="flex items-center gap-1.5 text-[11px]" style={{ color: D.muted }}>
-          <span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ background: it.color }} />
+        <span key={it.label} className="flex items-center gap-1 text-[10px]" style={{ color: D.mutedDark }}>
+          <span className="inline-block w-2 h-2 rounded-sm" style={{ background: it.color }} />
           {it.label}
         </span>
       ))}
