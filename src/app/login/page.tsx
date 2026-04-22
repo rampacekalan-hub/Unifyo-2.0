@@ -119,26 +119,109 @@ function LoginForm() {
   }
 
   return (
-    <main
-      className="min-h-screen flex items-center justify-center p-4"
-      style={{ background: B.background }}
-    >
+    <main className="min-h-screen grid lg:grid-cols-2" style={{ background: B.background }}>
+      {/* Left panel — brand hero. Hidden on mobile to keep the form
+          above the fold on small screens. */}
+      <section
+        className="hidden lg:flex flex-col justify-between p-12 relative overflow-hidden"
+        style={{
+          background:
+            "linear-gradient(135deg, rgba(139,92,246,0.25), rgba(14,165,233,0.18))",
+          borderRight: `1px solid ${B.border}`,
+        }}
+      >
+        {/* Decorative gradient orbs — tasteful, not carnival. */}
+        <div
+          aria-hidden
+          className="absolute -top-40 -left-40 w-96 h-96 rounded-full blur-3xl opacity-40"
+          style={{ background: "radial-gradient(circle, #8b5cf6, transparent 70%)" }}
+        />
+        <div
+          aria-hidden
+          className="absolute -bottom-40 -right-20 w-96 h-96 rounded-full blur-3xl opacity-30"
+          style={{ background: "radial-gradient(circle, #0ea5e9, transparent 70%)" }}
+        />
+
+        <div className="relative z-10">
+          <Link href="/" className="inline-flex items-center gap-2">
+            <div
+              className="w-9 h-9 rounded-2xl flex items-center justify-center"
+              style={{ background: "var(--brand-gradient)" }}
+            >
+              <span className="text-white text-sm font-black">U</span>
+            </div>
+            <span className="font-bold text-lg" style={{ color: B.text }}>Unifyo</span>
+          </Link>
+        </div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+          className="relative z-10"
+        >
+          <h1
+            className="font-black tracking-[-0.03em] leading-[1.05] mb-4"
+            style={{ fontSize: "clamp(2rem, 3vw, 3rem)", color: B.text }}
+          >
+            Tvoj biznis v jednej{" "}
+            <span
+              style={{
+                background: "var(--brand-gradient)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                backgroundClip: "text",
+              }}
+            >
+              mysli.
+            </span>
+          </h1>
+          <p className="text-base max-w-md leading-relaxed" style={{ color: B.textMuted }}>
+            CRM, kalendár, e-maily, hovory a AI poradca — všetko po slovensky,
+            na jednom mieste, bez chaosu medzi záložkami.
+          </p>
+          <div className="flex items-center gap-4 mt-8">
+            {["CRM", "Kalendár", "AI chat", "Hovory"].map((f) => (
+              <span
+                key={f}
+                className="text-[11px] px-2.5 py-1 rounded-full"
+                style={{
+                  background: "rgba(255,255,255,0.06)",
+                  border: `1px solid ${B.border}`,
+                  color: B.textMuted,
+                }}
+              >
+                {f}
+              </span>
+            ))}
+          </div>
+        </motion.div>
+
+        <div className="relative z-10 text-[11px]" style={{ color: B.textMuted }}>
+          © Unifyo · {new Date().getFullYear()} · Slovensko
+        </div>
+      </section>
+
+      {/* Right panel — the form */}
+      <section className="flex items-center justify-center p-6 md:p-12">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.45, ease: [0.21, 0.47, 0.32, 0.98] }}
         className="w-full max-w-sm"
       >
-        {/* Brand */}
-        <AuthBrand subtitle={texts.auth.loginSubtitle} />
+        {/* Brand (mobile only — desktop shows it in the left panel) */}
+        <div className="lg:hidden">
+          <AuthBrand subtitle={texts.auth.loginSubtitle} />
+        </div>
 
         {/* Card */}
         <div
-          className="rounded-2xl p-6"
+          className="rounded-2xl p-6 lg:p-8 lg:border-0 lg:shadow-none lg:bg-transparent"
           style={{
             background: B.surface,
             border: `1px solid ${B.border}`,
             backdropFilter: "blur(20px)",
+            borderRadius: "var(--r-lg)",
           }}
         >
           {stage === "credentials" ? (
@@ -338,6 +421,7 @@ function LoginForm() {
           </p>
         )}
       </motion.div>
+      </section>
     </main>
   );
 }

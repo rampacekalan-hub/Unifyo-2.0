@@ -48,6 +48,34 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/* ── Brand palette — single source of truth ───────────────────────
+   One violet primary, one sky secondary, one of each semantic. Inline
+   hex in components is fading out; new code should reach for these
+   vars. Keep these identical between light/dark themes so buttons and
+   badges carry the same identity across the whole app. */
+:root {
+  --brand-primary:        #8b5cf6; /* violet-500 — primary actions */
+  --brand-primary-strong: #7c3aed; /* violet-600 — hover / pressed  */
+  --brand-primary-soft:   rgba(139,92,246,0.12);
+  --brand-accent:         #0ea5e9; /* sky-500   — secondary accent */
+  --brand-accent-soft:    rgba(14,165,233,0.12);
+  --brand-success:        #10b981; /* emerald-500 */
+  --brand-success-soft:   rgba(16,185,129,0.12);
+  --brand-warning:        #f59e0b; /* amber-500   */
+  --brand-warning-soft:   rgba(245,158,11,0.12);
+  --brand-danger:         #f43f5e; /* rose-500    */
+  --brand-danger-soft:    rgba(244,63,94,0.12);
+
+  /* Gradients — reused for hero buttons and badges. */
+  --brand-gradient:     linear-gradient(135deg, #8b5cf6 0%, #0ea5e9 100%);
+  --brand-gradient-hot: linear-gradient(135deg, #8b5cf6 0%, #f43f5e 100%);
+
+  /* Radius scale. Stick to these three for every new surface. */
+  --r-sm: 0.5rem;   /* 8px  — pills, chips                 */
+  --r-md: 0.75rem;  /* 12px — inputs, buttons              */
+  --r-lg: 1rem;     /* 16px — cards, panels, modals        */
+}
+
 /* ── App-level semantic tokens (dark default) ─────────────────────
    Introduced for the light-mode migration. Components that previously
    hardcoded `#05070f` / `#eef2ff` / etc. inline can switch to
@@ -235,6 +263,55 @@ html.light {
 @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
 @keyframes bounce-dot { 0%,100%{transform:translateY(0);opacity:0.4} 50%{transform:translateY(-4px);opacity:1} }
 @keyframes marquee { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }
+
+/* ── Skeleton loader — greyscale placeholder with gentle shimmer ──
+   Drop <div class="skeleton h-4 w-24 rounded-md"/> anywhere.
+   Respects prefers-reduced-motion (media query at the top of the
+   file covers it globally via transition-duration: 0.01ms). */
+@keyframes skeleton-shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(139,92,246,0.06) 0%,
+    rgba(139,92,246,0.16) 50%,
+    rgba(139,92,246,0.06) 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+  border-radius: var(--r-md);
+}
+html.light .skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(15,23,42,0.04) 0%,
+    rgba(15,23,42,0.10) 50%,
+    rgba(15,23,42,0.04) 100%
+  );
+  background-size: 200% 100%;
+}
+
+/* ── Button press feedback — scale-down on :active ────────────────
+   Works on any element with data-press. Prefers-reduced-motion is
+   respected through the global duration override above. */
+[data-press] {
+  transition: transform 0.14s cubic-bezier(.2,.8,.2,1), box-shadow 0.2s ease;
+  will-change: transform;
+}
+[data-press]:active {
+  transform: scale(0.965);
+}
+
+/* ── Fade-in helper for lists ─────────────────────────────────────
+   Combined with a small vertical translate to suggest "content
+   arriving" rather than popping.  */
+@keyframes fade-in-up {
+  0%   { opacity: 0; transform: translateY(8px); }
+  100% { opacity: 1; transform: translateY(0);   }
+}
+.fade-in-up { animation: fade-in-up 0.24s ease-out both; }
 
 /* ── Accessibility — keyboard focus ring ─────────────────────────
    Only visible when navigating with keyboard (not on mouse click), so

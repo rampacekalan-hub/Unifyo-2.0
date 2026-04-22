@@ -20,6 +20,7 @@ import {
   Layers,
 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
+import { SkeletonList } from "@/components/ui/Skeleton";
 
 interface GmailMessageSummary {
   id: string;
@@ -298,17 +299,9 @@ export default function EmailPage() {
 
 // ── States ───────────────────────────────────────────────────────
 function LoadingCard() {
-  return (
-    <div
-      className="rounded-2xl p-8 flex items-center justify-center gap-3"
-      style={{ background: "var(--app-surface-2)", border: `1px solid ${D.indigoBorder}` }}
-    >
-      <Loader2 className="w-4 h-4 animate-spin" style={{ color: D.indigo }} />
-      <span className="text-xs" style={{ color: D.muted }}>
-        Načítavam Gmail…
-      </span>
-    </div>
-  );
+  // Skeleton list instead of a bare spinner — users see the inbox
+  // shape materialising instead of staring at a loader.
+  return <SkeletonList rows={5} />;
 }
 
 function NotConnectedCard() {

@@ -10,6 +10,7 @@ import {
   TrendingUp, Sparkles, Loader2,
 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
+import { SkeletonCard } from "@/components/ui/Skeleton";
 
 const D = {
   indigo: "#6366f1",
@@ -60,9 +61,16 @@ export default function AnalyticsPage() {
     <AppLayout title="Analytika" subtitle="Analytika —">
       <div className="p-4 md:p-8 max-w-5xl mx-auto space-y-4">
         {loading ? (
-          <div className="flex items-center justify-center py-20">
-            <Loader2 className="w-5 h-5 animate-spin" style={{ color: D.muted }} />
-          </div>
+          // Four-up stat cards + two panels — mirrors the final layout.
+          <>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} lines={1} />)}
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <SkeletonCard lines={2} />
+              <SkeletonCard lines={2} />
+            </div>
+          </>
         ) : !data ? (
           <p className="text-sm" style={{ color: D.muted }}>Dáta sa nepodarilo načítať.</p>
         ) : (
