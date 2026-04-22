@@ -15,10 +15,11 @@ const logos = [
 
 export default function MarqueeSection() {
   return (
-    <section className="py-16 relative overflow-hidden border-y border-white/5">
-      {/* Fade edges */}
-      <div className="absolute left-0 top-0 bottom-0 w-32 z-10 pointer-events-none" style={{ background: "linear-gradient(to right, #05070f, transparent)" }} />
-      <div className="absolute right-0 top-0 bottom-0 w-32 z-10 pointer-events-none" style={{ background: "linear-gradient(to left, #05070f, transparent)" }} />
+    <section className="py-16 relative overflow-hidden" style={{ borderTop: "1px solid var(--app-border)", borderBottom: "1px solid var(--app-border)" }}>
+      {/* Fade edges — match the page bg so marquee wraps invisibly.
+          Previously hardcoded #05070f caused black bars in light mode. */}
+      <div className="absolute left-0 top-0 bottom-0 w-32 z-10 pointer-events-none" style={{ background: "linear-gradient(to right, var(--app-bg), transparent)" }} />
+      <div className="absolute right-0 top-0 bottom-0 w-32 z-10 pointer-events-none" style={{ background: "linear-gradient(to left, var(--app-bg), transparent)" }} />
 
       <p className="text-center text-[0.65rem] font-semibold uppercase tracking-[0.2em] mb-8" style={{ color: "var(--app-text-subtle)" }}>
         Postavené na špičkových technológiách

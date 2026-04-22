@@ -155,13 +155,15 @@ html.light {
   --app-surface:       rgba(255,255,255,0.96);
   --app-surface-2:     rgba(245,245,244,0.94);
   --app-text:          #0f172a;
-  --app-text-muted:    #52525b;
-  --app-text-subtle:   #a1a1aa;
+  /* Bumped darker vs. default zinc so secondary text stays legible
+     on white (prev #52525b/#a1a1aa looked greyed-out on panels). */
+  --app-text-muted:    #3f3f46;
+  --app-text-subtle:   #71717a;
   /* Indigo-leaning border so it reads as accent, not greyscale */
   --app-border:        rgba(79,70,229,0.16);
   --app-border-strong: rgba(79,70,229,0.40);
   --app-glow:          rgba(79,70,229,0.12);
-  --app-decor-opacity: 0.10;
+  --app-decor-opacity: 0.04;
 
   --background:        #f8fafc;
   --foreground:        #0f172a;
@@ -326,6 +328,13 @@ html.light .skeleton {
 input:focus-visible, textarea:focus-visible {
   outline: 2px solid rgba(139, 92, 246, 0.75);
   outline-offset: 0;
+}
+
+/* Placeholders — default browser greys render near-invisible on a
+   white panel. Anchor to --app-text-subtle so they adapt to theme. */
+::placeholder {
+  color: var(--app-text-subtle);
+  opacity: 1; /* Firefox otherwise fades placeholders to 0.54 */
 }
 
 /* Screen-reader-only utility (alternative to Tailwind sr-only) */
