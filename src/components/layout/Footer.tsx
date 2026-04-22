@@ -22,29 +22,29 @@ export default function Footer() {
                 style={{ background: "linear-gradient(135deg, #7c3aed, #06b6d4)", boxShadow: "0 0 12px rgba(124,58,237,0.25)" }}>
                 <span className="text-white text-[10px] font-black">U</span>
               </div>
-              <span className="font-bold text-sm tracking-tight" style={{ color: "#eef2ff" }}>
+              <span className="font-bold text-sm tracking-tight" style={{ color: "var(--app-text)" }}>
                 {config.name}
               </span>
             </div>
-            <p className="text-xs leading-relaxed max-w-[200px]" style={{ color: "#64748b" }}>
+            <p className="text-xs leading-relaxed max-w-[200px]" style={{ color: "var(--app-text-subtle)" }}>
               {config.texts.footer.tagline}
             </p>
             {/* Status indicator */}
             <div className="flex items-center gap-1.5 mt-1">
               <span className="w-1.5 h-1.5 rounded-full bg-[#10b981] inline-block" />
-              <span className="text-[0.72rem]" style={{ color: "#64748b" }}>Všetky systémy fungujú</span>
+              <span className="text-[0.72rem]" style={{ color: "var(--app-text-subtle)" }}>Všetky systémy fungujú</span>
             </div>
           </div>
 
           {/* Nav col */}
           <div className="flex flex-col gap-3.5">
-            <p className="text-[0.7rem] font-semibold uppercase tracking-[0.16em]" style={{ color: "#94a3b8" }}>
+            <p className="text-[0.7rem] font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--app-text-muted)" }}>
               Navigácia
             </p>
             {config.links.nav.slice(0, 3).map((link) => (
               <Link key={link.href} href={link.href}
                 className="text-xs transition-colors duration-200 hover:text-white"
-                style={{ color: "#64748b" }}>
+                style={{ color: "var(--app-text-subtle)" }}>
                 {link.label}
               </Link>
             ))}
@@ -52,24 +52,24 @@ export default function Footer() {
 
           {/* Account col */}
           <div className="flex flex-col gap-3.5">
-            <p className="text-[0.7rem] font-semibold uppercase tracking-[0.16em]" style={{ color: "#94a3b8" }}>
+            <p className="text-[0.7rem] font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--app-text-muted)" }}>
               Účet
             </p>
             {config.links.nav.slice(3).map((link) => (
               <Link key={link.href} href={link.href}
                 className="text-xs transition-colors duration-200 hover:text-white"
-                style={{ color: "#64748b" }}>
+                style={{ color: "var(--app-text-subtle)" }}>
                 {link.label}
               </Link>
             ))}
             <Link href="/faq"
               className="text-xs transition-colors duration-200 hover:text-white"
-              style={{ color: "#64748b" }}>
+              style={{ color: "var(--app-text-subtle)" }}>
               Často kladené otázky
             </Link>
             <Link href="/changelog"
               className="text-xs transition-colors duration-200 hover:text-white"
-              style={{ color: "#64748b" }}>
+              style={{ color: "var(--app-text-subtle)" }}>
               Čo je nové
             </Link>
             <Link href="/register"
@@ -81,19 +81,19 @@ export default function Footer() {
 
           {/* Legal col */}
           <div className="flex flex-col gap-3.5">
-            <p className="text-[0.7rem] font-semibold uppercase tracking-[0.16em]" style={{ color: "#94a3b8" }}>
+            <p className="text-[0.7rem] font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--app-text-muted)" }}>
               Právne & Kontakt
             </p>
             {config.links.legal.map((link) => (
               <Link key={link.href} href={link.href}
                 className="text-xs transition-colors duration-200 hover:text-white"
-                style={{ color: "#64748b" }}>
+                style={{ color: "var(--app-text-subtle)" }}>
                 {link.label}
               </Link>
             ))}
             <a href={`mailto:${config.links.contact.email}`}
               className="text-xs transition-colors duration-200 hover:text-white"
-              style={{ color: "#64748b" }}>
+              style={{ color: "var(--app-text-subtle)" }}>
               {config.links.contact.email}
             </a>
           </div>
@@ -104,12 +104,12 @@ export default function Footer() {
 
         {/* Bottom bar */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-          <p className="text-[0.72rem]" style={{ color: "#64748b" }}>
+          <p className="text-[0.72rem]" style={{ color: "var(--app-text-subtle)" }}>
             {config.texts.footer.copyright}
           </p>
           <div className="flex items-center gap-5">
             <CookieManagerButton />
-            <span className="text-[0.72rem]" style={{ color: "#64748b" }}>
+            <span className="text-[0.72rem]" style={{ color: "var(--app-text-subtle)" }}>
               🇸🇰 Made in Slovakia
             </span>
             {config.links.social.map((s) => (
@@ -117,7 +117,7 @@ export default function Footer() {
                 target="_blank" rel="noopener noreferrer"
                 aria-label={s.label}
                 className="text-[0.72rem] transition-colors duration-200 hover:text-[#a78bfa]"
-                style={{ color: "#64748b" }}
+                style={{ color: "var(--app-text-subtle)" }}
               >
                 {s.label}
               </a>

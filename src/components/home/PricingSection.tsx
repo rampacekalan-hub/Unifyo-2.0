@@ -26,11 +26,11 @@ export default function PricingSection() {
           transition={{ duration: 0.55 }}
           className="text-center mb-14 flex flex-col items-center gap-4"
         >
-          <span className="text-xs font-semibold tracking-[0.18em] uppercase" style={{ color: "#94a3b8" }}>
+          <span className="text-xs font-semibold tracking-[0.18em] uppercase" style={{ color: "var(--app-text-muted)" }}>
             Cenník
           </span>
           <h2 className="font-black tracking-[-0.03em] leading-[1.08]"
-            style={{ fontSize: "clamp(1.9rem, 4vw, 3.2rem)", color: "#eef2ff" }}>
+            style={{ fontSize: "clamp(1.9rem, 4vw, 3.2rem)", color: "var(--app-text)" }}>
             Transparentné ceny,{" "}
             <span style={{
               background: "linear-gradient(90deg, #a78bfa, #67e8f9)",
@@ -41,7 +41,7 @@ export default function PricingSection() {
               žiadne prekvapenia
             </span>
           </h2>
-          <p className="text-sm" style={{ color: "#94a3b8" }}>
+          <p className="text-sm" style={{ color: "var(--app-text-muted)" }}>
             Žiadne skryté poplatky · Fakturácia v EUR · Zrušenie kedykoľvek
           </p>
 
@@ -156,7 +156,7 @@ export default function PricingSection() {
                       style={{ color: isHighlighted ? "#a78bfa" : "#94a3b8" }}>
                       {plan.name}
                     </p>
-                    <p className="text-xs leading-relaxed" style={{ color: "#94a3b8" }}>
+                    <p className="text-xs leading-relaxed" style={{ color: "var(--app-text-muted)" }}>
                       {plan.description}
                     </p>
                   </div>
@@ -172,11 +172,11 @@ export default function PricingSection() {
                         transition={{ duration: 0.18 }}
                         className="flex items-end gap-1.5"
                       >
-                        <span className="font-black tracking-tight leading-none" style={{ fontSize: "2.6rem", color: "#eef2ff" }}>
+                        <span className="font-black tracking-tight leading-none" style={{ fontSize: "2.6rem", color: "var(--app-text)" }}>
                           {displayPrice === 0 ? "Free" : `${plan.currency}${displayPrice}`}
                         </span>
                         {displayPrice > 0 && (
-                          <span className="text-xs mb-1.5 pb-0.5" style={{ color: "#94a3b8" }}>
+                          <span className="text-xs mb-1.5 pb-0.5" style={{ color: "var(--app-text-muted)" }}>
                             /{yearly ? "mes" : plan.interval}
                             {yearly && <span style={{ color: "#34d399" }}> · ročne</span>}
                           </span>
@@ -196,7 +196,7 @@ export default function PricingSection() {
                           }}>
                           {feature.included
                             ? <Check className="w-2.5 h-2.5" style={{ color: "#a78bfa" }} />
-                            : <Minus className="w-2.5 h-2.5" style={{ color: "#64748b" }} />
+                            : <Minus className="w-2.5 h-2.5" style={{ color: "var(--app-text-subtle)" }} />
                           }
                         </div>
                         {feature.tooltip ? (
@@ -238,7 +238,7 @@ export default function PricingSection() {
                     } : {
                       background: "rgba(255,255,255,0.04)",
                       border: "1px solid rgba(139,92,246,0.15)",
-                      color: "#94a3b8",
+                      color: "var(--app-text-muted)",
                     }}
                   >
                     {plan.cta}
@@ -259,7 +259,7 @@ export default function PricingSection() {
           className="mt-10 flex flex-wrap justify-center gap-6"
         >
           {["🔒 GDPR súlad", "🇸🇰 SK & ČR podpora", "⚡ AES-256 šifrovanie", "↩ Zrušenie kedykoľvek"].map(item => (
-            <span key={item} className="text-xs" style={{ color: "#64748b" }}>{item}</span>
+            <span key={item} className="text-xs" style={{ color: "var(--app-text-subtle)" }}>{item}</span>
           ))}
         </motion.div>
 

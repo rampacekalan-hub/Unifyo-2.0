@@ -143,9 +143,9 @@ export default function HeroSection() {
         >
           <span style={{
             display: "inline-flex", alignItems: "center", gap: "8px",
-            background: "rgba(139,92,246,0.1)",
-            border: "1px solid rgba(139,92,246,0.28)",
-            color: "#c4b5fd",
+            background: "var(--brand-primary-soft)",
+            border: "1px solid color-mix(in oklab, var(--brand-primary) 35%, transparent)",
+            color: "var(--brand-primary)",
             borderRadius: "999px",
             padding: "7px 16px",
             fontSize: "clamp(0.72rem, 2vw, 0.82rem)",
@@ -167,7 +167,7 @@ export default function HeroSection() {
             letterSpacing: "-0.03em",
             lineHeight: 1.08,
             wordBreak: "break-word",
-            color: "#eef2ff",
+            color: "var(--app-text)",
             marginBottom: "24px",
           }}
         >
@@ -189,7 +189,7 @@ export default function HeroSection() {
           transition={{ duration: 0.55, delay: 0.18 }}
           style={{
             fontSize: "clamp(0.95rem, 2.2vw, 1.18rem)",
-            color: "#8b9ab0",
+            color: "var(--app-text-muted)",
             lineHeight: 1.6,
             maxWidth: "44ch",
             padding: "0 4px",
@@ -222,9 +222,9 @@ export default function HeroSection() {
           </Link>
           <Link href="/#pricing" data-press style={{
             display: "inline-flex", alignItems: "center",
-            background: "rgba(255,255,255,0.06)",
-            border: "1px solid rgba(255,255,255,0.14)",
-            color: "#e5e7eb",
+            background: "var(--app-surface-2)",
+            border: "1px solid var(--app-border)",
+            color: "var(--app-text)",
             borderRadius: "var(--r-md)",
             padding: "14px 24px",
             fontSize: "clamp(0.9rem, 2.5vw, 1rem)",
@@ -258,16 +258,17 @@ export default function HeroSection() {
           pointerEvents: "none",
         }} />
 
-        {/* Chat card */}
+        {/* Chat card — surfaces use theme vars so the demo shell
+            flips light/dark with the rest of the page. */}
         <div style={{
           position: "relative",
-          background: "rgba(7,9,18,0.96)",
+          background: "var(--app-surface)",
           backdropFilter: "blur(40px)",
           WebkitBackdropFilter: "blur(40px)",
-          border: "1px solid rgba(139,92,246,0.18)",
+          border: "1px solid var(--app-border)",
           borderRadius: "20px",
           overflow: "hidden",
-          boxShadow: "0 0 0 1px rgba(139,92,246,0.06), 0 40px 100px rgba(0,0,0,0.7)",
+          boxShadow: "0 0 0 1px rgba(139,92,246,0.06), 0 40px 100px rgba(0,0,0,0.35)",
         }}>
           {/* Top gradient line */}
           <div style={{
@@ -279,8 +280,8 @@ export default function HeroSection() {
           <div style={{
             display: "flex", alignItems: "center", gap: "10px",
             padding: "12px 20px",
-            background: "rgba(10,12,22,0.9)",
-            borderBottom: "1px solid rgba(139,92,246,0.08)",
+            background: "var(--app-surface-2)",
+            borderBottom: "1px solid var(--app-border)",
           }}>
             {/* Traffic lights */}
             <div style={{ display: "flex", gap: "5px" }}>
@@ -297,7 +298,7 @@ export default function HeroSection() {
               }}>
                 <span style={{ color: "#fff", fontSize: "9px", fontWeight: 900 }}>U</span>
               </div>
-              <span style={{ color: "#e2e8f0", fontSize: "0.88rem", fontWeight: 600 }}>Unifyo AI</span>
+              <span style={{ color: "var(--app-text)", fontSize: "0.88rem", fontWeight: 600 }}>Unifyo AI</span>
               <span style={{
                 background: "rgba(16,185,129,0.12)", border: "1px solid rgba(16,185,129,0.22)",
                 color: "#34d399", fontSize: "0.68rem", padding: "2px 8px", borderRadius: "999px", fontWeight: 600,
@@ -314,7 +315,7 @@ export default function HeroSection() {
                     fontSize: "0.75rem", fontWeight: 500,
                     background: i === sceneIdx ? "rgba(139,92,246,0.14)" : "transparent",
                     border: `1px solid ${i === sceneIdx ? "rgba(139,92,246,0.3)" : "transparent"}`,
-                    color: i === sceneIdx ? s.tagColor : "#64748b",
+                    color: i === sceneIdx ? s.tagColor : "var(--app-text-subtle)",
                     cursor: "pointer", transition: "all 0.15s",
                   }}>
                     <TabIcon style={{ width: "12px", height: "12px" }} />
@@ -356,7 +357,7 @@ export default function HeroSection() {
                 padding: "11px 14px",
                 maxWidth: "min(85%, 440px)",
                 fontSize: "0.875rem",
-                color: "#f1f5f9",
+                color: "var(--app-text)",
                 lineHeight: 1.6,
               }}>
                 {userText}
@@ -402,7 +403,7 @@ export default function HeroSection() {
                       transition={{ duration: 0.2 }}
                       style={{
                         display: "inline-flex", alignItems: "center", gap: "6px",
-                        background: "rgba(20,12,40,0.92)",
+                        background: "var(--app-surface-2)",
                         border: `1px solid ${scene.accent}30`,
                         borderRadius: "4px 18px 18px 18px",
                         padding: "14px 18px",
@@ -425,7 +426,7 @@ export default function HeroSection() {
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
                       style={{
-                        background: "rgba(18,10,36,0.95)",
+                        background: "var(--app-surface-2)",
                         border: `1px solid ${scene.accent}35`,
                         borderRadius: "4px 18px 18px 18px",
                         padding: "12px 14px",
@@ -442,7 +443,7 @@ export default function HeroSection() {
                             style={{
                               fontSize: "0.875rem",
                               lineHeight: 1.65,
-                              color: i === 0 ? "#f1f5f9" : "#7d8fa8",
+                              color: i === 0 ? "var(--app-text)" : "var(--app-text-muted)",
                               margin: i > 0 ? "5px 0 0" : "0",
                             }}
                           >
@@ -462,11 +463,11 @@ export default function HeroSection() {
           <div style={{ padding: "0 20px 18px" }}>
             <div style={{
               display: "flex", alignItems: "center", gap: "10px",
-              background: "rgba(8,10,20,0.95)", border: "1px solid rgba(139,92,246,0.1)",
+              background: "var(--app-surface-2)", border: "1px solid var(--app-border)",
               borderRadius: "12px", padding: "10px 14px",
             }}>
               <SceneIcon style={{ width: "15px", height: "15px", color: scene.accent, flexShrink: 0 }} />
-              <span style={{ flex: 1, fontSize: "clamp(0.75rem, 2vw, 0.85rem)", color: "#64748b" }}>
+              <span style={{ flex: 1, fontSize: "clamp(0.75rem, 2vw, 0.85rem)", color: "var(--app-text-subtle)" }}>
                 Opýtaj sa Unifyo AI čokoľvek po slovensky...
               </span>
               <div style={{

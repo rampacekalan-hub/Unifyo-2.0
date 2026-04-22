@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X } from "lucide-react";
+import { Menu, X, Sun, Moon } from "lucide-react";
+import { useTheme } from "next-themes";
 import { getSiteConfig } from "@/config/site-settings";
 
 const config = getSiteConfig();
@@ -13,12 +14,17 @@ export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
+  const { resolvedTheme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  const toggleTheme = () => setTheme(resolvedTheme === "dark" ? "light" : "dark");
 
   return (
     <header
@@ -40,7 +46,7 @@ export default function Navbar() {
             }}>
             <span className="text-white text-[11px] font-black tracking-tight">U</span>
           </div>
-          <span className="font-bold text-[1.05rem] tracking-tight" style={{ color: "#eef2ff" }}>
+          <span className="font-bold text-[1.05rem] tracking-tight" style={{ color: "var(--app-text)" }}>
             {config.name}
           </span>
         </Link>
@@ -54,9 +60,9 @@ export default function Navbar() {
                 key={link.href}
                 href={link.href}
                 className="px-4 py-2 text-sm rounded-lg transition-all duration-200 relative"
-                style={{ color: isActive ? "#eef2ff" : "#94a3b8" }}
-                onMouseEnter={e => (e.currentTarget.style.color = "#eef2ff")}
-                onMouseLeave={e => (e.currentTarget.style.color = isActive ? "#eef2ff" : "#94a3b8")}
+                style={{ color: isActive ? "var(--app-text)" : "var(--app-text-muted)" }}
+                onMouseEnter={e => (e.currentTarget.style.color = "var(--app-text)")}
+                onMouseLeave={e => (e.currentTarget.style.color = isActive ? "var(--app-text)" : "var(--app-text-muted)")}
               >
                 {link.label}
                 {isActive && (
@@ -67,17 +73,38 @@ export default function Navbar() {
           })}
         </div>
 
-        {/* Desktop CTA */}
-        <div className="hidden md:flex items-center gap-3">
-          <Link href="/login" className="text-sm px-4 py-2 rounded-lg transition-all duration-200" style={{ color: "#94a3b8" }}
-            onMouseEnter={e => (e.currentTarget.style.color = "#eef2ff")}
-            onMouseLeave={e => (e.currentTarget.style.color = "#94a3b8")}>
+        {/* Desktop CTA + theme toggle */}
+        <div className="hidden md:flex items-center gap-2">
+          {/* Theme switcher — independent of account prefs on public
+              pages; persists via next-themes (localStorage).  */}
+          {mounted && (
+            <button
+              onClick={toggleTheme}
+              data-press
+              aria-label={resolvedTheme === "dark" ? "Prepnúť na svetlý" : "Prepnúť na tmavý"}
+              title={resolvedTheme === "dark" ? "Svetlý režim" : "Tmavý režim"}
+              className="w-9 h-9 rounded-lg flex items-center justify-center transition"
+              style={{
+                background: "var(--app-surface-2)",
+                border: "1px solid var(--app-border)",
+                color: "var(--app-text-muted)",
+              }}
+            >
+              {resolvedTheme === "dark"
+                ? <Sun className="w-4 h-4" />
+                : <Moon className="w-4 h-4" />}
+            </button>
+          )}
+          <Link href="/login" className="text-sm px-4 py-2 rounded-lg transition-all duration-200"
+            style={{ color: "var(--app-text-muted)" }}
+            onMouseEnter={e => (e.currentTarget.style.color = "var(--app-text)")}
+            onMouseLeave={e => (e.currentTarget.style.color = "var(--app-text-muted)")}>
             Prihlásiť sa
           </Link>
-          <Link href="/register"
-            className="text-sm text-white px-5 py-2 rounded-xl font-semibold transition-all duration-200 active:scale-[0.97]"
+          <Link href="/register" data-press
+            className="text-sm text-white px-5 py-2 rounded-xl font-semibold transition-all duration-200"
             style={{
-              background: "linear-gradient(135deg, #7c3aed, #5b21b6)",
+              background: "var(--brand-gradient)",
               boxShadow: "0 0 0 1px rgba(139,92,246,0.3), 0 2px 16px rgba(124,58,237,0.25)",
             }}>
             Začať zadarmo
@@ -120,7 +147,7 @@ export default function Navbar() {
                     onClick={() => setMobileOpen(false)}
                     className="py-3 px-4 text-sm rounded-xl transition-all duration-200"
                     style={{
-                      color: isActive ? "#eef2ff" : "#94a3b8",
+                      color: isActive ? "var(--app-text)" : "var(--app-text-muted)",
                       background: isActive ? "rgba(139,92,246,0.08)" : "transparent",
                     }}
                   >
@@ -128,15 +155,28 @@ export default function Navbar() {
                   </Link>
                 );
               })}
-              <div className="pt-3 border-t mt-2 flex flex-col gap-2" style={{ borderColor: "rgba(139,92,246,0.1)" }}>
+              <div className="pt-3 border-t mt-2 flex flex-col gap-2" style={{ borderColor: "var(--app-border)" }}>
+                {mounted && (
+                  <button
+                    onClick={toggleTheme}
+                    className="flex items-center justify-center gap-2 text-sm py-3 rounded-xl transition"
+                    style={{
+                      color: "var(--app-text-muted)",
+                      border: "1px solid var(--app-border)",
+                      background: "var(--app-surface-2)",
+                    }}
+                  >
+                    {resolvedTheme === "dark" ? <><Sun className="w-4 h-4" /> Svetlý režim</> : <><Moon className="w-4 h-4" /> Tmavý režim</>}
+                  </button>
+                )}
                 <Link href="/login" onClick={() => setMobileOpen(false)}
                   className="text-center text-sm py-3 rounded-xl transition-all duration-200"
-                  style={{ color: "#94a3b8", border: "1px solid rgba(255,255,255,0.08)" }}>
+                  style={{ color: "var(--app-text-muted)", border: "1px solid var(--app-border)" }}>
                   Prihlásiť sa
                 </Link>
                 <Link href="/register" onClick={() => setMobileOpen(false)}
                   className="text-center text-sm text-white font-semibold py-3 rounded-xl"
-                  style={{ background: "linear-gradient(135deg, #7c3aed, #5b21b6)", boxShadow: "0 4px 16px rgba(124,58,237,0.3)" }}>
+                  style={{ background: "var(--brand-gradient)", boxShadow: "0 4px 16px rgba(124,58,237,0.3)" }}>
                   Začať zadarmo →
                 </Link>
               </div>

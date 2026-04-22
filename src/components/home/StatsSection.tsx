@@ -59,7 +59,7 @@ export default function StatsSection() {
               className="flex flex-col items-center text-center gap-2"
             >
               <span className="font-black tabular-nums tracking-tight"
-                style={{ fontSize: "clamp(2rem, 4vw, 3rem)", color: "#eef2ff" }}>
+                style={{ fontSize: "clamp(2rem, 4vw, 3rem)", color: "var(--app-text)" }}>
                 <CountUp
                   target={stat.value}
                   suffix={stat.suffix}
@@ -68,7 +68,7 @@ export default function StatsSection() {
                   prefix={stat.prefix}
                 />
               </span>
-              <span className="text-[0.7rem] font-medium tracking-[0.14em] uppercase" style={{ color: "#94a3b8" }}>
+              <span className="text-[0.7rem] font-medium tracking-[0.14em] uppercase" style={{ color: "var(--app-text-muted)" }}>
                 {stat.label}
               </span>
             </motion.div>
