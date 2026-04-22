@@ -1149,9 +1149,26 @@ function ReferralSection() {
   return (
     <Section
       icon={Gift}
-      title="Pozvi kolegu — obaja získate 30 dní Pro zdarma."
-      subtitle="Zdieľaj svoj odkaz a odomknite si Pro pri spustení plateného plánu."
+      title="Pozvi kolegu"
+      subtitle="Program je vo finálnej príprave — odkaz môžeš zdieľať, odmeny dorábame."
     >
+      {/* Honest "work in progress" banner — users see tracking works
+          but rewards not active yet. Removed when we wire Stripe credits. */}
+      <div
+        className="rounded-xl p-3 mb-4 flex items-start gap-2 text-xs"
+        style={{
+          background: "var(--brand-warning-soft)",
+          border: "1px solid color-mix(in oklab, var(--brand-warning) 35%, transparent)",
+          color: "var(--brand-warning)",
+        }}
+      >
+        <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+        <div>
+          <strong>V príprave.</strong> Referral odkaz už dnes zaznamenáva
+          registrácie, ale kreditové odmeny cez Stripe sú v procese integrácie.
+          Keď bude live, dorovnáme retroaktívne — každý pozvaný sa ti bude rátať.
+        </div>
+      </div>
       {loading ? (
         <Skeleton />
       ) : !data ? (

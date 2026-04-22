@@ -679,6 +679,14 @@ export default function AdminClient({ adminEmail, users: initUsers, stats, recen
             <FileText className="w-4 h-4 flex-shrink-0" />
             <span className="text-xs font-semibold hidden md:block">Feedback</span>
           </Link>
+          <Link
+            href="/admin/integrations"
+            className="w-full flex items-center gap-3 px-3 py-3 rounded-2xl transition"
+            style={{ color: P.muted }}
+          >
+            <Zap className="w-4 h-4 flex-shrink-0" />
+            <span className="text-xs font-semibold hidden md:block">Dopyt integrácií</span>
+          </Link>
 
           <details className="mt-3 group">
             <summary

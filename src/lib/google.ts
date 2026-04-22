@@ -422,6 +422,83 @@ export async function sendGmail(
   return (await res.json()) as { id: string; threadId: string };
 }
 
+/** PATCH an existing calendar event. `eventId` format is "calendarId::id"
+ *  (what listCalendarEvents returns). Pass only the fields you want to
+ *  change. Throws on non-OK so callers can surface a toast. */
+export async function updateCalendarEvent(
+  accessToken: string,
+  eventCompositeId: string,
+  patch: {
+    summary?: string;
+    description?: string;
+    location?: string;
+    start?: string; // ISO datetime or date
+    end?: string;
+    allDay?: boolean;
+  },
+): Promise<void> {
+  const [calendarId, eventId] = eventCompositeId.includes("::")
+    ? eventCompositeId.split("::")
+    : ["primary", eventCompositeId];
+
+  // Build the Google-shaped patch body. For all-day events Google
+  // wants { date: "YYYY-MM-DD" }, for timed events { dateTime: ISO }.
+  const body: Record<string, unknown> = {};
+  if (patch.summary !== undefined) body.summary = patch.summary;
+  if (patch.description !== undefined) body.description = patch.description;
+  if (patch.location !== undefined) body.location = patch.location;
+  if (patch.start) {
+    body.start = patch.allDay
+      ? { date: patch.start.slice(0, 10) }
+      : { dateTime: patch.start };
+  }
+  if (patch.end) {
+    body.end = patch.allDay
+      ? { date: patch.end.slice(0, 10) }
+      : { dateTime: patch.end };
+  }
+
+  const res = await fetch(
+    `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(eventId)}`,
+    {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    },
+  );
+  if (!res.ok) {
+    const err = await res.text().catch(() => "");
+    throw new Error(`calendar update failed: ${res.status} ${err.slice(0, 200)}`);
+  }
+}
+
+/** DELETE a Google Calendar event by the composite id returned from
+ *  listCalendarEvents. sendUpdates=none so attendees don't get a
+ *  cancellation mail by default — caller decides. */
+export async function deleteCalendarEvent(
+  accessToken: string,
+  eventCompositeId: string,
+): Promise<void> {
+  const [calendarId, eventId] = eventCompositeId.includes("::")
+    ? eventCompositeId.split("::")
+    : ["primary", eventCompositeId];
+  const res = await fetch(
+    `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(eventId)}?sendUpdates=none`,
+    {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${accessToken}` },
+    },
+  );
+  // Google returns 204 (No Content) on success OR 410 if already gone.
+  if (!res.ok && res.status !== 410) {
+    const err = await res.text().catch(() => "");
+    throw new Error(`calendar delete failed: ${res.status} ${err.slice(0, 200)}`);
+  }
+}
+
 /** RFC 2047 B-encoding for non-ASCII subjects so Gmail doesn't mangle
  *  diakritics like "Vďaka za schôdzu". */
 function encodeSubject(s: string): string {

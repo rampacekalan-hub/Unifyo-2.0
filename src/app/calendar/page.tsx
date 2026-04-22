@@ -250,27 +250,45 @@ function CalendarPageInner() {
   }
 
   // Drag-n-drop reschedule: move task to a new date. Optimistic update + rollback on fail.
+  // Handles both local CalendarTask rows and Google Calendar events —
+  // prefix `g:` routes through /api/gcal/event/:id.
   async function moveTaskToDate(taskId: string, newDate: string) {
     const current = tasks.find((t) => t.id === taskId);
     if (!current || current.date === newDate) return;
-    if (current.googleEventId) {
-      toast.info("Google udalosti neprehadzuj — uprav ich v Googli.");
-      return;
-    }
     // Optimistic UI.
     setTasks((prev) => prev.map((t) => t.id === taskId ? { ...t, date: newDate } : t));
     try {
-      const res = await fetch("/api/calendar/tasks", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: taskId, date: newDate }),
-      });
-      if (!res.ok) throw new Error("patch failed");
+      if (current.googleEventId) {
+        // Google expects ISO datetime for timed events, date-only for all-day.
+        const gcalId = current.googleEventId; // "calendarId::eventId" already
+        const allDay = !current.time;
+        const newStart = allDay ? newDate : `${newDate}T${current.time}:00`;
+        // Preserve original duration if known; fall back to +1h for timed events.
+        const durationMs = 60 * 60 * 1000;
+        const endStart = new Date(`${newDate}T${current.time ?? "00:00"}:00`).getTime();
+        const newEnd = allDay ? newDate : new Date(endStart + durationMs).toISOString();
+        const res = await fetch(`/api/gcal/event/${encodeURIComponent(gcalId)}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ start: newStart, end: newEnd, allDay }),
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.hint ?? data.error ?? "patch failed");
+        }
+      } else {
+        const res = await fetch("/api/calendar/tasks", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: taskId, date: newDate }),
+        });
+        if (!res.ok) throw new Error("patch failed");
+      }
       toast.success(`Presunuté na ${newDate}`);
-    } catch {
+    } catch (e) {
       // Rollback.
       setTasks((prev) => prev.map((t) => t.id === taskId ? { ...t, date: current.date } : t));
-      toast.error("Presun zlyhal");
+      toast.error(e instanceof Error ? e.message : "Presun zlyhal");
     }
   }
 
@@ -293,8 +311,25 @@ function CalendarPageInner() {
   };
 
   async function handleDelete(id: string) {
+    // Google event → route through gcal delete. Local task → normal API.
     if (id.startsWith("g:")) {
-      toast.info("Udalosť z Google Kalendára zmažeš len v Googli.");
+      const current = tasks.find((t) => t.id === id);
+      const gcalId = current?.googleEventId;
+      if (!gcalId) return;
+      if (!confirm("Zmazať túto udalosť aj v Google Kalendári?")) return;
+      const snapshot = tasks;
+      setTasks((prev) => prev.filter((t) => t.id !== id));
+      if (selectedTask?.id === id) setSelectedTask(null);
+      try {
+        const res = await fetch(`/api/gcal/event/${encodeURIComponent(gcalId)}`, {
+          method: "DELETE",
+        });
+        if (!res.ok) throw new Error();
+        toast.success("Zmazané v Google Kalendári.");
+      } catch {
+        setTasks(snapshot);
+        toast.error("Mazanie zlyhalo");
+      }
       return;
     }
     const snapshot = tasks;
@@ -534,8 +569,8 @@ function CalendarPageInner() {
                           return (
                             <div
                               key={t.id}
-                              draggable={!isGoogle}
-                              onDragStart={(e) => { if (!isGoogle) { e.stopPropagation(); handleDragStart(e, t.id); } }}
+                              draggable
+                              onDragStart={(e) => { e.stopPropagation(); handleDragStart(e, t.id); }}
                               onClick={(e) => { e.stopPropagation(); setSelectedTask(t); }}
                               className="text-[10px] md:text-[11px] truncate px-1.5 py-0.5 rounded flex items-center gap-1"
                               style={{
@@ -543,7 +578,7 @@ function CalendarPageInner() {
                                 borderLeft: `2px solid ${accent}`,
                                 color: t.done ? accent : D.text,
                                 textDecoration: t.done ? "line-through" : "none",
-                                cursor: isGoogle ? "pointer" : "grab",
+                                cursor: "grab",
                               }}
                               title={`${t.time ? t.time + " · " : ""}${t.title}${t.calendarName ? " · " + t.calendarName : ""}`}
                             >
