@@ -105,7 +105,7 @@ export default function SettingsPage() {
 
   return (
     <AppLayout title="Nastavenia" subtitle="Nastavenia —">
-      <div className="p-4 md:p-8 max-w-3xl mx-auto space-y-4">
+      <div className="p-4 md:p-8 max-w-5xl mx-auto space-y-4">
         <SettingsSubnav />
         {/* ── Profil ── */}
         <div id="profil" className="scroll-mt-24" />

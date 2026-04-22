@@ -95,7 +95,7 @@ const TAG_STYLE: Record<Tag, { bg: string; border: string; color: string }> = {
   "vylepšenie": {
     bg: "rgba(139,92,246,0.12)",
     border: "rgba(139,92,246,0.3)",
-    color: "#c4b5fd",
+    color: "var(--brand-primary)",
   },
 };
 
@@ -120,7 +120,7 @@ export default function ChangelogPage() {
                 gap: "8px",
                 background: "rgba(139,92,246,0.1)",
                 border: "1px solid rgba(139,92,246,0.25)",
-                color: "#c4b5fd",
+                color: "var(--brand-primary)",
                 borderRadius: "999px",
                 padding: "6px 16px",
                 fontSize: "0.78rem",
@@ -137,7 +137,7 @@ export default function ChangelogPage() {
                 fontSize: "clamp(2rem, 5vw, 3.2rem)",
                 fontWeight: 900,
                 letterSpacing: "-0.03em",
-                color: "#eef2ff",
+                color: "var(--app-text)",
                 marginBottom: "16px",
                 lineHeight: 1.1,
               }}
@@ -146,7 +146,7 @@ export default function ChangelogPage() {
             </h1>
             <p
               style={{
-                color: "#94a3b8",
+                color: "var(--app-text-muted)",
                 fontSize: "1rem",
                 lineHeight: 1.6,
                 maxWidth: "600px",
@@ -176,7 +176,7 @@ export default function ChangelogPage() {
                     style={{
                       fontSize: "1.1rem",
                       fontWeight: 800,
-                      color: "#eef2ff",
+                      color: "var(--app-text)",
                       letterSpacing: "-0.02em",
                     }}
                   >
@@ -185,7 +185,7 @@ export default function ChangelogPage() {
                   <div
                     style={{
                       fontSize: "0.78rem",
-                      color: "#94a3b8",
+                      color: "var(--app-text-muted)",
                       marginTop: "4px",
                     }}
                   >

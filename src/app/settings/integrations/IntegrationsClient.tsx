@@ -319,7 +319,7 @@ function PlannedIntegration({
       });
       if (!res.ok) throw new Error();
       setVoted(true);
-      toast.success("Vďaka! Mám to v požiadavkách.");
+      toast.success("Vďaka! Keď bude live, pošlem ti e-mail.");
     } catch {
       toast.error("Nepodarilo sa odoslať");
     } finally {

@@ -48,11 +48,11 @@ const FAQS: Faq[] = [
   },
   {
     q: "Ako fakturujete?",
-    a: "Počas beta je Unifyo zadarmo. Po spustení Pro plánu budeš platiť mesačne alebo ročne (s výhodnejšou cenou). Faktúry dostávaš automaticky emailom, podporujeme slovenskú DPH a firemné fakturačné údaje.",
+    a: "Platby spracúva Stripe — mesačne alebo ročne (pri ročnom platení máš -20 %). Faktúry dostaneš automaticky e-mailom s DPH (SK 23 %) a firemnými údajmi. Zrušenie kedykoľvek cez Nastavenia → Plán a fakturácia.",
   },
   {
-    q: "Čo je to 30 dní Pro zdarma cez odkaz?",
-    a: "Ak pozveš kolegu cez svoj referral odkaz (Nastavenia → Pozvi kolegu) a on si pri spustení Pro kúpi platený plán, obaja dostanete 30 dní Pro zadarmo. Nie je limit na počet pozvaných.",
+    q: "Ako funguje pozývací odkaz (referral)?",
+    a: "V Nastaveniach nájdeš svoj unikátny link. Ak sa cez neho niekto zaregistruje a kúpi si Pro, obaja dostanete kredit 10 EUR k ďalšej fakturácii. Všetko vidíš v Nastaveniach → Odporúčania (počet pozvaných, získané kredity).",
   },
   {
     q: "Mám technický problém — kde mám pomoc?",
@@ -85,7 +85,7 @@ export default function FaqPage() {
                 gap: "8px",
                 background: "rgba(139,92,246,0.1)",
                 border: "1px solid rgba(139,92,246,0.25)",
-                color: "#c4b5fd",
+                color: "var(--brand-primary)",
                 borderRadius: "999px",
                 padding: "6px 16px",
                 fontSize: "0.78rem",
@@ -102,7 +102,7 @@ export default function FaqPage() {
                 fontSize: "clamp(2rem, 5vw, 3.2rem)",
                 fontWeight: 900,
                 letterSpacing: "-0.03em",
-                color: "#eef2ff",
+                color: "var(--app-text)",
                 marginBottom: "16px",
                 lineHeight: 1.1,
               }}
@@ -111,7 +111,7 @@ export default function FaqPage() {
             </h1>
             <p
               style={{
-                color: "#94a3b8",
+                color: "var(--app-text-muted)",
                 fontSize: "1rem",
                 lineHeight: 1.6,
                 maxWidth: "600px",
@@ -142,7 +142,7 @@ export default function FaqPage() {
                     alignItems: "center",
                     justifyContent: "space-between",
                     gap: "16px",
-                    color: "#eef2ff",
+                    color: "var(--app-text)",
                     fontSize: "0.98rem",
                     fontWeight: 600,
                   }}
@@ -151,7 +151,7 @@ export default function FaqPage() {
                   <span
                     className="transition-transform group-open:rotate-45"
                     style={{
-                      color: "#6366f1",
+                      color: "var(--brand-primary)",
                       fontSize: "1.4rem",
                       lineHeight: 1,
                       flexShrink: 0,
@@ -164,7 +164,7 @@ export default function FaqPage() {
                 <p
                   style={{
                     marginTop: "12px",
-                    color: "#94a3b8",
+                    color: "var(--app-text-muted)",
                     fontSize: "0.92rem",
                     lineHeight: 1.65,
                   }}
@@ -178,7 +178,7 @@ export default function FaqPage() {
           <p
             style={{
               marginTop: "40px",
-              color: "#64748b",
+              color: "var(--app-text-subtle)",
               fontSize: "0.85rem",
               textAlign: "center",
             }}
@@ -186,7 +186,7 @@ export default function FaqPage() {
             Nenašiel si odpoveď? Napíš nám na{" "}
             <a
               href="mailto:info@unifyo.online"
-              style={{ color: "#a78bfa", textDecoration: "none" }}
+              style={{ color: "var(--brand-primary)", textDecoration: "none" }}
             >
               info@unifyo.online
             </a>

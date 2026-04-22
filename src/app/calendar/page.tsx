@@ -377,17 +377,20 @@ function CalendarPageInner() {
               </button>
             </div>
             <div className="flex items-center gap-2">
-              {/* View toggle */}
+              {/* View toggle — segmented pill so both buttons visible
+                  in light mode too. Active uses brand gradient. */}
               <div
                 className="flex items-center p-0.5 rounded-xl"
-                style={{ background: D.indigoDim, border: `1px solid ${D.indigoBorder}` }}
+                style={{ background: "var(--app-surface-2)", border: "1px solid var(--app-border)" }}
               >
                 <button
                   onClick={() => setViewMode("month")}
-                  className="px-2 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-all"
+                  data-press
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all"
                   style={{
-                    background: viewMode === "month" ? D.indigo : "transparent",
-                    color: viewMode === "month" ? "white" : D.muted,
+                    background: viewMode === "month" ? "var(--brand-gradient)" : "transparent",
+                    color: viewMode === "month" ? "#fff" : "var(--app-text-muted)",
+                    boxShadow: viewMode === "month" ? "0 0 10px rgba(139,92,246,0.35)" : "none",
                   }}
                   aria-pressed={viewMode === "month"}
                   title="Mesiac"
@@ -397,10 +400,12 @@ function CalendarPageInner() {
                 </button>
                 <button
                   onClick={() => setViewMode("week")}
-                  className="px-2 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-all"
+                  data-press
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all"
                   style={{
-                    background: viewMode === "week" ? D.indigo : "transparent",
-                    color: viewMode === "week" ? "white" : D.muted,
+                    background: viewMode === "week" ? "var(--brand-gradient)" : "transparent",
+                    color: viewMode === "week" ? "#fff" : "var(--app-text-muted)",
+                    boxShadow: viewMode === "week" ? "0 0 10px rgba(139,92,246,0.35)" : "none",
                   }}
                   aria-pressed={viewMode === "week"}
                   title="Týždeň"

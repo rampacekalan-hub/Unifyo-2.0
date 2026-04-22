@@ -57,11 +57,11 @@ const RULES: Rule[] = [
   {
     id: "new-sender-to-crm",
     title: "Nový odosielateľ z Gmailu do CRM",
-    description: "Keď ti napíše niekto, kto ešte nie je v CRM, pridá sa automaticky ako kontakt.",
+    description: "Keď ti do Gmailu napíše niekto kto ešte nie je v CRM, pridá sa ako kontakt. Zatiaľ pripravujeme — dáme vedieť keď bude live.",
     Icon: UserPlus,
     color: D.emerald,
     runnable: false,
-    runLabel: "Beží na pozadí",
+    runLabel: "Plánované",
   },
 ];
 
@@ -157,7 +157,7 @@ export default function AutomationPage() {
                 Automatizácie
               </h1>
               <p className="text-xs" style={{ color: D.muted }}>
-                Zapni recept → beží automaticky každé ráno o 8:00.
+                Zapni recept → beží automaticky každý deň o 8:00 ráno (CEST).
                 Tlačidlo &ldquo;Spusti teraz&rdquo; pošle výstup ihneď na
                 {userEmail ? <> <strong style={{ color: D.text }}>{userEmail}</strong></> : " tvoj e-mail"}.
               </p>

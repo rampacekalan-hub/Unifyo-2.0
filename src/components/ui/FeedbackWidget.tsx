@@ -77,10 +77,12 @@ export default function FeedbackWidget() {
         aria-label="Pošli nám feedback"
         className="fixed z-40 flex items-center gap-2 rounded-full py-2.5 text-xs font-semibold transition"
         style={{
-          // Sit above the mobile bottom-nav (72px safe area) on phones,
-          // normal 20px on tablet/desktop.
+          // On phones: above the bottom-nav. On md+ the sidebar
+          // (240px wide) occupies bottom-left, so we shift the widget
+          // clear of it. It sits in the free space between sidebar
+          // and the AI bubble on the right.
           bottom: "calc(80px + env(safe-area-inset-bottom))",
-          left: 16,
+          left: "calc(250px + 12px)",
           paddingLeft: 12,
           paddingRight: 16,
           background: "var(--app-surface)",
@@ -93,6 +95,13 @@ export default function FeedbackWidget() {
         <MessageCircleHeart className="w-4 h-4" style={{ color: D.violet }} />
         <span className="hidden md:inline">Feedback</span>
       </button>
+      {/* Scoped style — on sub-md viewports pull the widget back to
+          the left edge since there's no sidebar overlay. */}
+      <style jsx>{`
+        @media (max-width: 767px) {
+          button[aria-label="Pošli nám feedback"] { left: 12px !important; }
+        }
+      `}</style>
 
       <AnimatePresence>
         {open && (

@@ -68,7 +68,7 @@ const GROUPS: Group[] = [
     rows: [
       { label: "E-mailová podpora",             values: [true, true, true] },
       { label: "Prioritná podpora (24h)",       values: [false, true, true] },
-      { label: "SLA & dedikovaná podpora",      values: [false, false, true] },
+      { label: "Prioritná podpora (do 24h)",     values: [false, true, true] },
       { label: "Custom integrácie",             values: [false, false, true] },
     ],
   },
