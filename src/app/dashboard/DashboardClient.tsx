@@ -677,7 +677,7 @@ export default function DashboardClient({ user }: DashboardClientProps) {
                   <Square className="w-3 h-3 text-white fill-white" />
                 </button>
               ) : (
-                <button onClick={handleSend} disabled={!input.trim()}
+                <button onClick={handleSend} disabled={!input.trim()} data-press
                   className="w-8 h-8 rounded-2xl flex items-center justify-center transition-all duration-200 flex-shrink-0 disabled:opacity-40"
                   style={{ background: `linear-gradient(135deg,${D.indigo},#4f46e5)`, boxShadow: `0 0 14px ${D.indigoGlow}` }}>
                   <Send className="w-3.5 h-3.5 text-white" />

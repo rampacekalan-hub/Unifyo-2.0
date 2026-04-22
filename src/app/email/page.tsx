@@ -545,14 +545,17 @@ function ComposeModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4"
       style={{ background: "rgba(0,0,0,0.7)", backdropFilter: "blur(6px)" }}
       onClick={onClose}
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-lg rounded-2xl p-5"
-        style={{ background: "var(--app-surface)", border: `1px solid ${D.indigoBorder}` }}
+        className="w-full max-w-lg p-5 rounded-t-2xl sm:rounded-2xl max-h-[94vh] overflow-y-auto"
+        style={{
+          background: "var(--app-surface)",
+          border: `1px solid ${D.indigoBorder}`,
+        }}
       >
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-sm font-bold" style={{ color: D.text }}>

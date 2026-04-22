@@ -222,13 +222,15 @@ export default function FloatingAIWidget() {
 
   return (
     <>
-      {/* Floating button */}
+      {/* Floating button — bottom-right; matched to feedback widget
+          safe-area offset on mobile so both dodge the bottom-nav. */}
       <motion.button
         onClick={() => setIsOpen((o) => !o)}
-        className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 w-14 h-14 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center shadow-2xl active:scale-95 transition-transform"
+        className="fixed right-4 sm:bottom-6 sm:right-6 z-50 w-14 h-14 rounded-2xl flex items-center justify-center shadow-2xl active:scale-95 transition-transform"
         style={{
-          background: "linear-gradient(135deg,#6366f1,#8b5cf6)",
-          boxShadow: "0 0 30px rgba(99,102,241,0.5)",
+          bottom: "calc(80px + env(safe-area-inset-bottom))",
+          background: "var(--brand-gradient)",
+          boxShadow: "0 0 30px rgba(139,92,246,0.5)",
         }}
         whileHover={{ scale: 1.06 }}
         whileTap={{ scale: 0.95 }}

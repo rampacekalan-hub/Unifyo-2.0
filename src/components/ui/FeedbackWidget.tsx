@@ -73,11 +73,16 @@ export default function FeedbackWidget() {
           AI widget (bottom-right) or the sonner toasts. */}
       <button
         onClick={() => setOpen(true)}
+        data-press
         aria-label="Pošli nám feedback"
-        className="fixed z-40 hidden md:flex items-center gap-2 rounded-full pl-3 pr-4 py-2.5 text-xs font-semibold transition"
+        className="fixed z-40 flex items-center gap-2 rounded-full py-2.5 text-xs font-semibold transition"
         style={{
-          bottom: 20,
-          left: 20,
+          // Sit above the mobile bottom-nav (72px safe area) on phones,
+          // normal 20px on tablet/desktop.
+          bottom: "calc(80px + env(safe-area-inset-bottom))",
+          left: 16,
+          paddingLeft: 12,
+          paddingRight: 16,
           background: "var(--app-surface)",
           color: D.text,
           border: `1px solid ${D.border}`,
@@ -86,7 +91,7 @@ export default function FeedbackWidget() {
         }}
       >
         <MessageCircleHeart className="w-4 h-4" style={{ color: D.violet }} />
-        Feedback
+        <span className="hidden md:inline">Feedback</span>
       </button>
 
       <AnimatePresence>

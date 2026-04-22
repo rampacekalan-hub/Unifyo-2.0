@@ -205,30 +205,32 @@ export default function HeroSection() {
           transition={{ duration: 0.5, delay: 0.26 }}
           style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "10px", marginBottom: "0" }}
         >
-          <Link href="/register" style={{
+          <Link href="/register" data-press style={{
             display: "inline-flex", alignItems: "center", gap: "10px",
-            background: "linear-gradient(135deg, #7c3aed, #5b21b6)",
-            boxShadow: "0 0 0 1px rgba(139,92,246,0.3), 0 4px 20px rgba(124,58,237,0.35)",
+            background: "var(--brand-gradient)",
+            boxShadow: "0 0 0 1px rgba(139,92,246,0.35), 0 8px 32px rgba(124,58,237,0.45), 0 0 40px rgba(14,165,233,0.18)",
             color: "#fff",
-            borderRadius: "14px",
-            padding: "13px 24px",
+            borderRadius: "var(--r-md)",
+            padding: "14px 26px",
             fontSize: "clamp(0.9rem, 2.5vw, 1rem)",
             fontWeight: 700,
             textDecoration: "none",
+            letterSpacing: "-0.01em",
           }}>
             {texts.hero.cta}
             <ArrowRight style={{ width: "18px", height: "18px" }} />
           </Link>
-          <Link href="/#pricing" style={{
+          <Link href="/#pricing" data-press style={{
             display: "inline-flex", alignItems: "center",
-            background: "rgba(255,255,255,0.04)",
-            border: "1px solid rgba(255,255,255,0.1)",
-            color: "#d1d5db",
-            borderRadius: "14px",
-            padding: "13px 22px",
+            background: "rgba(255,255,255,0.06)",
+            border: "1px solid rgba(255,255,255,0.14)",
+            color: "#e5e7eb",
+            borderRadius: "var(--r-md)",
+            padding: "14px 24px",
             fontSize: "clamp(0.9rem, 2.5vw, 1rem)",
             fontWeight: 600,
             textDecoration: "none",
+            backdropFilter: "blur(12px)",
           }}>
             {texts.hero.ctaSecondary}
           </Link>
