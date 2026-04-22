@@ -142,21 +142,21 @@ function RegisterPageInner() {
         >
           <h1 className="font-black tracking-[-0.03em] leading-[1.05] mb-4"
               style={{ fontSize: "clamp(2rem, 3vw, 3rem)", color: B.text }}>
-            Prvých 14 dní{" "}
+            Tvoj biznis,{" "}
             <span style={{ background: "var(--brand-gradient)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
-              bez platby.
+              v jednom nástroji.
             </span>
           </h1>
           <p className="text-base max-w-md leading-relaxed" style={{ color: B.textMuted }}>
-            Žiadna karta, žiadny nátlak. Vyskúšaj AI asistenta, CRM, kalendár
-            a hovory — rozhodneš sa až potom.
+            AI asistent, CRM, kalendár, Gmail a hovory — všetko na jednom mieste,
+            po slovensky. Od <strong>€8,99/mesiac</strong>, zrušenie kedykoľvek.
           </p>
           <ul className="mt-8 space-y-2">
             {[
-              "100 AI správ denne",
-              "Neobmedzené kontakty a kalendár",
+              "AI asistent po slovensky (100 správ / deň)",
+              "Neobmedzené kontakty + CRM + Pipeline",
               "Gmail + Google Calendar integrácia",
-              "Storno kedykoľvek, dáta exportuješ",
+              "Zrušenie kedykoľvek, dáta exportuješ",
             ].map((b) => (
               <li key={b} className="flex items-center gap-2 text-sm" style={{ color: B.text }}>
                 <span className="w-4 h-4 rounded-full flex items-center justify-center text-white text-[10px]"

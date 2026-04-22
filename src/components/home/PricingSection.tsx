@@ -45,37 +45,38 @@ export default function PricingSection() {
             Žiadne skryté poplatky · Fakturácia v EUR · Zrušenie kedykoľvek
           </p>
 
-          {/* Toggle */}
-          <div className="flex items-center gap-3 mt-1">
-            <span className="text-sm transition-colors duration-200"
-              style={{ color: !yearly ? "#eef2ff" : "#64748b" }}>
-              Mesačne
-            </span>
+          {/* Toggle — styled as a segmented pill so it works on both
+              themes. Active side uses brand gradient, inactive side
+              stays transparent but keeps a crisp border. */}
+          <div
+            className="inline-flex items-center gap-1 mt-1 rounded-full p-1"
+            style={{
+              background: "var(--app-surface-2)",
+              border: "1px solid var(--app-border)",
+            }}
+          >
             <button
-              onClick={() => setYearly(v => !v)}
-              className="relative w-11 h-6 rounded-full transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
+              onClick={() => setYearly(false)}
+              className="px-4 py-1.5 rounded-full text-sm font-semibold transition"
               style={{
-                background: yearly ? "rgba(139,92,246,0.3)" : "rgba(255,255,255,0.07)",
-                border: "1px solid rgba(139,92,246,0.2)",
+                background: !yearly ? "var(--brand-gradient)" : "transparent",
+                color: !yearly ? "#fff" : "var(--app-text-muted)",
+                boxShadow: !yearly ? "0 0 14px rgba(139,92,246,0.35)" : "none",
               }}
-              aria-label="Prepnúť fakturačné obdobie"
             >
-              <motion.div
-                layout
-                transition={{ type: "spring", stiffness: 600, damping: 34 }}
-                className="absolute top-0.5 w-5 h-5 rounded-full"
-                style={{
-                  left: yearly ? "22px" : "2px",
-                  background: yearly
-                    ? "linear-gradient(135deg, #8b5cf6, #06b6d4)"
-                    : "rgba(255,255,255,0.3)",
-                }}
-              />
+              Mesačne
             </button>
-            <span className="text-sm transition-colors duration-200"
-              style={{ color: yearly ? "#eef2ff" : "#64748b" }}>
+            <button
+              onClick={() => setYearly(true)}
+              className="px-4 py-1.5 rounded-full text-sm font-semibold transition"
+              style={{
+                background: yearly ? "var(--brand-gradient)" : "transparent",
+                color: yearly ? "#fff" : "var(--app-text-muted)",
+                boxShadow: yearly ? "0 0 14px rgba(139,92,246,0.35)" : "none",
+              }}
+            >
               Ročne
-            </span>
+            </button>
             <AnimatePresence>
               {yearly && (
                 <motion.span
@@ -83,11 +84,11 @@ export default function PricingSection() {
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -6 }}
                   transition={{ duration: 0.2 }}
-                  className="text-[0.68rem] font-bold px-2 py-0.5 rounded-full"
+                  className="ml-1 mr-2 text-[0.68rem] font-bold px-2 py-0.5 rounded-full"
                   style={{
-                    background: "rgba(16,185,129,0.12)",
-                    border: "1px solid rgba(16,185,129,0.25)",
-                    color: "#34d399",
+                    background: "var(--brand-success-soft)",
+                    border: "1px solid color-mix(in oklab, var(--brand-success) 40%, transparent)",
+                    color: "var(--brand-success)",
                   }}
                 >
                   −20%
@@ -153,7 +154,7 @@ export default function PricingSection() {
                   {/* Plan name + desc */}
                   <div className="mb-5 mt-1">
                     <p className="text-xs font-semibold tracking-[0.14em] uppercase mb-2"
-                      style={{ color: isHighlighted ? "#a78bfa" : "#94a3b8" }}>
+                      style={{ color: isHighlighted ? "var(--brand-primary)" : "var(--app-text-muted)" }}>
                       {plan.name}
                     </p>
                     <p className="text-xs leading-relaxed" style={{ color: "var(--app-text-muted)" }}>
@@ -178,7 +179,7 @@ export default function PricingSection() {
                         {displayPrice > 0 && (
                           <span className="text-xs mb-1.5 pb-0.5" style={{ color: "var(--app-text-muted)" }}>
                             /{yearly ? "mes" : plan.interval}
-                            {yearly && <span style={{ color: "#34d399" }}> · ročne</span>}
+                            {yearly && <span style={{ color: "var(--brand-success)" }}> · ročne</span>}
                           </span>
                         )}
                       </motion.div>
@@ -195,7 +196,7 @@ export default function PricingSection() {
                             border: feature.included ? "1px solid rgba(139,92,246,0.2)" : "1px solid rgba(255,255,255,0.05)",
                           }}>
                           {feature.included
-                            ? <Check className="w-2.5 h-2.5" style={{ color: "#a78bfa" }} />
+                            ? <Check className="w-2.5 h-2.5" style={{ color: "var(--brand-primary)" }} />
                             : <Minus className="w-2.5 h-2.5" style={{ color: "var(--app-text-subtle)" }} />
                           }
                         </div>
@@ -212,7 +213,7 @@ export default function PricingSection() {
                               style={{
                                 background: "var(--app-surface)",
                                 border: "1px solid rgba(139,92,246,0.2)",
-                                color: "#9ca3af",
+                                color: "var(--app-text-muted)",
                               }}>
                               {feature.tooltip}
                             </TooltipContent>

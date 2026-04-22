@@ -35,12 +35,12 @@ export default function KontaktPage() {
 
   const inputStyle = {
     width: "100%",
-    background: "rgba(255,255,255,0.04)",
+    background: "var(--app-surface)",
     border: "1px solid rgba(139,92,246,0.18)",
     borderRadius: "12px",
     padding: "13px 16px",
     fontSize: "0.9rem",
-    color: "#eef2ff",
+    color: "var(--app-text)",
     outline: "none",
     transition: "border-color 0.2s",
     boxSizing: "border-box" as const,
@@ -64,7 +64,7 @@ export default function KontaktPage() {
               display: "inline-flex", alignItems: "center", gap: "8px",
               background: "rgba(139,92,246,0.1)",
               border: "1px solid rgba(139,92,246,0.25)",
-              color: "#c4b5fd", borderRadius: "999px",
+              color: "var(--brand-primary)", borderRadius: "999px",
               padding: "6px 16px", fontSize: "0.78rem", fontWeight: 600,
               letterSpacing: "0.04em", textTransform: "uppercase" as const,
               marginBottom: "20px",
@@ -74,11 +74,11 @@ export default function KontaktPage() {
             <h1 style={{
               fontSize: "clamp(2rem, 5vw, 3rem)",
               fontWeight: 900, letterSpacing: "-0.03em", lineHeight: 1.1,
-              color: "#eef2ff", marginBottom: "14px",
+              color: "var(--app-text)", marginBottom: "14px",
             }}>
               Napíš nám
             </h1>
-            <p style={{ color: "#94a3b8", fontSize: "0.95rem", lineHeight: 1.7 }}>
+            <p style={{ color: "var(--app-text-muted)", fontSize: "0.95rem", lineHeight: 1.7 }}>
               Máš otázku alebo nápad? Odpovádame do 24 hodín.
             </p>
           </motion.div>
@@ -115,7 +115,7 @@ export default function KontaktPage() {
             </div>
             <div>
               <p style={{ fontSize: "0.72rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#8b5cf6", marginBottom: "3px" }}>Email</p>
-              <p style={{ fontSize: "0.95rem", fontWeight: 600, color: "#eef2ff" }}>info@unifyo.online</p>
+              <p style={{ fontSize: "0.95rem", fontWeight: 600, color: "var(--app-text)" }}>info@unifyo.online</p>
             </div>
             <span style={{ marginLeft: "auto", color: "#8b5cf6", fontSize: "1.1rem" }}>→</span>
           </motion.a>
@@ -123,7 +123,7 @@ export default function KontaktPage() {
           {/* Divider */}
           <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "32px" }}>
             <div style={{ flex: 1, height: "1px", background: "rgba(139,92,246,0.12)" }} />
-            <span style={{ fontSize: "0.75rem", color: "#64748b", fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase" }}>alebo napíš cez formulár</span>
+            <span style={{ fontSize: "0.75rem", color: "var(--app-text-subtle)", fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase" }}>alebo napíš cez formulár</span>
             <div style={{ flex: 1, height: "1px", background: "rgba(139,92,246,0.12)" }} />
           </div>
 
@@ -133,7 +133,7 @@ export default function KontaktPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.45, delay: 0.15 }}
             style={{
-              background: "rgba(12,15,26,0.85)",
+              background: "var(--app-surface)",
               border: "1px solid rgba(139,92,246,0.16)",
               borderRadius: "20px",
               padding: "32px",
@@ -156,11 +156,11 @@ export default function KontaktPage() {
                   }}>
                     <CheckCircle2 style={{ width: "26px", height: "26px", color: "#10b981" }} />
                   </div>
-                  <h3 style={{ fontSize: "1.2rem", fontWeight: 700, color: "#eef2ff", marginBottom: "10px" }}>
+                  <h3 style={{ fontSize: "1.2rem", fontWeight: 700, color: "var(--app-text)", marginBottom: "10px" }}>
                     Správa odoslaná!
                   </h3>
-                  <p style={{ color: "#94a3b8", fontSize: "0.88rem", lineHeight: 1.6 }}>
-                    Ozveme sa ti na <strong style={{ color: "#eef2ff" }}>{email}</strong> do 24 hodín.
+                  <p style={{ color: "var(--app-text-muted)", fontSize: "0.88rem", lineHeight: 1.6 }}>
+                    Ozveme sa ti na <strong style={{ color: "var(--app-text)" }}>{email}</strong> do 24 hodín.
                   </p>
                 </motion.div>
               ) : (
@@ -173,7 +173,7 @@ export default function KontaktPage() {
                 >
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                      <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 600, color: "#94a3b8", marginBottom: "7px", letterSpacing: "0.04em" }}>
+                      <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 600, color: "var(--app-text-muted)", marginBottom: "7px", letterSpacing: "0.04em" }}>
                         Meno
                       </label>
                       <input
@@ -187,7 +187,7 @@ export default function KontaktPage() {
                       />
                     </div>
                     <div>
-                      <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 600, color: "#94a3b8", marginBottom: "7px", letterSpacing: "0.04em" }}>
+                      <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 600, color: "var(--app-text-muted)", marginBottom: "7px", letterSpacing: "0.04em" }}>
                         Email
                       </label>
                       <input
@@ -204,7 +204,7 @@ export default function KontaktPage() {
                   </div>
 
                   <div>
-                    <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 600, color: "#94a3b8", marginBottom: "7px", letterSpacing: "0.04em" }}>
+                    <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 600, color: "var(--app-text-muted)", marginBottom: "7px", letterSpacing: "0.04em" }}>
                       Správa
                     </label>
                     <textarea
@@ -258,7 +258,7 @@ export default function KontaktPage() {
                       Odoslanie zlyhalo. Skús to prosím znova, alebo napíš priamo na info@unifyo.online.
                     </p>
                   )}
-                  <p style={{ fontSize: "0.75rem", color: "#64748b", textAlign: "center", lineHeight: 1.5 }}>
+                  <p style={{ fontSize: "0.75rem", color: "var(--app-text-subtle)", textAlign: "center", lineHeight: 1.5 }}>
                     Odoslaním súhlasíš so spracúvaním údajov podľa našich{" "}
                     <Link href="/sukromie" style={{ color: "#8b5cf6", textDecoration: "none" }}>Zásad ochrany súkromia</Link>.
                   </p>
@@ -269,7 +269,7 @@ export default function KontaktPage() {
 
           {/* Back */}
           <div style={{ marginTop: "40px", textAlign: "center" }}>
-            <Link href="/" style={{ color: "#64748b", fontSize: "0.82rem", textDecoration: "none" }}>
+            <Link href="/" style={{ color: "var(--app-text-subtle)", fontSize: "0.82rem", textDecoration: "none" }}>
               ← Späť na hlavnú stránku
             </Link>
           </div>
