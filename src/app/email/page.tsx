@@ -15,6 +15,9 @@ import {
   X,
   Link2,
   Inbox,
+  FileText,
+  Star,
+  Layers,
 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 
@@ -56,12 +59,22 @@ interface MessageDetail {
   snippet: string;
 }
 
+type Folder = "INBOX" | "SENT" | "STARRED" | "ALL";
+
+const FOLDERS: Array<{ id: Folder; label: string; Icon: React.ElementType }> = [
+  { id: "INBOX",   label: "Doručené",  Icon: Inbox },
+  { id: "SENT",    label: "Odoslané",  Icon: Send },
+  { id: "STARRED", label: "S hviezdou", Icon: Star },
+  { id: "ALL",     label: "Všetky",    Icon: Layers },
+];
+
 export default function EmailPage() {
   const [state, setState] = useState<LoadState>({ kind: "loading" });
   const [query, setQuery] = useState("");
   const [composing, setComposing] = useState(false);
   const [active, setActive] = useState<MessageDetail | null>(null);
   const [loadingActive, setLoadingActive] = useState<string | null>(null);
+  const [folder, setFolder] = useState<Folder>("INBOX");
 
   async function openMessage(id: string) {
     // Fetch full body + mark as read. We preserve the list state so the
@@ -88,11 +101,12 @@ export default function EmailPage() {
     }
   }
 
-  async function load(q?: string) {
+  async function load(q?: string, f: Folder = folder) {
     setState({ kind: "loading" });
     try {
-      const url = q ? `/api/gmail/inbox?q=${encodeURIComponent(q)}` : "/api/gmail/inbox";
-      const res = await fetch(url);
+      const params = new URLSearchParams({ label: f });
+      if (q) params.set("q", q);
+      const res = await fetch(`/api/gmail/inbox?${params}`);
       if (res.status === 409) {
         setState({ kind: "not_connected" });
         return;
@@ -108,9 +122,11 @@ export default function EmailPage() {
     }
   }
 
+  // Reload when folder changes — keep the search query if the user had one.
   useEffect(() => {
-    load();
-  }, []);
+    load(query.trim() || undefined, folder);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [folder]);
 
   return (
     <AppLayout title="Email" subtitle="Email —">
@@ -181,6 +197,32 @@ export default function EmailPage() {
             </>
           )}
         </div>
+
+        {/* Folder tabs — Gmail label filter. Hidden in not-connected
+            state since there's nothing to filter. */}
+        {state.kind !== "not_connected" && (
+          <div className="flex items-center gap-1 mb-3 overflow-x-auto no-scrollbar">
+            {FOLDERS.map((f) => {
+              const active = folder === f.id;
+              const Icon = f.Icon;
+              return (
+                <button
+                  key={f.id}
+                  onClick={() => setFolder(f.id)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition whitespace-nowrap"
+                  style={{
+                    background: active ? "rgba(139,92,246,0.18)" : "var(--app-surface-2)",
+                    border: `1px solid ${active ? "rgba(139,92,246,0.45)" : D.indigoBorder}`,
+                    color: active ? D.text : D.muted,
+                  }}
+                >
+                  <Icon className="w-3.5 h-3.5" />
+                  {f.label}
+                </button>
+              );
+            })}
+          </div>
+        )}
 
         {state.kind === "loading" && <LoadingCard />}
         {state.kind === "not_connected" && <NotConnectedCard />}

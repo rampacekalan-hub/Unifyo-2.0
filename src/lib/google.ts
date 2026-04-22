@@ -177,11 +177,19 @@ function headerOf(headers: { name: string; value: string }[] | undefined, name: 
 
 export async function listGmailInbox(
   accessToken: string,
-  opts: { maxResults?: number; q?: string } = {},
+  opts: {
+    maxResults?: number;
+    q?: string;
+    /** Gmail label ids — "INBOX", "SENT", "DRAFT", "STARRED". Omit or
+     *  pass "ALL" for the full message list (Gmail treats no label
+     *  filter as "everything"). */
+    label?: "INBOX" | "SENT" | "DRAFT" | "STARRED" | "ALL";
+  } = {},
 ): Promise<GmailMessageSummary[]> {
+  const label = opts.label ?? "INBOX";
   const params = new URLSearchParams({
     maxResults: String(opts.maxResults ?? 20),
-    labelIds: "INBOX",
+    ...(label !== "ALL" ? { labelIds: label } : {}),
     ...(opts.q ? { q: opts.q } : {}),
   });
   const listRes = await fetch(

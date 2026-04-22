@@ -20,9 +20,14 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const q = searchParams.get("q") ?? undefined;
   const maxResults = Math.min(50, Number(searchParams.get("max") ?? 20));
+  const labelRaw = searchParams.get("label");
+  const label =
+    labelRaw === "SENT" || labelRaw === "DRAFT" || labelRaw === "STARRED" || labelRaw === "ALL"
+      ? labelRaw
+      : "INBOX";
 
   try {
-    const messages = await listGmailInbox(token, { maxResults, q });
+    const messages = await listGmailInbox(token, { maxResults, q, label });
     return NextResponse.json({ messages });
   } catch (e) {
     console.error("[gmail:inbox]", e);

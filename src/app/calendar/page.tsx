@@ -13,7 +13,6 @@ import { confirmWithUndo } from "@/lib/undoable";
 import AppLayout from "@/components/layout/AppLayout";
 import EmptyIllustration from "@/components/ui/EmptyIllustration";
 import ShareButton from "@/components/ui/ShareButton";
-import GoogleEventsPanel from "@/components/calendar/GoogleEventsPanel";
 import { track } from "@/lib/analytics";
 
 interface Task {
@@ -28,6 +27,8 @@ interface Task {
   // with a different accent and disable edit/delete.
   googleEventId?: string;
   htmlLink?: string;
+  calendarName?: string;
+  calendarColor?: string;
 }
 
 const D = {
@@ -117,6 +118,8 @@ function CalendarPageInner() {
             end: string;
             htmlLink?: string;
             allDay: boolean;
+            calendarName?: string;
+            calendarColor?: string;
           }>;
         };
         google = (json.events ?? []).map((e) => {
@@ -135,6 +138,8 @@ function CalendarPageInner() {
             createdAt: e.start,
             googleEventId: e.id,
             htmlLink: e.htmlLink,
+            calendarName: e.calendarName,
+            calendarColor: e.calendarColor,
           };
         });
       }
@@ -323,8 +328,9 @@ function CalendarPageInner() {
       <div className="flex flex-col lg:flex-row h-full p-4 md:p-6 gap-4 md:gap-6">
         {/* ── Calendar grid ── */}
         <div className="flex-1 min-w-0">
-          {/* Google Calendar overlay — renders only if connected */}
-          <GoogleEventsPanel />
+          {/* Color legend — helps users distinguish local tasks from
+              Google events now that both render in the same grid. */}
+          <CalendarLegend />
           <div className="flex items-center justify-between mb-4 md:mb-6 flex-wrap gap-2">
             <div className="flex items-center gap-2 md:gap-4">
               <button
@@ -445,8 +451,12 @@ function CalendarPageInner() {
                 {Array.from({ length: startingDay }).map((_, i) => (
                   <div
                     key={`empty-${i}`}
-                    className="aspect-square rounded-lg md:rounded-xl"
-                    style={{ background: "rgba(99,102,241,0.02)", border: `1px solid ${D.indigoBorder}` }}
+                    className="rounded-lg md:rounded-xl"
+                    style={{
+                      minHeight: 88,
+                      background: "transparent",
+                      border: `1px dashed ${D.indigoBorder}`,
+                    }}
                   />
                 ))}
                 {Array.from({ length: daysInMonth }).map((_, i) => {
@@ -462,11 +472,17 @@ function CalendarPageInner() {
                       onDragOver={(e) => handleDragOver(e, iso)}
                       onDragLeave={() => setDragOverIso((v) => v === iso ? null : v)}
                       onDrop={(e) => handleDrop(e, iso)}
-                      className="aspect-square rounded-lg md:rounded-xl p-1 md:p-2 cursor-pointer relative overflow-hidden"
+                      className="rounded-lg md:rounded-xl p-1.5 md:p-2 cursor-pointer relative overflow-hidden flex flex-col"
                       style={{
+                        // Minimum height keeps cells readable — was
+                        // aspect-square which on wide screens squashed
+                        // to 18px tall.
+                        minHeight: 88,
                         background: isDragOver
                           ? "rgba(139,92,246,0.25)"
-                          : isToday ? "rgba(99,102,241,0.2)" : "rgba(99,102,241,0.05)",
+                          : isToday
+                          ? "rgba(99,102,241,0.14)"
+                          : "var(--app-surface-2)",
                         border: `1px solid ${isDragOver ? D.violet : isToday ? D.indigo : D.indigoBorder}`,
                       }}
                       whileHover={{ background: "rgba(99,102,241,0.1)" }}
@@ -478,33 +494,58 @@ function CalendarPageInner() {
                         }
                       }}
                     >
-                      <span
-                        className="text-xs md:text-sm font-medium"
-                        style={{ color: isToday ? D.indigo : D.text }}
-                      >
-                        {day}
-                      </span>
-                      <div className="mt-0.5 md:mt-1 space-y-0.5 md:space-y-1">
-                        {dayTasks.slice(0, 2).map((t) => (
-                          <div
-                            key={t.id}
-                            draggable
-                            onDragStart={(e) => { e.stopPropagation(); handleDragStart(e, t.id); }}
-                            onClick={(e) => { e.stopPropagation(); setSelectedTask(t); }}
-                            className="text-[9px] md:text-[10px] truncate px-1 py-0.5 rounded cursor-grab active:cursor-grabbing"
-                            style={{
-                              background: t.done ? "rgba(16,185,129,0.2)" : "rgba(99,102,241,0.25)",
-                              color: t.done ? D.emerald : "#a5b4fc",
-                              textDecoration: t.done ? "line-through" : "none",
-                            }}
-                            title={t.title}
-                          >
-                            {t.time ?? t.title}
-                          </div>
-                        ))}
-                        {dayTasks.length > 2 && (
-                          <div className="text-[9px] md:text-[10px]" style={{ color: D.muted }}>
-                            +{dayTasks.length - 2}
+                      <div className="flex items-center justify-between mb-1">
+                        <span
+                          className="inline-flex items-center justify-center rounded-full w-5 h-5 text-[10px] md:text-[11px] font-bold"
+                          style={{
+                            background: isToday ? D.indigo : "transparent",
+                            color: isToday ? "white" : D.text,
+                          }}
+                        >
+                          {day}
+                        </span>
+                        {dayTasks.length > 0 && (
+                          <span className="text-[9px]" style={{ color: D.mutedDark }}>
+                            {dayTasks.length}
+                          </span>
+                        )}
+                      </div>
+                      <div className="space-y-0.5 flex-1">
+                        {dayTasks.slice(0, 3).map((t) => {
+                          const isGoogle = !!t.googleEventId;
+                          const accent = t.done
+                            ? "#10b981"
+                            : isGoogle
+                            ? (t.calendarColor ?? "#0ea5e9") // sky-500 for Google
+                            : "#8b5cf6"; // violet for local tasks
+                          return (
+                            <div
+                              key={t.id}
+                              draggable={!isGoogle}
+                              onDragStart={(e) => { if (!isGoogle) { e.stopPropagation(); handleDragStart(e, t.id); } }}
+                              onClick={(e) => { e.stopPropagation(); setSelectedTask(t); }}
+                              className="text-[10px] md:text-[11px] truncate px-1.5 py-0.5 rounded flex items-center gap-1"
+                              style={{
+                                background: `${accent}22`,
+                                borderLeft: `2px solid ${accent}`,
+                                color: t.done ? accent : D.text,
+                                textDecoration: t.done ? "line-through" : "none",
+                                cursor: isGoogle ? "pointer" : "grab",
+                              }}
+                              title={`${t.time ? t.time + " · " : ""}${t.title}${t.calendarName ? " · " + t.calendarName : ""}`}
+                            >
+                              {t.time && (
+                                <span className="font-semibold flex-shrink-0" style={{ color: accent, opacity: 0.9 }}>
+                                  {t.time}
+                                </span>
+                              )}
+                              <span className="truncate">{t.title}</span>
+                            </div>
+                          );
+                        })}
+                        {dayTasks.length > 3 && (
+                          <div className="text-[9px] md:text-[10px] px-1" style={{ color: D.muted }}>
+                            +{dayTasks.length - 3} ďalších
                           </div>
                         )}
                       </div>
@@ -833,5 +874,36 @@ function CalendarPageInner() {
         )}
       </AnimatePresence>
     </AppLayout>
+  );
+}
+
+// ── Calendar legend — tiny visual key for the color system ─────────
+// Local tasks = violet, Google events = sky, completed = emerald.
+// Kept self-contained here because it only makes sense next to the
+// grid that uses those colors.
+function CalendarLegend() {
+  const items = [
+    { color: "#8b5cf6", label: "Moje úlohy" },
+    { color: "#0ea5e9", label: "Google Kalendár" },
+    { color: "#10b981", label: "Hotové" },
+  ];
+  return (
+    <div
+      className="flex items-center gap-3 mb-3 px-3 py-2 rounded-xl flex-wrap"
+      style={{
+        background: "var(--app-surface-2)",
+        border: `1px solid ${D.indigoBorder}`,
+      }}
+    >
+      <span className="text-[10px] uppercase tracking-widest" style={{ color: D.mutedDark }}>
+        Farby
+      </span>
+      {items.map((it) => (
+        <span key={it.label} className="flex items-center gap-1.5 text-[11px]" style={{ color: D.muted }}>
+          <span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ background: it.color }} />
+          {it.label}
+        </span>
+      ))}
+    </div>
   );
 }
