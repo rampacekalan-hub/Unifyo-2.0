@@ -69,14 +69,34 @@ export default function DashboardOverviewPage() {
     let alive = true;
     (async () => {
       try {
-        const [cRes, tRes, vRes] = await Promise.all([
+        // Also fetch Google Calendar events so the overview counts
+        // match what the Calendar page shows. Previously we only
+        // counted local CalendarTask rows — a user with a Google-only
+        // meeting today saw "0 úloh" on overview but a populated cell
+        // in /calendar. 409 (not connected) silently falls through.
+        const [cRes, tRes, vRes, gRes] = await Promise.all([
           fetch("/api/crm/contacts"),
           fetch("/api/calendar/tasks"),
           fetch("/api/conversations"),
+          fetch("/api/gcal/events").catch(() => null),
         ]);
         if (!alive) return;
         if (cRes.ok) setContacts(await cRes.json());
-        if (tRes.ok) setTasks(await tRes.json());
+        const local: Task[] = tRes.ok ? await tRes.json() : [];
+        let google: Task[] = [];
+        if (gRes && gRes.ok) {
+          const json = (await gRes.json()) as {
+            events?: Array<{ id: string; summary: string; start: string; end: string; allDay: boolean }>;
+          };
+          google = (json.events ?? []).map((e) => ({
+            id: `g:${e.id}`,
+            title: e.summary ?? "(bez názvu)",
+            date: e.start.slice(0, 10),
+            time: e.allDay || !/T/.test(e.start) ? null : e.start.slice(11, 16),
+            done: false,
+          }));
+        }
+        setTasks([...local, ...google]);
         if (vRes.ok) setConvos(await vRes.json());
       } finally {
         if (alive) setLoading(false);

@@ -75,7 +75,7 @@ const MODULES: ModuleDef[] = [
   { id: "email",     label: "Email",      href: "/email",     icon: Mail,      appId: "email" },
   { id: "calls",     label: "Hovory",     href: "/calls",     icon: Phone,     appId: "calls" },
   { id: "analytics", label: "Analytika",  href: "/analytics", icon: BarChart3, always: true },
-  { id: "automation",label: "Automation", href: "/automation",icon: Zap,       appId: "automation" },
+  { id: "automation",label: "Automatizácie", href: "/automation",icon: Zap,       appId: "automation" },
   { id: "settings",  label: "Nastavenia", href: "/settings",  icon: SettingsIcon, always: true },
 ];
 

@@ -65,32 +65,36 @@ const RULES: Rule[] = [
   },
 ];
 
+interface LastRun { at: string; result: string }
+
 export default function AutomationPage() {
   const [enabled, setEnabled] = useState<Record<RuleId, boolean>>({
     "daily-digest": false,
     "stale-deal": false,
     "new-sender-to-crm": false,
   });
+  const [lastRuns, setLastRuns] = useState<Record<string, LastRun>>({});
   const [running, setRunning] = useState<RuleId | null>(null);
   const [loading, setLoading] = useState(true);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+
+  const hydrate = async () => {
+    const res = await fetch("/api/user/me");
+    if (!res.ok) return;
+    const data = await res.json();
+    const prefs = data?.user?.preferences ?? {};
+    const a = prefs.automations ?? {};
+    setEnabled({
+      "daily-digest": !!a["daily-digest"],
+      "stale-deal": !!a["stale-deal"],
+      "new-sender-to-crm": !!a["new-sender-to-crm"],
+    });
+    setLastRuns((prefs.automationRuns ?? {}) as Record<string, LastRun>);
+    setUserEmail(data?.user?.email ?? null);
+  };
 
   useEffect(() => {
-    (async () => {
-      try {
-        const res = await fetch("/api/user/me");
-        if (res.ok) {
-          const data = await res.json();
-          const a = data?.user?.preferences?.automations ?? {};
-          setEnabled({
-            "daily-digest": !!a["daily-digest"],
-            "stale-deal": !!a["stale-deal"],
-            "new-sender-to-crm": !!a["new-sender-to-crm"],
-          });
-        }
-      } finally {
-        setLoading(false);
-      }
-    })();
+    hydrate().finally(() => setLoading(false));
   }, []);
 
   const toggle = async (id: RuleId) => {
@@ -121,6 +125,8 @@ export default function AutomationPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail ?? data.error ?? "run_failed");
       toast.success(data.result || "Hotovo");
+      // Refresh prefs so the "Naposledy" line updates immediately.
+      hydrate();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Spustenie zlyhalo");
     } finally {
@@ -129,7 +135,7 @@ export default function AutomationPage() {
   };
 
   return (
-    <AppLayout title="Automatizácia" subtitle="Automatizácia —">
+    <AppLayout title="Automatizácie" subtitle="Automatizácie —">
       <div className="p-4 md:p-8 max-w-3xl mx-auto space-y-4">
         {/* Hero */}
         <div
@@ -146,13 +152,24 @@ export default function AutomationPage() {
             >
               <Zap className="w-5 h-5 text-white" />
             </div>
-            <div>
+            <div className="flex-1">
               <h1 className="text-xl font-bold mb-1" style={{ color: D.text }}>
-                Automatizácie (Fáza A)
+                Automatizácie
               </h1>
               <p className="text-xs" style={{ color: D.muted }}>
-                3 pripravené recepty. Zapni, čo ti pomáha. Cron spúšťa denne; &ldquo;Spusti teraz&rdquo; ti to pošle ihneď.
+                Zapni recept → beží automaticky každé ráno o 8:00.
+                Tlačidlo &ldquo;Spusti teraz&rdquo; pošle výstup ihneď na
+                {userEmail ? <> <strong style={{ color: D.text }}>{userEmail}</strong></> : " tvoj e-mail"}.
               </p>
+              <div className="flex items-center gap-2 mt-2">
+                <span className="inline-flex items-center gap-1 text-[0.65rem] px-2 py-0.5 rounded-full"
+                  style={{ background: "rgba(16,185,129,0.12)", color: "#10b981", border: "1px solid rgba(16,185,129,0.3)" }}>
+                  <Check className="w-3 h-3" /> Cron aktívny (6:00 UTC)
+                </span>
+                <span className="text-[0.65rem]" style={{ color: D.mutedDark }}>
+                  {Object.values(enabled).filter(Boolean).length} / {RULES.length} zapnutých
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -196,6 +213,17 @@ export default function AutomationPage() {
                       )}
                     </div>
                     <p className="text-xs mt-1" style={{ color: D.muted }}>{r.description}</p>
+                    {/* Last-run status — shows the user the recipe
+                        really does something, not just a toggle. */}
+                    {lastRuns[r.id] && (
+                      <p className="text-[0.65rem] mt-1.5 flex items-center gap-1" style={{ color: D.mutedDark }}>
+                        <Check className="w-3 h-3" style={{ color: "#10b981" }} />
+                        <span>
+                          Naposledy: {formatRelative(lastRuns[r.id].at)} ·{" "}
+                          <em style={{ color: D.muted }}>{lastRuns[r.id].result}</em>
+                        </span>
+                      </p>
+                    )}
                     <div className="flex items-center gap-2 mt-2.5 flex-wrap">
                       {r.runnable && (
                         <button
@@ -251,4 +279,16 @@ export default function AutomationPage() {
       </div>
     </AppLayout>
   );
+}
+
+function formatRelative(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diff / 60_000);
+  if (mins < 1) return "pred chvíľou";
+  if (mins < 60) return `pred ${mins} min`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `pred ${hrs} h`;
+  const days = Math.floor(hrs / 24);
+  if (days < 7) return `pred ${days} dňami`;
+  return new Date(iso).toLocaleDateString("sk-SK", { day: "numeric", month: "short" });
 }

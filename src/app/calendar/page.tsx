@@ -79,6 +79,7 @@ function CalendarPageInner() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [selectedDay, setSelectedDay] = useState<string | null>(null); // ISO day for the detail drawer
   const [showModal, setShowModal] = useState(false);
   const [saving, setSaving] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -487,11 +488,11 @@ function CalendarPageInner() {
                       }}
                       whileHover={{ background: "rgba(99,102,241,0.1)" }}
                       onClick={() => {
-                        if (dayTasks.length > 0) setSelectedTask(dayTasks[0]);
-                        else {
-                          setForm((f) => ({ ...f, date: iso }));
-                          setShowModal(true);
-                        }
+                        // Clicking the cell (not a specific task pill)
+                        // always opens the day-detail drawer. User can
+                        // see every task/event for that day, click one
+                        // to edit, or hit "Pridať" to add another.
+                        setSelectedDay(iso);
                       }}
                     >
                       <div className="flex items-center justify-between mb-1">
@@ -544,9 +545,13 @@ function CalendarPageInner() {
                           );
                         })}
                         {dayTasks.length > 3 && (
-                          <div className="text-[9px] md:text-[10px] px-1" style={{ color: D.muted }}>
-                            +{dayTasks.length - 3} ďalších
-                          </div>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setSelectedDay(iso); }}
+                            className="text-[9px] md:text-[10px] px-1 text-left w-full hover:underline"
+                            style={{ color: D.muted }}
+                          >
+                            +{dayTasks.length - 3} ďalších →
+                          </button>
                         )}
                       </div>
                     </motion.div>
@@ -779,6 +784,28 @@ function CalendarPageInner() {
         </div>
       </div>
 
+      {/* ── Day detail drawer — lists every task/event for the
+            clicked day with quick-add button. Replaces the old
+            "click-opens-first-task" confusion. ── */}
+      <AnimatePresence>
+        {selectedDay && (
+          <DayDetailDrawer
+            iso={selectedDay}
+            tasks={tasks.filter((t) => t.date === selectedDay)
+              .sort((a, b) => (a.time ?? "").localeCompare(b.time ?? ""))}
+            onClose={() => setSelectedDay(null)}
+            onOpenTask={(t) => { setSelectedTask(t); }}
+            onAddNew={() => {
+              setForm((f) => ({ ...f, date: selectedDay }));
+              setSelectedDay(null);
+              setShowModal(true);
+            }}
+            onToggleDone={toggleDone}
+            onDelete={handleDelete}
+          />
+        )}
+      </AnimatePresence>
+
       {/* ── Add modal ── */}
       <AnimatePresence>
         {showModal && (
@@ -905,5 +932,196 @@ function CalendarLegend() {
         </span>
       ))}
     </div>
+  );
+}
+
+// ── Day detail drawer — full list of tasks/events for one day ────
+// Slides in from the right. Scrollable if the day has lots of items.
+// Each row: coloured bar (source), time, title, actions. Local tasks
+// are toggle-able / deletable; Google events are read-only with a
+// "Otvoriť v Googli" link.
+function DayDetailDrawer({
+  iso, tasks, onClose, onOpenTask, onAddNew, onToggleDone, onDelete,
+}: {
+  iso: string;
+  tasks: Task[];
+  onClose: () => void;
+  onOpenTask: (t: Task) => void;
+  onAddNew: () => void;
+  onToggleDone: (t: Task) => void;
+  onDelete: (id: string) => void;
+}) {
+  const d = new Date(iso + "T00:00:00");
+  const title = d.toLocaleDateString("sk-SK", {
+    weekday: "long", day: "numeric", month: "long", year: "numeric",
+  });
+  return (
+    <>
+      <motion.div
+        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+        onClick={onClose}
+        className="fixed inset-0 z-[80]"
+        style={{ background: "rgba(3,4,10,0.6)", backdropFilter: "blur(4px)" }}
+      />
+      <motion.aside
+        initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }}
+        transition={{ type: "tween", duration: 0.22 }}
+        className="fixed right-0 top-0 bottom-0 z-[81] w-full sm:max-w-md flex flex-col"
+        style={{
+          background: "var(--app-surface)",
+          borderLeft: "1px solid var(--app-border)",
+        }}
+      >
+        <div
+          className="px-5 py-4 flex items-center justify-between"
+          style={{ borderBottom: "1px solid var(--app-border)" }}
+        >
+          <div>
+            <h2 className="text-sm font-bold capitalize" style={{ color: "var(--app-text)" }}>
+              {title}
+            </h2>
+            <p className="text-[0.7rem]" style={{ color: "var(--app-text-muted)" }}>
+              {tasks.length === 0 ? "Zatiaľ prázdny deň" : `${tasks.length} položiek`}
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-lg"
+            style={{ color: "var(--app-text-muted)" }}
+            aria-label="Zavrieť"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-auto px-4 py-3 space-y-2">
+          {tasks.length === 0 ? (
+            <div
+              className="text-center py-10 rounded-xl text-xs"
+              style={{
+                background: "var(--app-surface-2)",
+                border: "1px dashed var(--app-border)",
+                color: "var(--app-text-muted)",
+              }}
+            >
+              Nič na tento deň. Pridaj prvú úlohu.
+            </div>
+          ) : (
+            tasks.map((t) => {
+              const isGoogle = !!t.googleEventId;
+              const accent = t.done
+                ? "#10b981"
+                : isGoogle
+                ? (t.calendarColor ?? "#0ea5e9")
+                : "#8b5cf6";
+              return (
+                <div
+                  key={t.id}
+                  className="rounded-xl p-3 flex items-start gap-3"
+                  style={{
+                    background: "var(--app-surface-2)",
+                    border: "1px solid var(--app-border)",
+                    borderLeft: `3px solid ${accent}`,
+                  }}
+                >
+                  {!isGoogle && (
+                    <button
+                      onClick={() => onToggleDone(t)}
+                      className="w-4 h-4 rounded border mt-0.5 flex-shrink-0"
+                      style={{
+                        background: t.done ? accent : "transparent",
+                        borderColor: accent,
+                      }}
+                      aria-label="Označiť hotové"
+                      title={t.done ? "Zrušiť hotové" : "Označiť hotové"}
+                    >
+                      {t.done && <Check className="w-3 h-3 text-white m-auto" />}
+                    </button>
+                  )}
+                  {isGoogle && (
+                    <div
+                      className="w-4 h-4 rounded-full mt-0.5 flex-shrink-0"
+                      style={{ background: `${accent}44`, border: `1px solid ${accent}` }}
+                      title={t.calendarName ?? "Google Kalendár"}
+                    />
+                  )}
+                  <button
+                    onClick={() => onOpenTask(t)}
+                    className="flex-1 min-w-0 text-left"
+                  >
+                    <div className="flex items-baseline gap-2">
+                      {t.time && (
+                        <span className="text-xs font-semibold" style={{ color: accent }}>
+                          {t.time}
+                        </span>
+                      )}
+                      <span
+                        className="text-sm font-medium truncate"
+                        style={{
+                          color: "var(--app-text)",
+                          textDecoration: t.done ? "line-through" : "none",
+                          opacity: t.done ? 0.7 : 1,
+                        }}
+                      >
+                        {t.title}
+                      </span>
+                    </div>
+                    {t.description && (
+                      <p className="text-[0.7rem] mt-0.5 line-clamp-2" style={{ color: "var(--app-text-muted)" }}>
+                        {t.description}
+                      </p>
+                    )}
+                    {isGoogle && t.calendarName && (
+                      <p className="text-[10px] mt-0.5" style={{ color: "var(--app-text-subtle)" }}>
+                        {t.calendarName}
+                      </p>
+                    )}
+                  </button>
+                  {isGoogle && t.htmlLink ? (
+                    <a
+                      href={t.htmlLink}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="p-1.5 rounded-md flex-shrink-0"
+                      style={{ color: "var(--app-text-muted)" }}
+                      title="Otvoriť v Google"
+                    >
+                      <CalendarDays className="w-3.5 h-3.5" />
+                    </a>
+                  ) : (
+                    <button
+                      onClick={() => onDelete(t.id)}
+                      className="p-1.5 rounded-md flex-shrink-0"
+                      style={{ color: "#f43f5e" }}
+                      title="Zmazať"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        <div
+          className="p-4"
+          style={{ borderTop: "1px solid var(--app-border)" }}
+        >
+          <button
+            onClick={onAddNew}
+            className="w-full flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-sm font-bold"
+            style={{
+              background: `linear-gradient(135deg, ${D.indigo}, ${D.violet})`,
+              color: "white",
+              boxShadow: "0 0 14px rgba(99,102,241,0.4)",
+            }}
+          >
+            <Plus className="w-4 h-4" />
+            Pridať úlohu na tento deň
+          </button>
+        </div>
+      </motion.aside>
+    </>
   );
 }

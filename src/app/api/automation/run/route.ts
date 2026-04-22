@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth";
 import { requireSameOrigin } from "@/lib/csrf";
 import { rateLimit } from "@/lib/rate-limit";
+import { prisma } from "@/lib/prisma";
 import { runAutomation, type AutomationId } from "@/lib/automation";
 
 export const dynamic = "force-dynamic";
@@ -35,6 +36,24 @@ export async function POST(req: NextRequest) {
 
   try {
     const result = await runAutomation(session.userId, body.id as AutomationId);
+    // Stamp the last-run in User.preferences.automationRuns so the
+    // automation page can show "Naposledy: pred 2 min · Poslané na
+    // info@unifyo.online" instead of a blind toggle.
+    try {
+      const user = await prisma.user.findUnique({
+        where: { id: session.userId },
+        select: { preferences: true },
+      });
+      const prefs = (user?.preferences ?? {}) as Record<string, unknown>;
+      const runs = (prefs.automationRuns ?? {}) as Record<string, { at: string; result: string }>;
+      runs[body.id as string] = { at: new Date().toISOString(), result };
+      await prisma.user.update({
+        where: { id: session.userId },
+        data: { preferences: { ...prefs, automationRuns: runs } as object },
+      });
+    } catch {
+      // Stamping is best-effort — don't fail the response.
+    }
     return NextResponse.json({ ok: true, result });
   } catch (e) {
     console.error("[automation:run]", body.id, e);
