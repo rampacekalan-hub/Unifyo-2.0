@@ -7,7 +7,7 @@ import { requireAiAccess } from "@/lib/verification-gate";
 import { getSiteConfig } from "@/config/site-settings";
 import { checkDailyLimit, incrementDailyUsage, retrieveContext, storeMemory, getActivePolicies, getUserPolicies } from "@/lib/ai/neural-core";
 import type { MembershipTier } from "@/lib/ai/neural-core";
-import { gdprAnonymize } from "@/lib/ai/neural-core";
+import { buildUserBusinessContext } from "@/lib/ai/userContext";
 
 const config = getSiteConfig();
 
@@ -15,6 +15,9 @@ const schema = z.object({
   message: z.string().min(1).max(2000),
   module: z.enum(["dashboard", "calendar", "email", "crm", "calls"]).default("dashboard"),
   sessionId: z.string().optional(),
+  // Last-few-messages context lookup key. Without it every turn
+  // feels like the AI has amnesia.
+  conversationId: z.string().optional(),
   prefs: z.object({
     style: z.enum(["concise", "friendly", "formal"]).default("friendly"),
     temperature: z.number().min(0).max(1).default(0.6),
@@ -45,7 +48,7 @@ export async function POST(req: NextRequest) {
   const parsed = schema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
 
-  const { message, module, sessionId, prefs } = parsed.data;
+  const { message, module, sessionId, conversationId, prefs } = parsed.data;
 
   const user = await prisma.user.findUnique({ where: { id: session.userId }, select: { membershipTier: true } });
   if (!user) return NextResponse.json({ error: "Session expired" }, { status: 401 });
@@ -73,6 +76,26 @@ export async function POST(req: NextRequest) {
 
   const styleInstr = prefs ? STYLE_INSTRUCTIONS[prefs.style] : "";
 
+  // Real business data — CRM contacts, open deals, upcoming tasks —
+  // so the AI knows who "Peter" is and what deadlines loom. Previously
+  // this was missing and the model only saw anonymised memories.
+  const businessContext = await buildUserBusinessContext(session.userId).catch(() => "");
+
+  // Pull the last 6 messages from the same conversation so the model
+  // can see what we just said. Without this every turn is amnesic.
+  const history = conversationId
+    ? await prisma.conversationMsg.findMany({
+        where: { conversationId, conversation: { userId: session.userId } },
+        orderBy: { createdAt: "desc" },
+        take: 6,
+        select: { role: true, content: true },
+      }).catch(() => [])
+    : [];
+  const historyMessages = history.reverse().map((m) => ({
+    role: (m.role === "assistant" ? "assistant" : "user") as "assistant" | "user",
+    content: m.content,
+  }));
+
   const systemPrompt = [
     policyLines,
     userPolicyLines,
@@ -80,10 +103,9 @@ export async function POST(req: NextRequest) {
     config.ai.systemPrompts.base,
     config.ai.systemPrompts[module] ?? "",
     styleInstr,
-    memories.length > 0 ? `\n--- Kontext ---\n${ctxLines}\n--- Koniec kontextu ---` : "",
+    businessContext,
+    memories.length > 0 ? `\n--- Dlhodobá pamäť ---\n${ctxLines}\n--- Koniec pamäte ---` : "",
   ].filter(Boolean).join("\n\n");
-
-  const sanitised = gdprAnonymize(message);
 
   // Update lastActiveAt async
   prisma.user.update({ where: { id: session.userId }, data: { lastActiveAt: new Date() } }).catch(() => {});
@@ -98,7 +120,11 @@ export async function POST(req: NextRequest) {
       stream: true,
       messages: [
         { role: "system", content: systemPrompt },
-        { role: "user", content: sanitised },
+        ...historyMessages,
+        // RAW (un-anonymised) message goes to OpenAI for THIS turn so
+        // the assistant can reason over real names/numbers. Anonymised
+        // copy is what we store long-term via `storeMemory()`.
+        { role: "user", content: message },
       ],
     }),
   });

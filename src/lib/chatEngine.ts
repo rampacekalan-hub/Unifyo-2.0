@@ -100,6 +100,9 @@ export async function sendChat(
       body: JSON.stringify({
         message: trimmed,
         module: opts.module,
+        // Passing conversationId lets the server pull the last few
+        // messages from THIS conversation — kills the "amnesia" feel.
+        conversationId: convId,
         prefs: {
           style: prefs.style,
           temperature: prefs.temperature,

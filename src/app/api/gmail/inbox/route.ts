@@ -26,6 +26,18 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ messages });
   } catch (e) {
     console.error("[gmail:inbox]", e);
+    // 403 almost always means "Gmail API not enabled in GCP project".
+    // Surface that to the UI so the admin can fix it instead of guessing.
+    const msg = e instanceof Error ? e.message : "";
+    if (/:\s*403/.test(msg)) {
+      return NextResponse.json(
+        {
+          error: "gmail_api_disabled",
+          hint: "Zapni Gmail API v Google Cloud Console (APIs & Services → Library → Gmail API → Enable).",
+        },
+        { status: 503 },
+      );
+    }
     return NextResponse.json({ error: "gmail_failed" }, { status: 502 });
   }
 }

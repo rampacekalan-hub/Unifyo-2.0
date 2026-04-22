@@ -31,6 +31,16 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ events });
   } catch (e) {
     console.error("[gcal:events]", e);
+    const msg = e instanceof Error ? e.message : "";
+    if (/:\s*403/.test(msg)) {
+      return NextResponse.json(
+        {
+          error: "calendar_api_disabled",
+          hint: "Zapni Google Calendar API v Google Cloud Console.",
+        },
+        { status: 503 },
+      );
+    }
     return NextResponse.json({ error: "gcal_failed" }, { status: 502 });
   }
 }

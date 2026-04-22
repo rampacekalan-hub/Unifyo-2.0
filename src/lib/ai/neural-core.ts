@@ -452,10 +452,12 @@ export async function neuralInfer(
   // 3b. Update lastActiveAt
   prisma.user.update({ where: { id: ctx.userId }, data: { lastActiveAt: new Date() } }).catch(() => {});
 
-  // 4. Sanitise user message — only anonymised version leaves server
-  const sanitisedMessage = gdprAnonymize(userMessage);
-
-  // 5. Call OpenAI
+  // 4. Call OpenAI
+  // NOTE on privacy: we used to pass `gdprAnonymize(userMessage)` to
+  // OpenAI here. That turned "Peter Novák" into "[NAME]" and the model
+  // couldn't actually help. Since the user's own data is being sent to
+  // assist the user, this is their own context — we only anonymise for
+  // long-term memory storage (which still happens inside storeMemory).
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) throw new Error("OPENAI_API_KEY not configured");
 
@@ -471,7 +473,7 @@ export async function neuralInfer(
       temperature: gov.temperature,
       messages: [
         { role: "system", content: fullSystemPrompt },
-        { role: "user",   content: sanitisedMessage },
+        { role: "user",   content: userMessage },
       ],
     }),
   });
