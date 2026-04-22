@@ -17,8 +17,8 @@ const D = {
   emerald: "#10b981",
   amber: "#f59e0b",
   rose: "#f43f5e",
-  text: "#eef2ff",
-  muted: "#94a3b8",
+  text: "var(--app-text)",
+  muted: "var(--app-text-muted)",
   border: "rgba(99,102,241,0.22)",
 };
 
@@ -78,7 +78,7 @@ export default function FeedbackWidget() {
         style={{
           bottom: 20,
           left: 20,
-          background: "rgba(10,12,24,0.9)",
+          background: "var(--app-surface)",
           color: D.text,
           border: `1px solid ${D.border}`,
           boxShadow: "0 4px 20px rgba(0,0,0,0.4), 0 0 14px rgba(139,92,246,0.2)",
@@ -107,7 +107,7 @@ export default function FeedbackWidget() {
               transition={{ duration: 0.18, ease: "easeOut" }}
               className="fixed z-[101] left-1/2 -translate-x-1/2 bottom-10 sm:bottom-10 sm:left-8 sm:translate-x-0 w-[min(92vw,400px)] rounded-2xl p-5"
               style={{
-                background: "rgba(10,12,24,0.98)",
+                background: "var(--app-surface)",
                 border: `1px solid ${D.border}`,
                 boxShadow: "0 20px 60px rgba(0,0,0,0.55), 0 0 30px rgba(139,92,246,0.2)",
                 backdropFilter: "blur(20px)",
@@ -141,7 +141,7 @@ export default function FeedbackWidget() {
                       onClick={() => setKind(k.id)}
                       className="flex flex-col items-center gap-0.5 py-2 rounded-lg text-[0.65rem] transition"
                       style={{
-                        background: active ? `${k.color}18` : "rgba(5,7,15,0.5)",
+                        background: active ? `${k.color}18` : "var(--app-surface-2)",
                         border: `1px solid ${active ? `${k.color}66` : D.border}`,
                         color: active ? D.text : D.muted,
                       }}
@@ -171,7 +171,7 @@ export default function FeedbackWidget() {
                 maxLength={5000}
                 className="w-full px-3 py-2.5 rounded-lg text-xs outline-none resize-none"
                 style={{
-                  background: "rgba(5,7,15,0.6)",
+                  background: "var(--app-surface-2)",
                   border: `1px solid ${D.border}`,
                   color: D.text,
                 }}

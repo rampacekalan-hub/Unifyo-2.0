@@ -81,7 +81,7 @@ export default function OnboardingTour() {
             exit={{ scale: 0.95, y: 20 }}
             className="w-full max-w-md rounded-3xl p-8 relative"
             style={{
-              background: "rgba(10,12,24,0.95)",
+              background: "var(--app-surface)",
               border: `1px solid ${slide.color}44`,
               boxShadow: `0 20px 60px ${slide.color}33`,
             }}
@@ -91,7 +91,7 @@ export default function OnboardingTour() {
               className="absolute top-4 right-4 p-1.5 rounded-lg hover:bg-white/5"
               aria-label="Zavrieť"
             >
-              <X className="w-4 h-4" style={{ color: "#94a3b8" }} />
+              <X className="w-4 h-4" style={{ color: "var(--app-text-muted)" }} />
             </button>
 
             <AnimatePresence mode="wait">
@@ -115,11 +115,11 @@ export default function OnboardingTour() {
 
                 <h2
                   className="text-xl font-bold mb-3"
-                  style={{ color: "#eef2ff" }}
+                  style={{ color: "var(--app-text)" }}
                 >
                   {slide.title}
                 </h2>
-                <p className="text-sm leading-relaxed" style={{ color: "#94a3b8" }}>
+                <p className="text-sm leading-relaxed" style={{ color: "var(--app-text-muted)" }}>
                   {slide.body}
                 </p>
               </motion.div>
@@ -146,7 +146,7 @@ export default function OnboardingTour() {
               <button
                 onClick={dismiss}
                 className="text-xs px-3 py-2"
-                style={{ color: "#6b7280" }}
+                style={{ color: "var(--app-text-muted)" }}
               >
                 Preskočiť
               </button>

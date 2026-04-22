@@ -24,9 +24,9 @@ const D = {
   indigo: "#6366f1",
   violet: "#8b5cf6",
   sky: "#22d3ee",
-  text: "#eef2ff",
-  muted: "#94a3b8",
-  mutedDark: "#64748b",
+  text: "var(--app-text)",
+  muted: "var(--app-text-muted)",
+  mutedDark: "var(--app-text-subtle)",
   indigoDim: "rgba(99,102,241,0.08)",
   indigoBorder: "rgba(99,102,241,0.22)",
   rose: "#f43f5e",
@@ -1938,11 +1938,11 @@ function SettingsSubnav() {
   return (
     <div
       className="sticky top-0 z-20 -mx-4 md:mx-0 px-4 md:px-0 py-2 mb-2"
-      style={{ background: "rgba(5,7,15,0.72)", backdropFilter: "blur(18px)" }}
+      style={{ background: "var(--app-surface-2)", backdropFilter: "blur(18px)" }}
     >
       <div
         className="flex items-center gap-1.5 overflow-x-auto no-scrollbar rounded-xl p-1.5"
-        style={{ background: "rgba(10,12,24,0.7)", border: `1px solid ${D.indigoBorder}` }}
+        style={{ background: "var(--app-surface)", border: `1px solid ${D.indigoBorder}` }}
       >
         {SECTIONS.map((s) => {
           const isActive = active === s.id;

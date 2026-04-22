@@ -157,7 +157,7 @@ export default async function StatusPage() {
         <section
           className="rounded-2xl overflow-hidden"
           style={{
-            background: "rgba(10,12,24,0.6)",
+            background: "var(--app-surface)",
             border: `1px solid ${D.indigoBorder}`,
             backdropFilter: "blur(16px)",
           }}

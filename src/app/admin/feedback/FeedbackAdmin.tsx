@@ -18,9 +18,9 @@ const D = {
   emerald: "#10b981",
   amber: "#f59e0b",
   rose: "#f43f5e",
-  text: "#eef2ff",
-  muted: "#94a3b8",
-  mutedDark: "#64748b",
+  text: "var(--app-text)",
+  muted: "var(--app-text-muted)",
+  mutedDark: "var(--app-text-subtle)",
   border: "rgba(99,102,241,0.22)",
 };
 
@@ -83,7 +83,7 @@ export default function FeedbackAdmin({ initial }: { initial: Row[] }) {
   }, [rows]);
 
   return (
-    <div className="min-h-screen p-4 md:p-8" style={{ background: "#05070f", color: D.text }}>
+    <div className="min-h-screen p-4 md:p-8" style={{ background: "var(--app-bg)", color: D.text }}>
       <div className="max-w-4xl mx-auto">
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-3">
@@ -120,7 +120,7 @@ export default function FeedbackAdmin({ initial }: { initial: Row[] }) {
                   onClick={() => setFilter(s)}
                   className="px-2.5 py-1 rounded-md text-[0.65rem] font-semibold transition"
                   style={{
-                    background: active ? "rgba(139,92,246,0.2)" : "rgba(5,7,15,0.5)",
+                    background: active ? "rgba(139,92,246,0.2)" : "var(--app-surface-2)",
                     border: `1px solid ${active ? "rgba(139,92,246,0.55)" : D.border}`,
                     color: active ? D.text : D.muted,
                   }}
@@ -139,7 +139,7 @@ export default function FeedbackAdmin({ initial }: { initial: Row[] }) {
               onClick={() => setKindFilter("ALL")}
               className="px-2.5 py-1 rounded-md text-[0.65rem] font-semibold"
               style={{
-                background: kindFilter === "ALL" ? "rgba(139,92,246,0.2)" : "rgba(5,7,15,0.5)",
+                background: kindFilter === "ALL" ? "rgba(139,92,246,0.2)" : "var(--app-surface-2)",
                 border: `1px solid ${kindFilter === "ALL" ? "rgba(139,92,246,0.55)" : D.border}`,
                 color: kindFilter === "ALL" ? D.text : D.muted,
               }}
@@ -155,7 +155,7 @@ export default function FeedbackAdmin({ initial }: { initial: Row[] }) {
                   onClick={() => setKindFilter(id as keyof typeof KIND_META)}
                   className="flex items-center gap-1 px-2.5 py-1 rounded-md text-[0.65rem] font-semibold"
                   style={{
-                    background: active ? `${meta.color}22` : "rgba(5,7,15,0.5)",
+                    background: active ? `${meta.color}22` : "var(--app-surface-2)",
                     border: `1px solid ${active ? `${meta.color}66` : D.border}`,
                     color: active ? D.text : D.muted,
                   }}
@@ -172,7 +172,7 @@ export default function FeedbackAdmin({ initial }: { initial: Row[] }) {
         {filtered.length === 0 ? (
           <div
             className="rounded-2xl p-10 text-center text-sm"
-            style={{ background: "rgba(10,12,24,0.6)", border: `1px solid ${D.border}`, color: D.muted }}
+            style={{ background: "var(--app-surface)", border: `1px solid ${D.border}`, color: D.muted }}
           >
             Žiadne položky pre tento filter.
           </div>
@@ -186,7 +186,7 @@ export default function FeedbackAdmin({ initial }: { initial: Row[] }) {
                   key={r.id}
                   className="rounded-2xl p-4"
                   style={{
-                    background: "rgba(10,12,24,0.7)",
+                    background: "var(--app-surface)",
                     border: `1px solid ${r.status === "NEW" ? meta.color + "55" : D.border}`,
                   }}
                 >

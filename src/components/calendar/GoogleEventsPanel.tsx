@@ -70,7 +70,7 @@ export default function GoogleEventsPanel() {
     return (
       <div
         className="rounded-2xl px-4 py-3 mb-4 flex items-center gap-2"
-        style={{ background: "rgba(10,12,24,0.4)", border: `1px solid ${D.indigoBorder}` }}
+        style={{ background: "var(--app-surface)", border: `1px solid ${D.indigoBorder}` }}
       >
         <Loader2 className="w-3.5 h-3.5 animate-spin" style={{ color: D.indigo }} />
         <span className="text-[11px]" style={{ color: D.muted }}>
@@ -117,7 +117,7 @@ export default function GoogleEventsPanel() {
   return (
     <div
       className="rounded-2xl p-4 mb-4"
-      style={{ background: "rgba(10,12,24,0.55)", border: `1px solid ${D.indigoBorder}` }}
+      style={{ background: "var(--app-surface)", border: `1px solid ${D.indigoBorder}` }}
     >
       <div className="flex items-center gap-2 mb-3">
         <Calendar className="w-3.5 h-3.5" style={{ color: D.indigo }} />

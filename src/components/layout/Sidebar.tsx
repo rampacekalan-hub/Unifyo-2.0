@@ -38,9 +38,9 @@ const D = {
   indigoDim: "rgba(99,102,241,0.10)",
   indigoBorder: "rgba(99,102,241,0.20)",
   indigoGlow: "rgba(99,102,241,0.28)",
-  text: "#eef2ff",
-  muted: "#6b7280",
-  mutedDark: "#374151",
+  text: "var(--app-text)",
+  muted: "var(--app-text-muted)",
+  mutedDark: "var(--app-text-subtle)",
 };
 
 const GLASS: React.CSSProperties = {
@@ -321,7 +321,7 @@ export default function Sidebar({ user, liveToggles }: SidebarProps) {
         onClick={() => setMobileOpen(true)}
         className="md:hidden fixed top-3 left-3 z-40 p-2.5 rounded-xl"
         style={{
-          background: "rgba(10,12,24,0.9)",
+          background: "var(--app-surface)",
           border: `1px solid ${D.indigoBorder}`,
           backdropFilter: "blur(12px)",
         }}

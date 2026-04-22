@@ -268,7 +268,7 @@ export default function CommandPalette() {
             transition={{ duration: 0.16, ease: "easeOut" }}
             className="fixed left-1/2 top-[14vh] -translate-x-1/2 z-[101] w-[92vw] max-w-[620px] rounded-2xl overflow-hidden flex flex-col"
             style={{
-              background: "rgba(10,12,24,0.96)",
+              background: "var(--app-surface)",
               border: `1px solid ${D.border}`,
               boxShadow: "0 20px 60px rgba(0,0,0,0.55), 0 0 28px rgba(99,102,241,0.22)",
               backdropFilter: "blur(28px)",
@@ -355,7 +355,7 @@ export default function CommandPalette() {
             {/* Footer */}
             <div
               className="flex items-center justify-between px-4 py-2 flex-shrink-0"
-              style={{ borderTop: `1px solid ${D.border}`, background: "rgba(5,7,15,0.5)" }}
+              style={{ borderTop: `1px solid ${D.border}`, background: "var(--app-surface-2)" }}
             >
               <div className="flex items-center gap-3 text-[0.6rem]" style={{ color: D.muted }}>
                 <span className="flex items-center gap-1">

@@ -95,7 +95,7 @@ export default function CookieConsent() {
       <div
         className="w-full max-w-3xl rounded-2xl overflow-hidden pointer-events-auto"
         style={{
-          background: "rgba(10,12,24,0.96)",
+          background: "var(--app-surface)",
           border: "1px solid rgba(139,92,246,0.28)",
           backdropFilter: "blur(24px)",
           WebkitBackdropFilter: "blur(24px)",

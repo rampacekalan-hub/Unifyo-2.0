@@ -172,7 +172,7 @@ export default function ActivityTimeline() {
                       <div
                         className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 z-10 whitespace-nowrap rounded-lg px-2.5 py-1.5 text-[0.65rem] pointer-events-none"
                         style={{
-                          background: "rgba(10,12,24,0.96)",
+                          background: "var(--app-surface)",
                           border: `1px solid ${D.indigoBorder}`,
                           color: D.text,
                           boxShadow: "0 6px 20px rgba(0,0,0,0.45)",

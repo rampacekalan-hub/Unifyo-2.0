@@ -28,12 +28,12 @@ const D = {
   sky:    "#22d3ee",
   emerald:"#10b981",
   amber:  "#f59e0b",
-  text:   "#eef2ff",
-  muted:  "#94a3b8",
-  mutedDark: "#475569",
+  text:   "var(--app-text)",
+  muted:  "var(--app-text-muted)",
+  mutedDark: "var(--app-text-subtle)",
   border: "rgba(99,102,241,0.22)",
   borderActive: "rgba(139,92,246,0.55)",
-  panel:  "rgba(10,12,24,0.92)",
+  panel:  "var(--app-surface)",
 };
 
 const APPS: Array<{ id: AppId; label: string; desc: string; Icon: React.ElementType; color: string }> = [
@@ -110,7 +110,7 @@ export default function OnboardingWizard({
   const prev = () => step > 1 && setStep(step - 1);
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4" style={{ background: "#05070f", color: D.text }}>
+    <div className="min-h-screen flex items-center justify-center p-4" style={{ background: "var(--app-bg)", color: D.text }}>
       {/* Decorative radial glow */}
       <div
         aria-hidden
@@ -223,7 +223,7 @@ export default function OnboardingWizard({
                   className="flex items-center gap-1.5 text-xs font-semibold px-5 py-2.5 rounded-xl transition"
                   style={{
                     background: `linear-gradient(135deg,${D.emerald},${D.sky})`,
-                    color: "#05070f",
+                    color: "var(--app-bg)",
                     boxShadow: `0 0 20px ${D.emerald}66`,
                   }}
                 >
@@ -270,7 +270,7 @@ function StepWelcome({
           placeholder="napr. Alan"
           className="w-full px-4 py-3 rounded-xl text-sm outline-none"
           style={{
-            background: "rgba(5,7,15,0.6)",
+            background: "var(--app-surface-2)",
             border: `1px solid ${D.border}`,
             color: D.text,
           }}
@@ -292,7 +292,7 @@ function StepWelcome({
                 onClick={() => toggle(g.id)}
                 className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs text-left transition"
                 style={{
-                  background: active ? "rgba(139,92,246,0.15)" : "rgba(5,7,15,0.4)",
+                  background: active ? "rgba(139,92,246,0.15)" : "var(--app-surface-2)",
                   border: `1px solid ${active ? D.borderActive : D.border}`,
                   color: active ? D.text : D.muted,
                 }}
@@ -342,7 +342,7 @@ function StepCompany({
           onChange={(e) => setCompany(e.target.value)}
           placeholder="napr. Unifyo s.r.o."
           className="w-full px-4 py-3 rounded-xl text-sm outline-none"
-          style={{ background: "rgba(5,7,15,0.6)", border: `1px solid ${D.border}`, color: D.text }}
+          style={{ background: "var(--app-surface-2)", border: `1px solid ${D.border}`, color: D.text }}
         />
       </label>
 
@@ -359,7 +359,7 @@ function StepCompany({
                 onClick={() => setIndustry(active ? "" : it.id)}
                 className="px-3 py-2 rounded-xl text-xs transition"
                 style={{
-                  background: active ? "rgba(34,211,238,0.14)" : "rgba(5,7,15,0.4)",
+                  background: active ? "rgba(34,211,238,0.14)" : "var(--app-surface-2)",
                   border: `1px solid ${active ? "rgba(34,211,238,0.55)" : D.border}`,
                   color: active ? D.text : D.muted,
                 }}
@@ -468,7 +468,7 @@ function StepPrefs({ prefs, setPrefs }: { prefs: UserPrefs; setPrefs: (p: UserPr
               onClick={() => toggleApp(a.id)}
               className="relative p-3 rounded-xl text-left transition"
               style={{
-                background: active ? `${a.color}14` : "rgba(5,7,15,0.4)",
+                background: active ? `${a.color}14` : "var(--app-surface-2)",
                 border: `1px solid ${active ? `${a.color}77` : D.border}`,
               }}
             >
@@ -526,7 +526,7 @@ function ToggleRow({
       onClick={() => onChange(!checked)}
       className="flex items-center justify-between w-full px-3 py-2.5 rounded-xl transition"
       style={{
-        background: "rgba(5,7,15,0.4)",
+        background: "var(--app-surface-2)",
         border: `1px solid ${D.border}`,
       }}
     >
@@ -677,7 +677,7 @@ function PlanCard({
       style={{
         background: highlighted
           ? `linear-gradient(135deg, ${accent}1a, rgba(99,102,241,0.10))`
-          : "rgba(5,7,15,0.5)",
+          : "var(--app-surface-2)",
         border: `1px solid ${highlighted ? `${accent}77` : D.border}`,
         boxShadow: highlighted ? `0 0 28px ${accent}33` : undefined,
       }}

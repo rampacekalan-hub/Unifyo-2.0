@@ -395,7 +395,7 @@ export default function DashboardClient({ user }: DashboardClientProps) {
 
         {/* Topbar */}
         <header className="h-16 flex items-center justify-between pl-16 md:pl-6 pr-4 md:pr-6 flex-shrink-0"
-          style={{ borderBottom: `1px solid ${D.indigoBorder}`, background: "rgba(5,7,15,0.55)", backdropFilter: "blur(24px)" }}>
+          style={{ borderBottom: `1px solid ${D.indigoBorder}`, background: "var(--app-surface-2)", backdropFilter: "blur(24px)" }}>
           <div>
             <p className="text-[0.6rem] font-medium tracking-widest uppercase" style={{ color: "#10b981" }}>
               ● {dashboard.systemsOnline}

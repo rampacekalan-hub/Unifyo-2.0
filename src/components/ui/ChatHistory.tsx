@@ -125,7 +125,7 @@ export default function ChatHistory() {
         key="scrim"
         className="fixed inset-0"
         onClick={() => setOpen(false)}
-        style={{ background: "rgba(5,7,15,0.55)", zIndex: 2147483000 }}
+        style={{ background: "var(--app-surface-2)", zIndex: 2147483000 }}
       />
       <motion.div
         key="panel"

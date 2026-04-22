@@ -23,9 +23,9 @@ const D = {
   indigo: "#6366f1",
   violet: "#8b5cf6",
   sky:    "#22d3ee",
-  text:   "#eef2ff",
-  muted:  "#94a3b8",
-  mutedDark: "#475569",
+  text:   "var(--app-text)",
+  muted:  "var(--app-text-muted)",
+  mutedDark: "var(--app-text-subtle)",
   border: "rgba(99,102,241,0.28)",
   borderSky: "rgba(34,211,238,0.28)",
 };
@@ -327,7 +327,7 @@ export default function GuidedCard({ draft, onChange, onConfirm, onDismiss }: Pr
         {/* Actions */}
         <div
           className="flex items-center justify-between gap-2 px-4 py-2.5"
-          style={{ borderTop: `1px solid ${D.border}`, background: "rgba(5,7,15,0.35)" }}
+          style={{ borderTop: `1px solid ${D.border}`, background: "var(--app-surface-2)" }}
         >
           <span className="text-[0.7rem] font-semibold" style={{ color: D.sky }}>
             ← Uprav polia a klikni &quot;Uložiť&quot;

@@ -13,6 +13,7 @@ import {
   Sparkles, FileAudio, ListChecks, Quote,
 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
+import EmptyState from "@/components/ui/EmptyState";
 
 const D = {
   indigo: "#6366f1",
@@ -287,23 +288,13 @@ function StatusPill({ status }: { status: CallRow["status"] }) {
 
 function EmptyCalls() {
   return (
-    <div
-      className="flex flex-col items-center text-center py-10 px-4 rounded-xl"
-      style={{ border: `1px dashed ${D.border}` }}
-    >
-      <div
-        className="w-12 h-12 rounded-2xl flex items-center justify-center mb-3"
-        style={{ background: "rgba(99,102,241,0.12)" }}
-      >
-        <Sparkles className="w-5 h-5" style={{ color: D.violet }} />
-      </div>
-      <p className="text-sm font-medium mb-1" style={{ color: D.text }}>
-        Zatiaľ žiadne hovory
-      </p>
-      <p className="text-xs max-w-sm" style={{ color: D.muted }}>
-        Nahraj prvé audio a AI ti vráti prepis, kľúčové body a úlohy z hovoru.
-      </p>
-    </div>
+    <EmptyState
+      Icon={Sparkles}
+      tone="primary"
+      compact
+      title="Zatiaľ žiadne hovory"
+      description="Nahraj prvé audio a AI ti vráti prepis, kľúčové body a úlohy z hovoru."
+    />
   );
 }
 

@@ -23,7 +23,7 @@ export default function MobileBottomNav() {
     <nav
       className="md:hidden fixed bottom-0 left-0 right-0 z-30 flex items-stretch"
       style={{
-        background: "rgba(10,12,24,0.92)",
+        background: "var(--app-surface)",
         backdropFilter: "blur(24px)",
         WebkitBackdropFilter: "blur(24px)",
         borderTop: "1px solid rgba(99,102,241,0.22)",

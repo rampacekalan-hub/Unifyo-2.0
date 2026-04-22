@@ -78,7 +78,7 @@ export default function ShortcutsModal() {
             onClick={(e) => e.stopPropagation()}
             className="w-full max-w-lg rounded-2xl p-6"
             style={{
-              background: "rgba(10,12,24,0.95)",
+              background: "var(--app-surface)",
               border: "1px solid rgba(99,102,241,0.28)",
               boxShadow: "0 20px 60px rgba(0,0,0,0.6)",
             }}

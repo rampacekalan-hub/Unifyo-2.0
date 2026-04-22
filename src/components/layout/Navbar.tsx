@@ -24,7 +24,7 @@ export default function Navbar() {
     <header
       className="fixed top-0 left-0 right-0 z-50 transition-all duration-500"
       style={scrolled ? {
-        background: "rgba(5,7,15,0.85)",
+        background: "var(--app-surface-2)",
         backdropFilter: "blur(20px)",
         WebkitBackdropFilter: "blur(20px)",
         borderBottom: "1px solid rgba(139,92,246,0.1)",
@@ -104,7 +104,7 @@ export default function Navbar() {
             transition={{ duration: 0.2 }}
             className="md:hidden overflow-hidden"
             style={{
-              background: "rgba(5,7,15,0.95)",
+              background: "var(--app-surface-2)",
               backdropFilter: "blur(20px)",
               WebkitBackdropFilter: "blur(20px)",
               borderBottom: "1px solid rgba(139,92,246,0.1)",

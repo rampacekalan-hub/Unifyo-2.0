@@ -576,7 +576,7 @@ function ComposeModal({
       <div
         onClick={(e) => e.stopPropagation()}
         className="w-full max-w-lg rounded-2xl p-5"
-        style={{ background: "rgba(15,18,34,0.95)", border: `1px solid ${D.indigoBorder}` }}
+        style={{ background: "var(--app-surface)", border: `1px solid ${D.indigoBorder}` }}
       >
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-sm font-bold" style={{ color: D.text }}>
