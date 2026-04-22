@@ -25,12 +25,13 @@ const GROUPS: Group[] = [
     title: "AI asistent",
     rows: [
       { label: "AI chat po slovensky",         values: [true, true, true] },
-      { label: "Denný limit AI správ",          values: ["100", "1 000", "Neobmedzene"] },
-      { label: "Pamäť kontextu",                values: [true, true, true] },
-      { label: "Rozšírená pamäť (dlhodobá)",    values: [false, true, true] },
+      { label: "Denný limit AI správ",          values: ["50", "500", "Neobmedzene"] },
+      { label: "Pamäť kontextu (správy)",        values: ["5", "20", "50"] },
+      { label: "Dlhodobá pamäť (slotov)",        values: ["200", "2 000", "10 000"] },
       { label: "AI prepis hovoru (Whisper)",    values: ["5 / mes.", "Neobmedzene", "Neobmedzene"] },
+      { label: "Automatizácie (ranný súhrn…)",   values: [true, true, true] },
       { label: "Vlastní AI agenti",             values: [false, "3", "Neobmedzene"],
-        hint: "Čoskoro" },
+        hint: "Plánované" },
     ],
   },
   {
@@ -46,11 +47,11 @@ const GROUPS: Group[] = [
   {
     title: "E-mail & integrácie",
     rows: [
-      { label: "Prepojenie Gmail",              values: [true, true, true] },
-      { label: "Prepojenie Google Kalendár",    values: [true, true, true] },
-      { label: "Outlook + Teams",               values: [false, false, true],
-        hint: "Čoskoro" },
-      { label: "Automatizácie (ranný súhrn…)",  values: [false, true, true] },
+      { label: "Gmail — čítať aj odoslať",       values: [true, true, true] },
+      { label: "Google Kalendár (multi-calendar)", values: [true, true, true] },
+      { label: "Uložiť ako Gmail koncept",       values: [true, true, true] },
+      { label: "Outlook + Teams",                values: [false, false, true],
+        hint: "Plánované" },
     ],
   },
   {
