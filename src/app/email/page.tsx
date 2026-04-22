@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import { SkeletonList } from "@/components/ui/Skeleton";
+import EmptyState from "@/components/ui/EmptyState";
 
 interface GmailMessageSummary {
   id: string;
@@ -306,38 +307,13 @@ function LoadingCard() {
 
 function NotConnectedCard() {
   return (
-    <div
-      className="rounded-2xl p-8 text-center"
-      style={{ background: "var(--app-surface-2)", border: `1px solid ${D.indigoBorder}` }}
-    >
-      <div
-        className="w-14 h-14 mx-auto rounded-2xl flex items-center justify-center mb-4"
-        style={{
-          background: "linear-gradient(135deg, rgba(99,102,241,0.18), rgba(139,92,246,0.18))",
-          border: `1px solid ${D.indigoBorder}`,
-        }}
-      >
-        <Inbox className="w-6 h-6" style={{ color: D.indigo }} />
-      </div>
-      <h2 className="text-lg font-black mb-2" style={{ color: D.text }}>
-        Pripoj Gmail
-      </h2>
-      <p className="text-xs mb-5 max-w-md mx-auto" style={{ color: D.muted }}>
-        Všetky emaily uvidíš tu, bez prepínania kariet. AI ich priradí ku kontaktom
-        a navrhne follow-up.
-      </p>
-      <Link
-        href="/settings/integrations"
-        className="inline-flex items-center gap-1.5 text-xs font-bold px-4 py-2.5 rounded-xl"
-        style={{
-          background: `linear-gradient(135deg, ${D.indigo}, ${D.violet})`,
-          color: "#fff",
-        }}
-      >
-        <Link2 className="w-3.5 h-3.5" />
-        Pripojiť Google
-      </Link>
-    </div>
+    <EmptyState
+      Icon={Inbox}
+      tone="accent"
+      title="Pripoj Gmail"
+      description="Všetky emaily uvidíš tu, bez prepínania kariet. AI ich priradí ku kontaktom a navrhne follow-up."
+      cta={{ label: "Pripojiť Google", href: "/settings/integrations" }}
+    />
   );
 }
 

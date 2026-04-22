@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import PricingSection from "@/components/home/PricingSection";
+import PricingComparisonTable from "@/components/home/PricingComparisonTable";
 import NeuralBackground from "@/components/ui/NeuralBackground";
 import { getSiteConfig } from "@/config/site-settings";
 import { Sparkles } from "lucide-react";
@@ -71,6 +72,7 @@ export default function CennikPage() {
         </section>
 
         <PricingSection />
+        <PricingComparisonTable />
       </main>
       <Footer />
     </>
