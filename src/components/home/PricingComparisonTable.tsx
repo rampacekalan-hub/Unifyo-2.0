@@ -74,7 +74,9 @@ const GROUPS: Group[] = [
 ];
 
 const PLAN_LABELS: [string, string, string] = ["Basic", "Pro", "Enterprise"];
-const PLAN_PRICES: [string, string, string] = ["€0", "€19/mes.", "€49/mes."];
+// Prices mirror src/config/site-settings.ts → config.pricing.
+// Single source of truth lives there; keep in sync with Stripe.
+const PLAN_PRICES: [string, string, string] = ["€8,99/mes.", "€18,99/mes.", "€48,99/mes."];
 
 export default function PricingComparisonTable() {
   return (

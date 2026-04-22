@@ -39,9 +39,8 @@ export async function POST(req: NextRequest) {
   if (!planDef || !planDef.priceId) {
     return NextResponse.json({ error: "Neznámy plán" }, { status: 400 });
   }
-  if (planDef.plan === "basic") {
-    return NextResponse.json({ error: "Basic je zadarmo — bez potreby platby" }, { status: 400 });
-  }
+  // Basic is a paid tier (€8.99/mo in Stripe), so it goes through
+  // checkout like every other plan — no free-plan guard here.
 
   const user = await prisma.user.findUnique({
     where: { id: session.userId },

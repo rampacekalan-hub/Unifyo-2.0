@@ -549,10 +549,10 @@ function ToggleRow({
 
 /* ─────────────── Step 5 — Plan ─────────────── */
 function StepPlan() {
-  const [redirecting, setRedirecting] = useState<null | "pro" | "enterprise">(null);
+  const [redirecting, setRedirecting] = useState<null | "basic" | "pro" | "enterprise">(null);
   const [err, setErr] = useState<string | null>(null);
 
-  const goCheckout = async (plan: "pro" | "enterprise") => {
+  const goCheckout = async (plan: "basic" | "pro" | "enterprise") => {
     setRedirecting(plan);
     setErr(null);
     try {
@@ -583,16 +583,19 @@ function StepPlan() {
           tier="basic"
           Icon={Sparkles}
           title="Basic"
-          price="Zadarmo"
+          price="€8,99"
+          period="/mesiac"
           accent={D.emerald}
-          badge="Predvolene"
+          badge="Najlacnejšie"
           features={[
             "AI asistent (100 správ / deň)",
             "CRM + Kalendár + Email",
             "1 Google účet",
             "5 hovorov / mesiac (AI prepis)",
           ]}
-          ctaLabel="Pokračovať zadarmo"
+          ctaLabel={redirecting === "basic" ? "Presmerúvam…" : "Vybrať Basic"}
+          ctaLoading={redirecting === "basic"}
+          onCta={() => goCheckout("basic")}
           disabled={redirecting !== null}
         />
 
@@ -601,7 +604,7 @@ function StepPlan() {
           tier="pro"
           Icon={Rocket}
           title="Pro"
-          price="€19"
+          price="€18,99"
           period="/mesiac"
           accent={D.violet}
           badge="Odporúčané"
@@ -623,7 +626,7 @@ function StepPlan() {
           tier="enterprise"
           Icon={Crown}
           title="Enterprise"
-          price="€49"
+          price="€48,99"
           period="/mesiac"
           accent={D.amber}
           badge="Pre tímy"
@@ -641,7 +644,8 @@ function StepPlan() {
       </div>
 
       <p className="mt-5 text-[0.7rem] text-center" style={{ color: D.mutedDark }}>
-        Basic ostane tvoj plán keď klikneš <strong>Dokončiť a spustiť</strong>. Pro/Enterprise otvorí Stripe.
+        Klik na <strong>Vybrať</strong> otvorí Stripe checkout. Alebo klikni dole
+        <strong> Dokončiť a spustiť</strong> — rozhodneš sa neskôr.
       </p>
 
       {err && (
