@@ -45,10 +45,48 @@ type LoadState =
   | { kind: "error"; msg: string }
   | { kind: "ready"; messages: GmailMessageSummary[] };
 
+interface MessageDetail {
+  id: string;
+  from: string;
+  to: string;
+  subject: string;
+  date: string;
+  html: string | null;
+  text: string | null;
+  snippet: string;
+}
+
 export default function EmailPage() {
   const [state, setState] = useState<LoadState>({ kind: "loading" });
   const [query, setQuery] = useState("");
   const [composing, setComposing] = useState(false);
+  const [active, setActive] = useState<MessageDetail | null>(null);
+  const [loadingActive, setLoadingActive] = useState<string | null>(null);
+
+  async function openMessage(id: string) {
+    // Fetch full body + mark as read. We preserve the list state so the
+    // user can close the overlay and immediately click another item.
+    setLoadingActive(id);
+    try {
+      const res = await fetch(`/api/gmail/message/${id}`);
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.hint ?? data.error ?? `HTTP ${res.status}`);
+      }
+      const data = (await res.json()) as MessageDetail;
+      setActive(data);
+      // Reflect "read" state in the list optimistically.
+      setState((s) =>
+        s.kind === "ready"
+          ? { ...s, messages: s.messages.map((m) => (m.id === id ? { ...m, unread: false } : m)) }
+          : s,
+      );
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "E-mail sa nepodarilo otvoriť");
+    } finally {
+      setLoadingActive(null);
+    }
+  }
 
   async function load(q?: string) {
     setState({ kind: "loading" });
@@ -147,7 +185,13 @@ export default function EmailPage() {
         {state.kind === "loading" && <LoadingCard />}
         {state.kind === "not_connected" && <NotConnectedCard />}
         {state.kind === "error" && <ErrorCard msg={state.msg} onRetry={() => load()} />}
-        {state.kind === "ready" && <InboxList messages={state.messages} />}
+        {state.kind === "ready" && (
+          <InboxList
+            messages={state.messages}
+            onOpen={openMessage}
+            loadingId={loadingActive}
+          />
+        )}
 
         {composing && (
           <ComposeModal
@@ -156,6 +200,18 @@ export default function EmailPage() {
               setComposing(false);
               toast.success("E-mail odoslaný");
               load();
+            }}
+          />
+        )}
+
+        {active && (
+          <MessageOverlay
+            message={active}
+            onClose={() => setActive(null)}
+            onReply={() => {
+              setActive(null);
+              setComposing(true);
+              // TODO: pre-fill Compose with reply subject & recipient.
             }}
           />
         )}
@@ -242,7 +298,13 @@ function ErrorCard({ msg, onRetry }: { msg: string; onRetry: () => void }) {
   );
 }
 
-function InboxList({ messages }: { messages: GmailMessageSummary[] }) {
+function InboxList({
+  messages, onOpen, loadingId,
+}: {
+  messages: GmailMessageSummary[];
+  onOpen: (id: string) => void;
+  loadingId: string | null;
+}) {
   if (messages.length === 0) {
     return (
       <div
@@ -259,43 +321,128 @@ function InboxList({ messages }: { messages: GmailMessageSummary[] }) {
       style={{ background: "var(--app-surface-2)", border: `1px solid ${D.indigoBorder}` }}
     >
       {messages.map((m, i) => (
-        <li
-          key={m.id}
-          className="px-4 py-3 flex items-start gap-3 transition-colors"
-          style={{
-            borderTop: i === 0 ? "none" : `1px solid ${D.indigoBorder}`,
-            background: m.unread ? "rgba(99,102,241,0.04)" : "transparent",
-          }}
-        >
-          <div
-            className="w-2 h-2 rounded-full flex-shrink-0 mt-2"
-            style={{ background: m.unread ? D.indigo : "transparent", border: m.unread ? "none" : `1px solid ${D.mutedDark}` }}
-          />
-          <div className="flex-1 min-w-0">
-            <div className="flex items-baseline gap-2">
-              <span
-                className="text-xs font-semibold truncate"
-                style={{ color: m.unread ? D.text : D.muted, maxWidth: "14rem" }}
-              >
-                {stripAddress(m.from)}
-              </span>
-              <span className="text-[10px] ml-auto flex-shrink-0" style={{ color: D.mutedDark }}>
-                {formatDate(m.date)}
-              </span>
-            </div>
+        <li key={m.id}>
+          <button
+            onClick={() => onOpen(m.id)}
+            disabled={loadingId !== null}
+            className="w-full px-4 py-3 flex items-start gap-3 transition-colors text-left hover:opacity-90"
+            style={{
+              borderTop: i === 0 ? "none" : `1px solid ${D.indigoBorder}`,
+              background: m.unread ? "rgba(99,102,241,0.04)" : "transparent",
+              cursor: "pointer",
+            }}
+          >
             <div
-              className="text-xs truncate mt-0.5"
-              style={{ color: m.unread ? D.text : D.muted, fontWeight: m.unread ? 600 : 500 }}
-            >
-              {m.subject}
+              className="w-2 h-2 rounded-full flex-shrink-0 mt-2"
+              style={{ background: m.unread ? D.indigo : "transparent", border: m.unread ? "none" : `1px solid ${D.mutedDark}` }}
+            />
+            <div className="flex-1 min-w-0">
+              <div className="flex items-baseline gap-2">
+                <span
+                  className="text-xs font-semibold truncate"
+                  style={{ color: m.unread ? D.text : D.muted, maxWidth: "14rem" }}
+                >
+                  {stripAddress(m.from)}
+                </span>
+                <span className="text-[10px] ml-auto flex-shrink-0" style={{ color: D.mutedDark }}>
+                  {loadingId === m.id ? "…" : formatDate(m.date)}
+                </span>
+              </div>
+              <div
+                className="text-xs truncate mt-0.5"
+                style={{ color: m.unread ? D.text : D.muted, fontWeight: m.unread ? 600 : 500 }}
+              >
+                {m.subject}
+              </div>
+              <div className="text-[11px] truncate mt-0.5" style={{ color: D.mutedDark }}>
+                {m.snippet}
+              </div>
             </div>
-            <div className="text-[11px] truncate mt-0.5" style={{ color: D.mutedDark }}>
-              {m.snippet}
-            </div>
-          </div>
+          </button>
         </li>
       ))}
     </ul>
+  );
+}
+
+function MessageOverlay({
+  message, onClose, onReply,
+}: {
+  message: MessageDetail;
+  onClose: () => void;
+  onReply: () => void;
+}) {
+  // Prefer HTML when Gmail gave us one — emails are usually styled and
+  // stripping to plain text loses context. We render inside an iframe
+  // srcDoc so Gmail's inline styles / images don't leak into our CSS.
+  const hasHtml = !!message.html && message.html.length > 0;
+
+  return (
+    <>
+      <div
+        onClick={onClose}
+        className="fixed inset-0 z-[80]"
+        style={{ background: "rgba(3,4,10,0.65)", backdropFilter: "blur(4px)" }}
+      />
+      <div
+        className="fixed right-0 top-0 bottom-0 z-[81] w-full sm:max-w-2xl flex flex-col"
+        style={{
+          background: "var(--app-surface)",
+          borderLeft: `1px solid ${D.indigoBorder}`,
+        }}
+      >
+        <div
+          className="flex items-center justify-between px-5 py-3 gap-3"
+          style={{ borderBottom: `1px solid ${D.indigoBorder}` }}
+        >
+          <div className="min-w-0 flex-1">
+            <h2 className="text-sm font-bold truncate" style={{ color: D.text }}>
+              {message.subject}
+            </h2>
+            <p className="text-[0.7rem] truncate" style={{ color: D.muted }}>
+              Od {stripAddress(message.from)} · {formatDate(message.date)}
+            </p>
+          </div>
+          <button
+            onClick={onReply}
+            className="flex items-center gap-1 text-[0.7rem] font-semibold px-3 py-1.5 rounded-lg flex-shrink-0"
+            style={{
+              background: `linear-gradient(135deg,${D.indigo},${D.violet})`,
+              color: "white",
+            }}
+          >
+            <Send className="w-3 h-3" /> Odpovedať
+          </button>
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-lg flex-shrink-0"
+            style={{ color: D.muted }}
+            aria-label="Zavrieť"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-auto">
+          {hasHtml ? (
+            <iframe
+              title="E-mail"
+              srcDoc={message.html!}
+              sandbox=""
+              className="w-full h-full"
+              style={{ border: "none", minHeight: 400, background: "white" }}
+            />
+          ) : (
+            <pre
+              className="p-5 whitespace-pre-wrap text-sm"
+              style={{ color: D.text, fontFamily: "ui-monospace, Menlo, monospace" }}
+            >
+              {message.text || message.snippet}
+            </pre>
+          )}
+        </div>
+      </div>
+    </>
   );
 }
 

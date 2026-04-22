@@ -220,6 +220,121 @@ export async function listGmailInbox(
     }));
 }
 
+/** Fetch the full body of a single Gmail message. Returns both the
+ *  HTML body (if present) and a plain-text fallback. Strips the MIME
+ *  wrapper so the UI can drop the result straight into a panel.
+ */
+export async function getGmailMessage(
+  accessToken: string,
+  id: string,
+): Promise<{
+  id: string;
+  threadId: string;
+  from: string;
+  to: string;
+  subject: string;
+  date: string;
+  html: string | null;
+  text: string | null;
+  snippet: string;
+}> {
+  const res = await fetch(
+    `https://gmail.googleapis.com/gmail/v1/users/me/messages/${id}?format=full`,
+    { headers: { Authorization: `Bearer ${accessToken}` } },
+  );
+  if (!res.ok) throw new Error(`gmail get failed: ${res.status}`);
+  const msg = (await res.json()) as GmailFullMessage;
+
+  // Walk the MIME tree collecting `text/plain` and `text/html` parts.
+  // Gmail nests: root can be a single part or multipart/*; multipart
+  // can contain more multiparts. Simple recursive reducer.
+  const walk = (part?: {
+    mimeType?: string;
+    body?: { data?: string };
+    parts?: Array<{ mimeType?: string; body?: { data?: string }; parts?: unknown[] }>;
+  }, acc: { html: string | null; text: string | null } = { html: null, text: null }) => {
+    if (!part) return acc;
+    const mt = part.mimeType ?? "";
+    const raw = part.body?.data;
+    if (raw) {
+      // Gmail base64url
+      const decoded = Buffer.from(raw.replace(/-/g, "+").replace(/_/g, "/"), "base64").toString("utf-8");
+      if (mt === "text/html" && !acc.html) acc.html = decoded;
+      else if (mt === "text/plain" && !acc.text) acc.text = decoded;
+    }
+    if (part.parts) {
+      for (const p of part.parts) {
+        // Recursive cast — typing is loose since Gmail MIME tree is heterogeneous.
+        walk(p as typeof part, acc);
+      }
+    }
+    return acc;
+  };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const body = walk(msg.payload as any);
+
+  return {
+    id: msg.id,
+    threadId: msg.threadId,
+    from: headerOf(msg.payload?.headers, "From"),
+    to: headerOf(msg.payload?.headers, "To"),
+    subject: headerOf(msg.payload?.headers, "Subject") || "(bez predmetu)",
+    date: msg.internalDate
+      ? new Date(Number(msg.internalDate)).toISOString()
+      : new Date().toISOString(),
+    html: body.html,
+    text: body.text,
+    snippet: msg.snippet ?? "",
+  };
+}
+
+/** Mark a Gmail message as read by removing the UNREAD label. */
+export async function markGmailRead(accessToken: string, id: string): Promise<void> {
+  const res = await fetch(
+    `https://gmail.googleapis.com/gmail/v1/users/me/messages/${id}/modify`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ removeLabelIds: ["UNREAD"] }),
+    },
+  );
+  if (!res.ok) throw new Error(`gmail modify failed: ${res.status}`);
+}
+
+/** List every calendar the user can read (primary + secondary + shared).
+ *  Returns id, summary, primary flag, color — UI uses color to tint
+ *  events and `primary` to highlight the main one. */
+export async function listGoogleCalendars(
+  accessToken: string,
+): Promise<Array<{ id: string; summary: string; primary: boolean; backgroundColor?: string }>> {
+  const res = await fetch(
+    "https://www.googleapis.com/calendar/v3/users/me/calendarList?minAccessRole=reader",
+    { headers: { Authorization: `Bearer ${accessToken}` } },
+  );
+  if (!res.ok) throw new Error(`calendarList failed: ${res.status}`);
+  const data = (await res.json()) as {
+    items?: Array<{
+      id: string;
+      summary?: string;
+      summaryOverride?: string;
+      primary?: boolean;
+      backgroundColor?: string;
+      selected?: boolean;
+    }>;
+  };
+  return (data.items ?? [])
+    .filter((c) => c.selected !== false) // respect Google's "hidden" toggle
+    .map((c) => ({
+      id: c.id,
+      summary: c.summaryOverride || c.summary || c.id,
+      primary: !!c.primary,
+      backgroundColor: c.backgroundColor,
+    }));
+}
+
 /** Send a plain-text email via the authenticated user's Gmail account.
  *  Returns the created message id. */
 export async function sendGmail(
@@ -275,6 +390,11 @@ export interface GoogleCalendarEvent {
   attendees?: { email: string; displayName?: string }[];
   location?: string;
   allDay: boolean;
+  // Calendar metadata — set when the event comes from a named
+  // calendar (not just "primary"). UI uses color to tint the pill.
+  calendarId?: string;
+  calendarName?: string;
+  calendarColor?: string;
 }
 
 interface GCalApiEvent {
@@ -291,37 +411,75 @@ interface GCalApiEvent {
 
 export async function listCalendarEvents(
   accessToken: string,
-  opts: { timeMin?: Date; timeMax?: Date; maxResults?: number } = {},
+  opts: {
+    timeMin?: Date;
+    timeMax?: Date;
+    maxResults?: number;
+    /** Explicit calendar IDs; omit to auto-fetch all visible calendars. */
+    calendarIds?: string[];
+  } = {},
 ): Promise<GoogleCalendarEvent[]> {
-  const params = new URLSearchParams({
-    singleEvents: "true", // expand recurring into individual instances
-    orderBy: "startTime",
-    maxResults: String(opts.maxResults ?? 50),
-    timeMin: (opts.timeMin ?? new Date()).toISOString(),
-    ...(opts.timeMax ? { timeMax: opts.timeMax.toISOString() } : {}),
-  });
-  const res = await fetch(
-    `https://www.googleapis.com/calendar/v3/calendars/primary/events?${params}`,
-    { headers: { Authorization: `Bearer ${accessToken}` } },
+  // Decide which calendars to scan. Previously we only hit "primary",
+  // which missed the user's work / shared / subscribed calendars —
+  // owner called this out as a regression.
+  let calendars: Array<{ id: string; summary: string; backgroundColor?: string }>;
+  if (opts.calendarIds && opts.calendarIds.length > 0) {
+    calendars = opts.calendarIds.map((id) => ({ id, summary: id }));
+  } else {
+    try {
+      calendars = await listGoogleCalendars(accessToken);
+    } catch {
+      // Fallback to primary if the list call fails (scope issue etc.)
+      calendars = [{ id: "primary", summary: "Primary" }];
+    }
+  }
+
+  const perCal = Math.max(20, Math.ceil((opts.maxResults ?? 100) / Math.max(1, calendars.length)));
+  const timeMin = (opts.timeMin ?? new Date()).toISOString();
+  const timeMax = opts.timeMax?.toISOString();
+
+  const results = await Promise.all(
+    calendars.map(async (cal) => {
+      const params = new URLSearchParams({
+        singleEvents: "true",
+        orderBy: "startTime",
+        maxResults: String(perCal),
+        timeMin,
+        ...(timeMax ? { timeMax } : {}),
+      });
+      try {
+        const res = await fetch(
+          `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(cal.id)}/events?${params}`,
+          { headers: { Authorization: `Bearer ${accessToken}` } },
+        );
+        if (!res.ok) return [];
+        const json = (await res.json()) as { items?: GCalApiEvent[] };
+        return (json.items ?? [])
+          .filter((e) => e.status !== "cancelled")
+          .map<GoogleCalendarEvent>((e) => ({
+            id: `${cal.id}::${e.id}`,
+            summary: e.summary ?? "(bez názvu)",
+            description: e.description,
+            location: e.location,
+            htmlLink: e.htmlLink,
+            attendees: e.attendees,
+            start: e.start?.dateTime ?? e.start?.date ?? "",
+            end: e.end?.dateTime ?? e.end?.date ?? "",
+            allDay: Boolean(e.start?.date && !e.start?.dateTime),
+            calendarId: cal.id,
+            calendarName: cal.summary,
+            calendarColor: cal.backgroundColor,
+          }));
+      } catch {
+        return [];
+      }
+    }),
   );
-  if (!res.ok) throw new Error(`calendar list failed: ${res.status}`);
-  const json = (await res.json()) as { items?: GCalApiEvent[] };
-  return (json.items ?? [])
-    .filter((e) => e.status !== "cancelled")
-    .map<GoogleCalendarEvent>((e) => {
-      const allDay = Boolean(e.start?.date && !e.start?.dateTime);
-      return {
-        id: e.id,
-        summary: e.summary ?? "(bez názvu)",
-        description: e.description,
-        location: e.location,
-        htmlLink: e.htmlLink,
-        attendees: e.attendees,
-        start: e.start?.dateTime ?? e.start?.date ?? "",
-        end: e.end?.dateTime ?? e.end?.date ?? "",
-        allDay,
-      };
-    });
+
+  // Merge + sort by start — client may want everything chronological.
+  const all = results.flat();
+  all.sort((a, b) => (a.start || "").localeCompare(b.start || ""));
+  return all;
 }
 
 /** Disconnect — revoke tokens on Google side (best effort) and remove row. */
