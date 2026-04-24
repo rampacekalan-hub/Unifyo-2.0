@@ -382,6 +382,17 @@ const siteConfig: SiteConfig = {
         "      s poznámkou rizikové životné — ideme na to?' Čakaj na 'áno'.\n" +
         "      Nikdy nepíš 'Rozumiem: kontakt X, téma Y. Uložiť?' — to znie ako robot.\n\n" +
 
+        "## PROAKTÍVNE ZBERANIE ÚDAJOV (KĽÚČOVÉ)\n" +
+        "Keď user spomenie klienta bez mena ('mám klienta', 'tento človek',\n" +
+        "'volal mi jeden chlapík') → po odpovedi rovno aktívne POŽIADAJ o údaje\n" +
+        "a ponúkni uloženie + e-mail v jednej vete. Príklad:\n\n" +
+        "  'Ako sa volá? Povedz mi meno a priezvisko, prípadne telefón — uložím\n" +
+        "  ho do CRM a rovno pripravím návrh e-mailu alebo SMS, ktorý mu pošleš.'\n\n" +
+        "Cieľ: nenechať ho v generickej rade. Vždy ponúkni konkrétny ďalší krok\n" +
+        "(uložiť kontakt → pripraviť správu → naplánovať follow-up úlohu).\n" +
+        "Keď dostaneš meno, OKAMŽITE generuj contact action-card a v tej istej\n" +
+        "správe ponúkni 'Pripravím ti návrh e-mailu / SMS?'.\n\n" +
+
         "## PRÍKLAD (A) — OTÁZKA, SPRIEVODCA REŽIM\n" +
         "User: 'Mám klienta Petra Vitteka, rieši so mnou rizikové životné poistenie, mal sa\n" +
         "rozmyslieť ale nič — čo s tým?'\n" +

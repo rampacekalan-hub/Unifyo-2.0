@@ -514,14 +514,19 @@ export default function DashboardClient({ user }: DashboardClientProps) {
                     <div className={"group relative " + (msg.role === "ai" ? "max-w-[82%]" : "max-w-[75%]")}>
                       <div className="rounded-2xl px-4 py-3 text-sm leading-[1.6]"
                         style={msg.role === "user"
-                          ? { background: "linear-gradient(135deg,rgba(124,58,237,0.3),rgba(79,70,229,0.3))", border: "1px solid rgba(124,58,237,0.3)", color: "#eef2ff" }
+                          // User bubble: plný violet gradient + biely text — čitateľné v
+                          // oboch režimoch (predtým 0.3 violet + biely text sa v light
+                          // strácal).
+                          ? { background: "linear-gradient(135deg,#7c3aed,#4f46e5)", border: "1px solid rgba(124,58,237,0.45)", color: "#ffffff", boxShadow: "0 2px 12px rgba(99,102,241,0.25)" }
                           : msg.role === "error"
-                          ? { background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", color: "#fca5a5" }
+                          ? { background: "var(--brand-danger-soft, rgba(239,68,68,0.10))", border: "1px solid rgba(239,68,68,0.35)", color: "var(--brand-danger, #dc2626)" }
                           : msg.role === "integration"
-                          ? { background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.2)", color: "#6ee7b7" }
+                          ? { background: "var(--brand-success-soft, rgba(16,185,129,0.10))", border: "1px solid rgba(16,185,129,0.35)", color: "var(--brand-success, #059669)" }
                           : msg.role === "thinking"
                           ? { background: "transparent", border: "none" }
-                          : { background: "rgba(139,92,246,0.07)", border: "1px solid rgba(139,92,246,0.15)", color: "#c4b5fd" }
+                          // AI bubble: neutrálny surface + app-text (tmavý text v light,
+                          // svetlý v dark). Zachováva jemný violet rámček ako akcent.
+                          : { background: "var(--app-surface)", border: "1px solid var(--app-border)", color: "var(--app-text)" }
                         }>
                         {msg.role === "thinking" ? (
                           <SmartThinkingUI />
@@ -533,7 +538,7 @@ export default function DashboardClient({ user }: DashboardClientProps) {
                             {msg.id === streamingId && msg.role === "ai" && (
                               <motion.span
                                 className="inline-block w-1.5 h-3.5 ml-0.5 -mb-0.5 rounded-sm"
-                                style={{ background: "#c4b5fd" }}
+                                style={{ background: "var(--brand-primary, #7c3aed)" }}
                                 animate={{ opacity: [1, 0.2, 1] }}
                                 transition={{ duration: 0.9, repeat: Infinity, ease: "easeInOut" }}
                               />
