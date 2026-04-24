@@ -9,13 +9,16 @@ import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, X, Mail, UserPlus, Sparkles, CalendarPlus, Settings } from "lucide-react";
 
+// Theme-aware tokens. `text` / `muted` resolve to CSS vars so the card
+// stays readable in both dark and light modes (previously hardcoded
+// near-white text vanished on the light background).
 const D = {
   indigo:       "#6366f1",
   violet:       "#8b5cf6",
-  text:         "#eef2ff",
-  muted:        "#94a3b8",
+  text:         "var(--app-text)",
+  muted:        "var(--app-text-muted)",
   emerald:      "#10b981",
-  indigoBorder: "rgba(99,102,241,0.22)",
+  indigoBorder: "var(--app-border)",
 };
 
 interface OnboardingStatus {
