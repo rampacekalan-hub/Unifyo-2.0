@@ -14,8 +14,8 @@ interface BeforeInstallPromptEvent extends Event {
 const D = {
   indigo: "#6366f1",
   violet: "#8b5cf6",
-  text: "#eef2ff",
-  muted: "#94a3b8",
+  text: "var(--app-text)",
+  muted: "var(--app-text-muted)",
   indigoBorder: "rgba(99,102,241,0.22)",
 };
 

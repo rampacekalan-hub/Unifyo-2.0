@@ -12,7 +12,7 @@ interface Contact {
   notes?: Note[];
 }
 
-const D = { indigo: "#6366f1", indigoBorder: "rgba(99,102,241,0.20)", indigoDim: "rgba(99,102,241,0.10)", muted: "#6b7280", text: "#eef2ff" };
+const D = { indigo: "#6366f1", indigoBorder: "rgba(99,102,241,0.20)", indigoDim: "rgba(99,102,241,0.10)", muted: "#6b7280", text: "var(--app-text)" };
 
 const EMPTY = { name: "", company: "", email: "", phone: "" };
 

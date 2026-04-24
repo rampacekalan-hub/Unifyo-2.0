@@ -73,12 +73,11 @@ const MODULES: ModuleDef[] = [
   { id: "pipeline",  label: "Pipeline",   href: "/pipeline",  icon: Kanban,    appId: "pipeline" },
   { id: "calendar",  label: "Kalendár",   href: "/calendar",  icon: Calendar,  appId: "calendar" },
   { id: "email",     label: "Email",      href: "/email",     icon: Mail,      appId: "email" },
-  // Hovory + Analytika sú zatiaľ "coming soon" — `enabled:false` ich
-  // konzistentne zamkne na KAŽDEJ stránke. Predtým to riadil len
-  // admin SSE kanál, ktorý je pripojený iba na /dashboard → na ostatných
-  // routes sa zámok strácal a vyzeralo to "otočene".
-  { id: "calls",     label: "Hovory",     href: "/calls",     icon: Phone,     appId: "calls", enabled: false },
-  { id: "analytics", label: "Analytika",  href: "/analytics", icon: BarChart3, always: true, enabled: false },
+  // Zámok / odomknutie riadi admin cez /api/events (liveToggles). Layout
+  // úroveň SSE posiela stav do Sidebar konzistentne na každej route,
+  // takže zmena v admin konzole sa prejaví okamžite a rovnako všade.
+  { id: "calls",     label: "Hovory",     href: "/calls",     icon: Phone,     appId: "calls" },
+  { id: "analytics", label: "Analytika",  href: "/analytics", icon: BarChart3, always: true },
   { id: "automation",label: "Automatizácie", href: "/automation",icon: Zap,       appId: "automation" },
   { id: "settings",  label: "Nastavenia", href: "/settings",  icon: SettingsIcon, always: true },
 ];

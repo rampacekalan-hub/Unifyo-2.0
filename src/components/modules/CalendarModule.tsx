@@ -28,7 +28,7 @@ interface Task {
   done: boolean;
 }
 
-const D = { violet: "#8b5cf6", violetBorder: "rgba(139,92,246,0.22)", violetDim: "rgba(139,92,246,0.10)", muted: "#6b7280", text: "#eef2ff" };
+const D = { violet: "#8b5cf6", violetBorder: "rgba(139,92,246,0.22)", violetDim: "rgba(139,92,246,0.10)", muted: "#6b7280", text: "var(--app-text)" };
 
 const EMPTY_FORM = { title: "", description: "", date: new Date().toISOString().slice(0, 10), time: "" };
 

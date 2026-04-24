@@ -13,8 +13,8 @@ import { toast } from "sonner";
 const D = {
   indigo: "#6366f1",
   violet: "#8b5cf6",
-  text:   "#eef2ff",
-  muted:  "#94a3b8",
+  text:   "var(--app-text)",
+  muted:  "var(--app-text-muted)",
   mutedDark: "#475569",
   border: "rgba(99,102,241,0.22)",
   rose: "#f43f5e",

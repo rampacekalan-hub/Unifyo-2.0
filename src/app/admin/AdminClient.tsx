@@ -37,7 +37,7 @@ const P = {
   redBorder:     "rgba(239,68,68,0.25)",
   redDim:        "rgba(239,68,68,0.07)",
   text:          "#f8fafc",
-  muted:         "#94a3b8",
+  muted:         "var(--app-text-muted)",
   faint:         "#334155",
 };
 

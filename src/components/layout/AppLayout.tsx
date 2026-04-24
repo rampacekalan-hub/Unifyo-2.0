@@ -25,8 +25,8 @@ const D = {
   indigo: "#6366f1",
   sky: "#22d3ee",
   violet: "#8b5cf6",
-  text: "#eef2ff",
-  muted: "#94a3b8",
+  text: "var(--app-text)",
+  muted: "var(--app-text-muted)",
   indigoBorder: "rgba(99,102,241,0.22)",
 };
 
@@ -34,6 +34,32 @@ export default function AppLayout({ children, subtitle, user }: AppLayoutProps) 
   const pathname = usePathname();
   const router = useRouter();
   const [fetchedUser, setFetchedUser] = useState<SidebarUser | null>(user ?? null);
+
+  // ── Live module toggles (admin kill-switch) ───────────────────
+  // DashboardClient had its own /api/events subscription; without one
+  // here, Sidebar on CRM/Calendar/Email/etc. saw no toggles, so Hovory
+  // and Analytika flickered between "locked" (on /dashboard) and
+  // "unlocked" (elsewhere). Subscribing at layout level makes lock
+  // state consistent on every route that uses AppLayout.
+  const [liveToggles, setLiveToggles] = useState<Record<string, boolean> | null>(null);
+  useEffect(() => {
+    const es = new EventSource("/api/events");
+    const onInit = (e: Event) => {
+      try {
+        const d = JSON.parse((e as MessageEvent).data);
+        if (d.toggles) setLiveToggles(d.toggles);
+      } catch {}
+    };
+    const onToggles = (e: Event) => {
+      try {
+        const d = JSON.parse((e as MessageEvent).data);
+        if (d.toggles) setLiveToggles(d.toggles);
+      } catch {}
+    };
+    es.addEventListener("init", onInit);
+    es.addEventListener("toggles", onToggles);
+    return () => es.close();
+  }, []);
 
   useEffect(() => {
     if (user) return;
@@ -75,7 +101,7 @@ export default function AppLayout({ children, subtitle, user }: AppLayoutProps) 
       <NeuralBackground />
 
       {/* Shared sidebar */}
-      <Sidebar user={activeUser} />
+      <Sidebar user={activeUser} liveToggles={liveToggles} />
 
       {/* Main content */}
       <main className="flex-1 flex flex-col z-10 overflow-hidden relative">

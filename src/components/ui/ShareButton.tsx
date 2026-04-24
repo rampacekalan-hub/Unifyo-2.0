@@ -22,8 +22,8 @@ const D = {
   violet: "#8b5cf6",
   indigoBorder: "rgba(99,102,241,0.22)",
   indigoDim: "rgba(99,102,241,0.08)",
-  text: "#eef2ff",
-  muted: "#94a3b8",
+  text: "var(--app-text)",
+  muted: "var(--app-text-muted)",
 };
 
 export default function ShareButton({
