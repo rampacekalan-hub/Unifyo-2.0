@@ -5,7 +5,7 @@
 
 import { useState, useEffect, useRef, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { User, CalendarCheck, Check, X, Loader2, TrendingUp } from "lucide-react";
+import { User, CalendarCheck, Check, X, Loader2, TrendingUp, Pencil } from "lucide-react";
 
 export interface GuidedDraft {
   contact: Record<string, string>; // Meno, Email, Telefón, Firma, Poznámka
@@ -104,11 +104,11 @@ function SectionRow({
 
 export default function GuidedCard({ draft, onChange, onConfirm, onDismiss }: Props) {
   const [saving, setSaving] = useState(false);
-  // Default to edit mode so users see the fields they can tweak
-  // + the big "Uložiť" button from the first render. The old compact
-  // mode hid the form behind a pencil icon and confused users who
-  // expected a classic form.
-  const [editing, setEditing] = useState(true);
+  // Default to COMPACT SUMMARY — show only the fields AI actually filled,
+  // as read-only chips. The card is "tu je súhrn toho, čo idem uložiť",
+  // not a blank wizard. User clicks "Upraviť" to expand the full editor
+  // when they want to dotiahnuť email/telefón/dátum.
+  const [editing, setEditing] = useState(false);
 
   // ── Flash-animate fields that just became filled (AI added them) ──
   const prevRef = useRef<GuidedDraft | null>(null);
@@ -395,10 +395,19 @@ export default function GuidedCard({ draft, onChange, onConfirm, onDismiss }: Pr
           className="flex items-center justify-between gap-2 px-4 py-2.5"
           style={{ borderTop: `1px solid ${D.border}`, background: "var(--app-surface-2)" }}
         >
-          <span className="text-[0.7rem] font-semibold" style={{ color: D.sky }}>
-            ← Uprav polia a klikni &quot;Uložiť&quot;
+          <span className="text-[0.65rem]" style={{ color: D.muted }}>
+            {editing ? "Uprav polia a klikni Uložiť." : `${progress.filled}/${progress.total} polí vyplnených`}
           </span>
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => setEditing((v) => !v)}
+              disabled={saving}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-colors disabled:opacity-50"
+              style={{ color: D.muted, background: "rgba(148,163,184,0.08)" }}
+            >
+              <Pencil className="w-3 h-3" />
+              {editing ? "Hotovo" : "Upraviť"}
+            </button>
             <button
               onClick={onDismiss}
               disabled={saving}
