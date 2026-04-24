@@ -2131,9 +2131,6 @@ function PrivacyInfoSection() {
           </div>
         ))}
       </div>
-      <p className="mt-3 text-[0.65rem]" style={{ color: D.mutedDark }}>
-        Chceš úplne lokálny model (bez OpenAI)? Pripravujeme variant s Ollama — napíš cez Feedback.
-      </p>
     </Section>
   );
 }
