@@ -5,7 +5,7 @@ import { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Loader2, Eye, EyeOff, ShieldCheck } from "lucide-react";
+import { Loader2, Eye, EyeOff, ShieldCheck, Fingerprint } from "lucide-react";
 import { getSiteConfig } from "@/config/site-settings";
 import { toast } from "sonner";
 import AuthBrand, { GradientTitle } from "@/components/auth/AuthBrand";
@@ -40,6 +40,54 @@ function LoginForm() {
   const [useBackup, setUseBackup] = useState(false);
   const [code, setCode] = useState("");
   const codeRef = useRef<HTMLInputElement>(null);
+
+  // Passkey passwordless flow — lazy feature detection so we hide the
+  // button on legacy browsers / webviews that don't expose WebAuthn.
+  const [passkeySupported, setPasskeySupported] = useState(false);
+  const [passkeyBusy, setPasskeyBusy] = useState(false);
+  useEffect(() => {
+    setPasskeySupported(
+      typeof window !== "undefined" && typeof window.PublicKeyCredential !== "undefined",
+    );
+  }, []);
+
+  async function handlePasskeyLogin() {
+    if (passkeyBusy) return;
+    setPasskeyBusy(true);
+    try {
+      const { startAuthentication } = await import("@simplewebauthn/browser");
+      const optsRes = await fetch("/api/passkeys/auth/options", { method: "POST" });
+      if (!optsRes.ok) throw new Error("options_failed");
+      const options = await optsRes.json();
+
+      let assertion;
+      try {
+        assertion = await startAuthentication({ optionsJSON: options });
+      } catch (e) {
+        const err = e as { name?: string };
+        if (err.name === "NotAllowedError") return; // user cancelled
+        throw e;
+      }
+
+      const verifyRes = await fetch("/api/passkeys/auth/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ response: assertion }),
+      });
+      if (!verifyRes.ok) {
+        const d = await verifyRes.json().catch(() => ({}));
+        throw new Error(d.error ?? "verify_failed");
+      }
+      toast.success("Prihlásenie úspešné");
+      track("login_passkey_success");
+      router.push(from);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "neznáma chyba";
+      toast.error(`Prihlásenie cez passkey zlyhalo: ${msg}`);
+    } finally {
+      setPasskeyBusy(false);
+    }
+  }
 
   useEffect(() => {
     if (stage === "twofactor") {
@@ -314,6 +362,36 @@ function LoginForm() {
                     "Prihlásiť sa"
                   )}
                 </button>
+
+                {passkeySupported && (
+                  <>
+                    <div className="relative flex items-center gap-3 my-1">
+                      <div className="flex-1 h-px" style={{ background: B.border }} />
+                      <span className="text-[10px] uppercase tracking-wider" style={{ color: B.textMuted }}>
+                        alebo
+                      </span>
+                      <div className="flex-1 h-px" style={{ background: B.border }} />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handlePasskeyLogin}
+                      disabled={passkeyBusy}
+                      className="w-full py-2.5 rounded-xl text-sm font-semibold transition-all active:scale-[0.98] disabled:opacity-60 flex items-center justify-center gap-2"
+                      style={{
+                        background: B.surface,
+                        color: B.text,
+                        border: `1px solid ${B.border}`,
+                      }}
+                    >
+                      {passkeyBusy ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Fingerprint className="w-4 h-4" />
+                      )}
+                      Prihlásiť cez passkey
+                    </button>
+                  </>
+                )}
               </form>
             </>
           ) : (

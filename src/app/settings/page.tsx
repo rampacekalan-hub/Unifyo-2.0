@@ -11,7 +11,7 @@ import {
   Brain, Thermometer, MessageSquare, Camera, Trash2, Download, AlertTriangle,
   Monitor, Smartphone, Globe, CheckCircle2, XCircle, Upload,
   Gift, Copy, CreditCard, ChevronRight, BadgeCheck, HelpCircle, Sparkle,
-  Link2,
+  Link2, Fingerprint, Plus,
 } from "lucide-react";
 import Link from "next/link";
 import { useTheme } from "next-themes";
@@ -223,6 +223,9 @@ export default function SettingsPage() {
           enabledAt={me?.twoFactorEnabledAt ?? null}
           onChange={load}
         />
+
+        {/* ── Passkeys (Touch ID / Face ID / Windows Hello / bezpečnostné kľúče) ── */}
+        <PasskeysSection />
 
         {/* ── AI preferencie ── */}
         <div id="ai" className="scroll-mt-24" />
@@ -1738,6 +1741,187 @@ function TwoFactorSection({
             Zapnúť 2FA
           </button>
         </div>
+      )}
+    </Section>
+  );
+}
+
+// ── Passkeys — WebAuthn credentials listing + register/remove ───────
+// The heavy lifting lives in /api/passkeys/**; this component is just
+// a thin UI. We lazy-import @simplewebauthn/browser because it pulls
+// ~20KB that first-load users don't need.
+interface PasskeyRow {
+  id: string;
+  deviceName: string | null;
+  deviceType: string | null;
+  backedUp: boolean;
+  transports: string | null;
+  createdAt: string;
+  lastUsedAt: string | null;
+}
+
+function PasskeysSection() {
+  const [rows, setRows] = useState<PasskeyRow[] | null>(null);
+  const [adding, setAdding] = useState(false);
+  const [supported, setSupported] = useState<boolean | null>(null);
+
+  const load = useCallback(async () => {
+    try {
+      const r = await fetch("/api/passkeys", { cache: "no-store" });
+      if (!r.ok) throw new Error("fetch_failed");
+      const d = await r.json();
+      setRows(d.passkeys ?? []);
+    } catch {
+      setRows([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    // Feature detection — if the browser doesn't expose PublicKeyCredential
+    // (very old browsers, some webviews), we hide the button and show a
+    // friendly message instead of letting the user click something that
+    // throws.
+    setSupported(
+      typeof window !== "undefined" &&
+        typeof window.PublicKeyCredential !== "undefined",
+    );
+    load();
+  }, [load]);
+
+  const handleAdd = useCallback(async () => {
+    if (adding) return;
+    setAdding(true);
+    try {
+      const { startRegistration } = await import("@simplewebauthn/browser");
+      const optsRes = await fetch("/api/passkeys/register/options", { method: "POST" });
+      if (!optsRes.ok) throw new Error("options_failed");
+      const options = await optsRes.json();
+
+      let attResp;
+      try {
+        attResp = await startRegistration({ optionsJSON: options });
+      } catch (e) {
+        const err = e as { name?: string; message?: string };
+        if (err.name === "InvalidStateError") {
+          toast.error("Tento kľúč je už zaregistrovaný na tvojom účte.");
+        } else if (err.name === "NotAllowedError") {
+          // User cancelled — no toast, just silently stop.
+          return;
+        } else {
+          toast.error(err.message ?? "Registrácia kľúča zlyhala");
+        }
+        return;
+      }
+
+      const deviceName =
+        window.prompt("Pomenuj tento kľúč (napr. 'MacBook Touch ID'):", "")?.trim() || null;
+
+      const verifyRes = await fetch("/api/passkeys/register/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ response: attResp, deviceName }),
+      });
+      if (!verifyRes.ok) {
+        const d = await verifyRes.json().catch(() => ({}));
+        throw new Error(d.error ?? "verify_failed");
+      }
+      toast.success("Passkey pridaný");
+      await load();
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Neznáma chyba";
+      toast.error(`Nepodarilo sa pridať passkey: ${msg}`);
+    } finally {
+      setAdding(false);
+    }
+  }, [adding, load]);
+
+  const handleDelete = useCallback(
+    async (id: string) => {
+      if (!confirm("Odstrániť tento passkey? Už sa ním nebudeš vedieť prihlásiť.")) return;
+      const r = await fetch(`/api/passkeys/${id}`, { method: "DELETE" });
+      if (r.ok) {
+        toast.success("Passkey odstránený");
+        await load();
+      } else {
+        toast.error("Odstránenie zlyhalo");
+      }
+    },
+    [load],
+  );
+
+  return (
+    <Section
+      icon={Fingerprint}
+      title="Prístupové kľúče (Passkeys)"
+      subtitle="Touch ID, Face ID, Windows Hello, YubiKey — prihlasuj sa bez hesla."
+    >
+      {supported === false && (
+        <div
+          className="rounded-xl p-3 text-xs mb-3"
+          style={{
+            background: "var(--brand-warning-soft)",
+            color: "var(--brand-warning)",
+          }}
+        >
+          Tento prehliadač nepodporuje passkey. Skús Safari, Chrome alebo Edge.
+        </div>
+      )}
+
+      {rows === null ? (
+        <div className="text-xs opacity-60">Načítavam…</div>
+      ) : rows.length === 0 ? (
+        <div className="text-xs opacity-70 mb-3">
+          Zatiaľ si nepridal žiadny passkey. Pridaním si zapneš prihlásenie cez odtlačok / Face ID bez písania hesla.
+        </div>
+      ) : (
+        <ul className="space-y-2 mb-3">
+          {rows.map((p) => (
+            <li
+              key={p.id}
+              className="flex items-center justify-between gap-3 p-3 rounded-xl"
+              style={{
+                background: "var(--app-surface-muted)",
+                border: "1px solid var(--app-border)",
+              }}
+            >
+              <div className="min-w-0">
+                <div className="text-sm font-medium truncate">
+                  {p.deviceName ?? (p.deviceType === "multiDevice" ? "Synced passkey" : "Passkey")}
+                </div>
+                <div className="text-[11px] opacity-60">
+                  Pridaný {new Date(p.createdAt).toLocaleDateString("sk-SK")}
+                  {p.lastUsedAt
+                    ? ` · posledné použitie ${new Date(p.lastUsedAt).toLocaleDateString("sk-SK")}`
+                    : " · zatiaľ nepoužitý"}
+                  {p.backedUp ? " · zálohovaný" : ""}
+                </div>
+              </div>
+              <button
+                onClick={() => handleDelete(p.id)}
+                className="text-xs px-2.5 py-1.5 rounded-lg"
+                style={{ color: "var(--brand-danger)", background: "var(--brand-danger-soft)" }}
+                aria-label="Odstrániť passkey"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {supported !== false && (
+        <button
+          onClick={handleAdd}
+          disabled={adding}
+          className="px-3.5 py-2 rounded-xl text-sm font-medium flex items-center gap-2 disabled:opacity-50"
+          style={{
+            background: "var(--brand-primary)",
+            color: "white",
+          }}
+        >
+          {adding ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+          Pridať passkey
+        </button>
       )}
     </Section>
   );

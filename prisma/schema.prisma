@@ -94,6 +94,35 @@ model User {
   stripeSubscription StripeSubscription?
   callRecordings    CallRecording[]
   feedbackItems     Feedback[]
+  passkeys          Passkey[]
+}
+
+// ── WebAuthn / FIDO2 passkeys ─────────────────────────────────────────
+// One row per registered authenticator. `credentialId` is the base64url
+// identifier the browser sends in allowCredentials / during auth; it's
+// globally unique so we can look up the user before we know who's
+// logging in (discoverable credentials). `publicKey` stores the raw
+// CBOR-encoded public key bytes returned by @simplewebauthn. `counter`
+// is bumped every authentication to defeat cloned authenticators;
+// platform authenticators (iCloud Keychain, Google Password Manager)
+// report 0 and that's fine — we just don't regress. `transports` is a
+// CSV hint ("internal","hybrid","usb"…). `deviceName` is user-supplied
+// at registration so the settings page can show "MacBook Air — Touch ID"
+// instead of a hash.
+model Passkey {
+  id           String    @id @default(cuid())
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  credentialId String    @unique
+  publicKey    Bytes
+  counter      BigInt    @default(0)
+  transports   String?
+  deviceName   String?
+  backedUp     Boolean   @default(false)
+  deviceType   String?
+  createdAt    DateTime  @default(now())
+  lastUsedAt   DateTime?
+  @@index([userId])
 }
 
 // ── User feedback — floating widget captures → admin reviews ────────
