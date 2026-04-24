@@ -274,13 +274,34 @@ export default function DashboardClient({ user }: DashboardClientProps) {
   // ── Guided draft: save both entities ────────────────────────
   const handleDraftConfirm = useCallback(async () => {
     if (!draft) return;
-    const promises: Promise<Response>[] = [];
     const hasContact = Object.values(draft.contact).some((v) => v && v.trim());
     const hasTask    = Object.values(draft.task).some((v) => v && v.trim());
+    const hasDeal    = draft.deal ? Object.values(draft.deal).some((v) => v && v.trim()) : false;
 
-    if (hasContact) {
-      promises.push(
-        fetch("/api/crm/contacts", {
+    // Map Slovak "Fáza" label -> DealStage enum on the API side.
+    const mapStage = (faza?: string): "LEAD" | "QUALIFIED" | "PROPOSAL" | "WON" | "LOST" => {
+      const s = (faza ?? "").toLowerCase().trim();
+      if (!s) return "LEAD";
+      if (s.startsWith("lead") || s.includes("nový") || s.includes("novy")) return "LEAD";
+      if (s.includes("analýza") || s.includes("analyza") || s.includes("kvalif")) return "QUALIFIED";
+      if (s.includes("ponuk") || s.includes("návrh") || s.includes("navrh") || s.includes("proposal")) return "PROPOSAL";
+      if (s.includes("won") || s.includes("uzavret") || s.includes("vyhran")) return "WON";
+      if (s.includes("lost") || s.includes("stratený") || s.includes("strateny")) return "LOST";
+      return "QUALIFIED"; // safe default for "Analýza potrieb" etc.
+    };
+
+    const parseEurCents = (raw?: string): number | undefined => {
+      if (!raw) return undefined;
+      const n = parseFloat(raw.replace(/[^\d.,-]/g, "").replace(",", "."));
+      if (!Number.isFinite(n) || n <= 0) return undefined;
+      return Math.round(n * 100); // store in cents
+    };
+
+    try {
+      // 1) Contact first — we need its id to attach the deal.
+      let contactId: string | undefined;
+      if (hasContact) {
+        const res = await fetch("/api/crm/contacts", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -289,47 +310,64 @@ export default function DashboardClient({ user }: DashboardClientProps) {
             phone: draft.contact["Telefón"] || undefined,
             company: draft.contact["Firma"] || undefined,
           }),
-        }),
-      );
-    }
-    if (hasTask) {
-      const date = draft.task["Dátum"] || new Date().toISOString().split("T")[0];
-      promises.push(
-        fetch("/api/calendar/tasks", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            title: draft.task["Úloha"] || "Nová úloha",
-            date,
-            time: draft.task["Čas"] || undefined,
-            description: draft.task["Poznámka"] || undefined,
-          }),
-        }),
-      );
-    }
-    try {
-      const results = await Promise.all(promises);
-      const allOk = results.every((r) => r.ok);
-      if (allOk) {
-        const goto = hasContact ? "/crm" : "/calendar";
-        const label = hasContact ? "Pozrieť v CRM" : "Pozrieť v Kalendári";
-        toast.success(
-          hasContact && hasTask ? "Kontakt aj termín uložené."
-          : hasContact ? "Kontakt uložený do CRM."
-          : "Termín pridaný do Kalendára.",
-          {
-            action: {
-              label,
-              onClick: () => { window.location.href = goto; },
-            },
-          },
-        );
-        chatActions.clearDraft();
-      } else {
-        toast.error("Niektorá časť sa neuložila.");
+        });
+        if (!res.ok) throw new Error("contact");
+        const saved = await res.json().catch(() => null);
+        contactId = saved?.id as string | undefined;
       }
+
+      // 2) Deal + task in parallel — task doesn't depend on contactId,
+      //    deal attaches to contactId when available.
+      const parallel: Promise<Response>[] = [];
+
+      if (hasDeal && draft.deal) {
+        parallel.push(
+          fetch("/api/crm/deals", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              title: draft.deal["Názov"] || "Nový deal",
+              stage: mapStage(draft.deal["Fáza"]),
+              contactId,
+              expectedValue: parseEurCents(draft.deal["Hodnota"]),
+              note: draft.deal["Poznámka"] || undefined,
+            }),
+          }),
+        );
+      }
+
+      if (hasTask) {
+        const date = draft.task["Dátum"] || new Date().toISOString().split("T")[0];
+        parallel.push(
+          fetch("/api/calendar/tasks", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              title: draft.task["Úloha"] || "Nová úloha",
+              date,
+              time: draft.task["Čas"] || undefined,
+              description: draft.task["Poznámka"] || undefined,
+            }),
+          }),
+        );
+      }
+
+      const results = await Promise.all(parallel);
+      const allOk = results.every((r) => r.ok);
+      if (!allOk) throw new Error("partial");
+
+      const parts: string[] = [];
+      if (hasContact) parts.push("Kontakt");
+      if (hasDeal) parts.push("Deal");
+      if (hasTask) parts.push("termín");
+      const goto = hasDeal ? "/pipeline" : hasContact ? "/crm" : "/calendar";
+      const label = hasDeal ? "Pozrieť v Pipeline" : hasContact ? "Pozrieť v CRM" : "Pozrieť v Kalendári";
+      toast.success(`${parts.join(", ")} uložené.`, {
+        action: { label, onClick: () => { window.location.href = goto; } },
+      });
+      chatActions.clearDraft();
     } catch {
-      toast.error("Ukladanie zlyhalo.");
+      toast.error("Niektorá časť sa neuložila.");
     }
   }, [draft]);
 

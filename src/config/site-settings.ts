@@ -399,10 +399,13 @@ const siteConfig: SiteConfig = {
         "2–3 vety: čo klient chce, čo mu chýba, aký je jasný cieľ ťahu\n" +
         "(napr. 'získať podklady a dohodnúť osobné stretnutie').\n\n" +
         "**Blok 2 — 🗂 CRM & PIPELINE**\n" +
-        "Vygeneruj JEDEN contact action-card s menom klienta + témou v Poznámke.\n" +
-        "Pipeline Deal ohlás len TEXTOM: 'Deal v Pipeline: [Názov] — fáza: Analýza\n" +
-        "potrieb (potvrdíš v Pipeline module).' Nepoužívaj action-card type='deal' —\n" +
-        "ešte nie je podporovaný v UI, user si deal vytvorí jedným klikom v Pipeline.\n\n" +
+        "Vygeneruj DVE action-card: contact + deal. Contact má Meno klienta + tému\n" +
+        "v Poznámke. Deal má:\n" +
+        "  - Názov: '[Téma] — [Meno klienta]' (napr. 'Hypotéka — Peter Vittek')\n" +
+        "  - Fáza: jedna z 'Lead' / 'Analýza potrieb' / 'Ponuka' / 'Vyhraté' / 'Stratené'\n" +
+        "    (pre bežné sondovanie daj 'Analýza potrieb')\n" +
+        "  - Hodnota: prázdne '' ak nevieš (nikdy si nevymýšľaj sumu)\n" +
+        "  - Poznámka: krátky kontext (1 veta)\n\n" +
         "**Blok 3 — ✉️ NÁVRHY SPRÁVY (2 verzie)**\n" +
         "VŽDY dve verzie, jasne označené:\n" +
         "  **A) Formálna (Vykanie)** — biznis tón, celé mená, 'Vážený pán X'.\n" +
@@ -428,12 +431,13 @@ const siteConfig: SiteConfig = {
         "Pán Vittek rieši hypotéku, ale zatiaľ len sonduje cez správy. Potrebujeme\n" +
         "ho dostať na osobné stretnutie, aby sme preverili bonitu a porovnali ponuky bánk.\n\n" +
         "🗂 **CRM & PIPELINE**\n" +
-        "Pridávam p. Vitteka do CRM.\n" +
+        "Pridávam p. Vitteka do CRM a zakladám Deal v Pipeline.\n" +
         "```action-card\n" +
         "{\"type\":\"contact\",\"fields\":{\"Meno\":\"Peter Vittek\",\"Email\":\"\",\"Telefón\":\"\",\"Firma\":\"\",\"Poznámka\":\"Hypotéka — sonduje cez správy\"}}\n" +
         "```\n" +
-        "Deal v Pipeline: **Hypotéka — Peter Vittek** · fáza: *Analýza potrieb*\n" +
-        "(potvrdíš jedným klikom v Pipeline module).\n\n" +
+        "```action-card\n" +
+        "{\"type\":\"deal\",\"fields\":{\"Názov\":\"Hypotéka — Peter Vittek\",\"Fáza\":\"Analýza potrieb\",\"Hodnota\":\"\",\"Poznámka\":\"Sonduje cez správy, smerujeme na osobné stretnutie\"}}\n" +
+        "```\n\n" +
         "✉️ **NÁVRHY SPRÁVY**\n" +
         "**A) Formálna (Vykanie):**\n" +
         "„Vážený pán Vittek, pripravil som pre Vás predbežné porovnanie bánk. Aby sme\n" +

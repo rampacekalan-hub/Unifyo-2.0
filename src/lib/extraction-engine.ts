@@ -1,4 +1,4 @@
-export type ActionCardType = "contact" | "task" | "company" | "event";
+export type ActionCardType = "contact" | "task" | "company" | "event" | "deal";
 
 export interface ActionCard {
   id: string;
@@ -512,7 +512,7 @@ function normalizeDate(text: string): { raw: string; normalized: string } {
 function repairActionCardJson(raw: string): string {
   let s = raw;
   // 1) Missing "type" key → heuristic: first empty key with "contact"/"task"/"company" value
-  s = s.replace(/"":\s*"(contact|task|company|event)"/g, '"type":"$1"');
+  s = s.replace(/"":\s*"(contact|task|company|event|deal)"/g, '"type":"$1"');
   // 2) "fields" merged with first inner key: fieldsÚloha, fieldsMeno, fieldsFirma, fieldsEmail…
   s = s.replace(/"fields([A-ZÁČŠŽÝÍÉÚÄÔŇ][a-záčšžýíéúäôňá-ž]+)"\s*:\s*"([^"]*)"/g,
     (_match, firstKey: string, firstVal: string) => `"fields":{"${firstKey}":"${firstVal}"`);
@@ -539,19 +539,21 @@ function parseActionCardBlocks(text: string): ActionCard[] {
     if (!parsed || typeof parsed !== "object") continue;
     const type = (
       parsed.type === "task" ? "task" :
-      parsed.type === "company" ? "company" : "contact"
+      parsed.type === "company" ? "company" :
+      parsed.type === "deal" ? "deal" : "contact"
     ) as ActionCardType;
     const fields = sanitiseFields(parsed.fields ?? {});
 
     // FORCE NAME EXTRACTION: "Vittek Test"
-    // If Meno is empty for a contact card, FORCE strict extraction from raw text
+    // If Meno is empty for a contact/company card, FORCE strict extraction from raw text.
+    // Deals don't have Meno — they have Názov — so skip this for them.
     let extractionDebug: ExtractionDebug | undefined;
-    if (type !== "task" && !fields["Meno"]) {
+    if (type !== "task" && type !== "deal" && !fields["Meno"]) {
       const { name: forcedName, classified, confidence } = extractStrictName(text);
       if (forcedName) fields["Meno"] = forcedName;
       extractionDebug = { classifiedWords: classified, chosenName: forcedName, confidence };
     }
-    
+
     // Normalize dates in task cards
     if (type === "task" && fields["Dátum"]) {
       const dateInfo = normalizeDate(fields["Dátum"]);
@@ -607,6 +609,12 @@ export function validateCard(card: ActionCard): ActionCard {
   if (card.type === "task") {
     if (!card.fields["Úloha"]?.trim()) {
       missing.push("Úloha");
+    }
+  }
+
+  if (card.type === "deal") {
+    if (!card.fields["Názov"]?.trim()) {
+      missing.push("Názov");
     }
   }
   

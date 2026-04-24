@@ -5,11 +5,12 @@
 
 import { useState, useEffect, useRef, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { User, CalendarCheck, Check, X, Loader2 } from "lucide-react";
+import { User, CalendarCheck, Check, X, Loader2, TrendingUp } from "lucide-react";
 
 export interface GuidedDraft {
   contact: Record<string, string>; // Meno, Email, Telefón, Firma, Poznámka
   task: Record<string, string>;    // Úloha, Dátum, Čas, Poznámka
+  deal?: Record<string, string>;   // Názov, Fáza, Hodnota, Poznámka (Pipeline)
 }
 
 interface Props {
@@ -42,6 +43,13 @@ const TASK_FIELDS: Array<{ key: string; label: string; type?: string; placeholde
   { key: "Úloha",    label: "Úloha",    placeholder: "Stretnutie: Peter Novák" },
   { key: "Dátum",    label: "Dátum",    type: "date", placeholder: "" },
   { key: "Čas",      label: "Čas",      type: "time", placeholder: "14:00" },
+  { key: "Poznámka", label: "Poznámka", placeholder: "" },
+];
+
+const DEAL_FIELDS: Array<{ key: string; label: string; type?: string; placeholder: string }> = [
+  { key: "Názov",    label: "Názov",    placeholder: "Hypotéka — Peter Novák" },
+  { key: "Fáza",     label: "Fáza",     placeholder: "Analýza potrieb" },
+  { key: "Hodnota",  label: "Hodnota",  placeholder: "€ (voliteľné)" },
   { key: "Poznámka", label: "Poznámka", placeholder: "" },
 ];
 
@@ -109,10 +117,12 @@ export default function GuidedCard({ draft, onChange, onConfirm, onDismiss }: Pr
     const prev = prevRef.current;
     if (prev) {
       const newlyFilled = new Set<string>();
-      for (const bucket of ["contact", "task"] as const) {
-        for (const key of Object.keys(draft[bucket])) {
-          const before = (prev[bucket]?.[key] ?? "").trim();
-          const after  = (draft[bucket][key] ?? "").trim();
+      for (const bucket of ["contact", "task", "deal"] as const) {
+        const prevBucket = prev[bucket] ?? {};
+        const nextBucket = draft[bucket] ?? {};
+        for (const key of Object.keys(nextBucket)) {
+          const before = (prevBucket[key] ?? "").trim();
+          const after  = (nextBucket[key] ?? "").trim();
           if (!before && after) newlyFilled.add(`${bucket}:${key}`);
         }
       }
@@ -130,21 +140,27 @@ export default function GuidedCard({ draft, onChange, onConfirm, onDismiss }: Pr
   const progress = useMemo(() => {
     const contactKeys = CONTACT_FIELDS.map(f => f.key);
     const taskKeys    = TASK_FIELDS.map(f => f.key);
+    const dealKeys    = DEAL_FIELDS.map(f => f.key);
+    const dealBucket  = draft.deal ?? {};
     const filled =
       contactKeys.filter(k => (draft.contact[k] ?? "").trim()).length +
-      taskKeys.filter(k => (draft.task[k] ?? "").trim()).length;
-    const total = contactKeys.length + taskKeys.length;
+      taskKeys.filter(k => (draft.task[k] ?? "").trim()).length +
+      dealKeys.filter(k => (dealBucket[k] ?? "").trim()).length;
+    const total = contactKeys.length + taskKeys.length + dealKeys.length;
     return { filled, total, pct: Math.round((filled / total) * 100) };
   }, [draft]);
 
   const hasContact = Object.values(draft.contact).some((v) => v && v.trim());
   const hasTask    = Object.values(draft.task).some((v) => v && v.trim());
-  if (!hasContact && !hasTask) return null;
+  const hasDeal    = draft.deal ? Object.values(draft.deal).some((v) => v && v.trim()) : false;
+  if (!hasContact && !hasTask && !hasDeal) return null;
 
   const setContact = (key: string, v: string) =>
     onChange({ ...draft, contact: { ...draft.contact, [key]: v } });
   const setTask = (key: string, v: string) =>
     onChange({ ...draft, task: { ...draft.task, [key]: v } });
+  const setDeal = (key: string, v: string) =>
+    onChange({ ...draft, deal: { ...(draft.deal ?? {}), [key]: v } });
 
   const handleConfirm = async () => {
     setSaving(true);
@@ -197,10 +213,18 @@ export default function GuidedCard({ draft, onChange, onConfirm, onDismiss }: Pr
               </motion.div>
               <div>
                 <p className="text-xs font-bold" style={{ color: D.text }}>
-                  {hasContact && hasTask
+                  {hasContact && hasTask && hasDeal
+                    ? "Pridať kontakt, Deal a naplánovať úlohu?"
+                    : hasContact && hasDeal
+                    ? "Pridať kontakt a Deal do Pipeline?"
+                    : hasTask && hasDeal
+                    ? "Založiť Deal a naplánovať úlohu?"
+                    : hasContact && hasTask
                     ? "Pridať kontakt a naplánovať úlohu?"
                     : hasContact
                     ? "Pridať tento kontakt do CRM?"
+                    : hasDeal
+                    ? "Založiť Deal v Pipeline?"
                     : "Naplánovať túto úlohu?"}
                 </p>
                 <p className="text-[0.65rem] mt-0.5" style={{ color: D.muted }}>
@@ -286,6 +310,30 @@ export default function GuidedCard({ draft, onChange, onConfirm, onDismiss }: Pr
                 </div>
               </div>
             )}
+            {hasDeal && draft.deal && (
+              <div className="flex items-center gap-2">
+                <div
+                  className="w-7 h-7 rounded-xl flex items-center justify-center flex-shrink-0"
+                  style={{
+                    background: "rgba(139,92,246,0.14)",
+                    border: `1px solid rgba(139,92,246,0.32)`,
+                  }}
+                >
+                  <TrendingUp className="w-3.5 h-3.5" style={{ color: D.violet }} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[0.6rem] uppercase tracking-widest" style={{ color: D.muted }}>
+                    Deal (Pipeline)
+                  </p>
+                  <p className="text-sm truncate" style={{ color: D.text }}>
+                    {draft.deal["Názov"] || <span style={{ color: D.muted }}>názov chýba</span>}
+                    {draft.deal["Fáza"] && (
+                      <span style={{ color: D.muted }}> · {draft.deal["Fáza"]}</span>
+                    )}
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           <div className="px-4 py-3 space-y-4">
@@ -321,6 +369,24 @@ export default function GuidedCard({ draft, onChange, onConfirm, onDismiss }: Pr
                 />
               ))}
             </div>
+            {hasDeal && (
+              <div>
+                <p className="text-[0.6rem] uppercase tracking-widest mb-1" style={{ color: D.violet }}>
+                  Deal (Pipeline)
+                </p>
+                {DEAL_FIELDS.map((f) => (
+                  <SectionRow
+                    key={f.key}
+                    label={f.label}
+                    type={f.type}
+                    placeholder={f.placeholder}
+                    value={(draft.deal ?? {})[f.key] ?? ""}
+                    onChange={(v) => setDeal(f.key, v)}
+                    flash={flashed.has(`deal:${f.key}`)}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         )}
 
@@ -343,7 +409,7 @@ export default function GuidedCard({ draft, onChange, onConfirm, onDismiss }: Pr
             </button>
             <button
               onClick={handleConfirm}
-              disabled={saving || (!hasContact && !hasTask)}
+              disabled={saving || (!hasContact && !hasTask && !hasDeal)}
               className="px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-1.5 disabled:opacity-50"
               style={{
                 background: `linear-gradient(135deg, ${D.indigo}, ${D.violet})`,

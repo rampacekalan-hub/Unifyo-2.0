@@ -33,7 +33,7 @@ interface StoreState {
 // navigation or serialization. Lives only in memory as a module-level handle.
 let currentAbortController: AbortController | null = null;
 
-const EMPTY_DRAFT: GuidedDraft = { contact: {}, task: {} };
+const EMPTY_DRAFT: GuidedDraft = { contact: {}, task: {}, deal: {} };
 
 // Normalise AI's task-title mistakes into a proper action title.
 //   "S Peter Novák"                          → "Stretnutie: Peter Novák"
@@ -195,10 +195,15 @@ export const chatActions = {
     const base: GuidedDraft = state.draft ?? {
       contact: { ...EMPTY_DRAFT.contact },
       task:    { ...EMPTY_DRAFT.task },
+      deal:    { ...(EMPTY_DRAFT.deal ?? {}) },
     };
+    if (!base.deal) base.deal = {};
     let touched = false;
     for (const c of cards) {
-      const bucket = c.type === "task" ? "task" : "contact";
+      const bucket: "task" | "deal" | "contact" =
+        c.type === "task" ? "task" :
+        c.type === "deal" ? "deal" : "contact";
+      const target = bucket === "deal" ? (base.deal ?? (base.deal = {})) : base[bucket];
       for (const [k, v] of Object.entries(c.fields)) {
         let val = String(v ?? "").trim();
         if (!val) continue;
@@ -208,15 +213,22 @@ export const chatActions = {
         if (bucket === "task" && k === "Úloha") val = fixTaskTitle(val);
         // Only write into EMPTY fields. Preserves user edits + avoids
         // AI "correcting" a value the user deliberately changed.
-        const current = base[bucket][k];
+        const current = target[k];
         if (!current || !current.trim()) {
-          base[bucket][k] = val;
+          target[k] = val;
           touched = true;
         }
       }
     }
     if (!touched && !state.draft) return; // nothing to do
-    state = { ...state, draft: { contact: { ...base.contact }, task: { ...base.task } } };
+    state = {
+      ...state,
+      draft: {
+        contact: { ...base.contact },
+        task:    { ...base.task },
+        deal:    { ...(base.deal ?? {}) },
+      },
+    };
     emit();
   },
   clearDraft() {
@@ -228,6 +240,7 @@ export const chatActions = {
     const base: GuidedDraft = state.draft ?? {
       contact: { ...EMPTY_DRAFT.contact },
       task:    { ...EMPTY_DRAFT.task },
+      deal:    { ...(EMPTY_DRAFT.deal ?? {}) },
     };
     let touched = false;
     const nextContact = { ...base.contact };
@@ -242,7 +255,11 @@ export const chatActions = {
     if (!touched) return;
     state = {
       ...state,
-      draft: { contact: nextContact, task: { ...base.task } },
+      draft: {
+        contact: nextContact,
+        task:    { ...base.task },
+        deal:    { ...(base.deal ?? {}) },
+      },
     };
     emit();
   },
