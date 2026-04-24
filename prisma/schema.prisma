@@ -89,6 +89,8 @@ model User {
   referralsReceived Referral[] @relation("referred")
   shareLinks        ShareLink[]
   googleIntegration GoogleIntegration?
+  microsoftIntegration MicrosoftIntegration?
+  appleIntegration  AppleIntegration?
   stripeSubscription StripeSubscription?
   callRecordings    CallRecording[]
   feedbackItems     Feedback[]
@@ -185,6 +187,44 @@ model GoogleIntegration {
   updatedAt     DateTime @updatedAt
 
   @@index([expiresAt])
+}
+
+// ── Microsoft (Outlook / Microsoft 365) integration ──────────────
+// Same shape as GoogleIntegration but for Microsoft Graph. Scopes we
+// request: Mail.Read, Mail.Send, Calendars.ReadWrite, offline_access,
+// User.Read. Refresh flow: POST to /common/oauth2/v2.0/token with
+// grant_type=refresh_token.
+model MicrosoftIntegration {
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  microsoftEmail String
+  accessToken    String   @db.Text
+  refreshToken   String   @db.Text
+  expiresAt      DateTime
+  scopes         String
+  connectedAt    DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([expiresAt])
+}
+
+// ── Apple iCloud integration (CalDAV + CardDAV) ──────────────────
+// Apple has no OAuth — users issue an "app-specific password" at
+// appleid.apple.com and we authenticate with HTTP Basic against
+// caldav.icloud.com. Password is stored AES-256-GCM encrypted with
+// APP_ENCRYPTION_KEY (see lib/crypto.ts). iCloud principal + calendar
+// home URLs are discovered once and cached for follow-up requests.
+model AppleIntegration {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  appleId           String   // email address used to log in
+  passwordEnc       String   @db.Text // AES-256-GCM ciphertext
+  principalUrl      String?  @db.Text // discovered CalDAV principal
+  calendarHomeUrl   String?  @db.Text
+  connectedAt       DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 }
 
 // ── Referrals ────────────────────────────────────────────────────

@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ChevronLeft, ChevronRight, Plus, Clock, X, Trash2, Check, Loader2,
-  CalendarDays, Search, LayoutGrid, Rows3,
+  CalendarDays, Search, LayoutGrid, Rows3, Pencil, ExternalLink,
 } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
@@ -81,6 +81,9 @@ function CalendarPageInner() {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [selectedDay, setSelectedDay] = useState<string | null>(null); // ISO day for the detail drawer
   const [showModal, setShowModal] = useState(false);
+  // Task being edited in the modal. null = add new. Works for both
+  // local CalendarTask rows and Google events (g:-prefixed id).
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [saving, setSaving] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<ViewMode>("month");
@@ -160,6 +163,7 @@ function CalendarPageInner() {
   useEffect(() => {
     if (!searchParams) return;
     if (searchParams.get("new") === "1") {
+      setEditingTask(null);
       setShowModal(true);
       router.replace("/calendar");
     }
@@ -191,7 +195,30 @@ function CalendarPageInner() {
     return filteredTasks.filter((t) => t.date === iso).sort((a, b) => (a.time ?? "").localeCompare(b.time ?? ""));
   }, [filteredTasks, year, month]);
 
-  async function handleAdd() {
+  // Open the add/edit modal. Pre-fills the form from `task` for edits;
+  // when task is null, uses the current form.date so "+ pridať" on a
+  // given day lands you on that day.
+  function openEdit(task: Task | null, dateHint?: string) {
+    setEditingTask(task);
+    if (task) {
+      setForm({
+        title: task.title,
+        date: task.date,
+        time: task.time ?? "",
+        description: task.description ?? "",
+      });
+    } else {
+      setForm({
+        title: "",
+        date: dateHint ?? form.date,
+        time: "",
+        description: "",
+      });
+    }
+    setShowModal(true);
+  }
+
+  async function handleSave() {
     if (!form.title.trim()) {
       toast.error("Názov úlohy je povinný");
       return;
@@ -202,25 +229,82 @@ function CalendarPageInner() {
     }
     setSaving(true);
     try {
-      const res = await fetch("/api/calendar/tasks", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: form.title.trim(),
-          date: form.date,
-          time: form.time.trim() || undefined,
-          description: form.description.trim() || undefined,
-        }),
-      });
-      if (res.ok) {
+      // Editing an existing task/event → PATCH to the right endpoint.
+      if (editingTask) {
+        if (editingTask.googleEventId) {
+          // Google: build start/end ISO. All-day when time is empty.
+          const allDay = !form.time.trim();
+          const newStart = allDay ? form.date : `${form.date}T${form.time}:00`;
+          // Preserve duration from the current event when we know it;
+          // otherwise default to 1h for timed, same-day for all-day.
+          const durationMs =
+            editingTask.time && editingTask.date
+              ? 60 * 60 * 1000
+              : 60 * 60 * 1000;
+          const endDt = allDay
+            ? form.date
+            : new Date(
+                new Date(`${form.date}T${form.time}:00`).getTime() + durationMs,
+              ).toISOString();
+          const res = await fetch(
+            `/api/gcal/event/${encodeURIComponent(editingTask.googleEventId)}`,
+            {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                summary: form.title.trim(),
+                description: form.description.trim() || undefined,
+                start: newStart,
+                end: endDt,
+                allDay,
+              }),
+            },
+          );
+          if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            throw new Error(data.hint ?? data.error ?? "patch failed");
+          }
+          toast.success("Uložené v Google Kalendári.");
+        } else {
+          const res = await fetch("/api/calendar/tasks", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              id: editingTask.id,
+              title: form.title.trim(),
+              date: form.date,
+              time: form.time.trim() || null,
+              description: form.description.trim() || null,
+            }),
+          });
+          if (!res.ok) throw new Error("patch failed");
+          toast.success("Úloha upravená");
+        }
+      } else {
+        const res = await fetch("/api/calendar/tasks", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: form.title.trim(),
+            date: form.date,
+            time: form.time.trim() || undefined,
+            description: form.description.trim() || undefined,
+          }),
+        });
+        if (!res.ok) throw new Error("post failed");
         track("task_created");
         toast.success("Úloha pridaná");
-        setForm({ title: "", date: form.date, time: "", description: "" });
-        setShowModal(false);
-        loadTasks();
-      } else {
-        toast.error("Nepodarilo sa pridať");
       }
+      setForm({ title: "", date: form.date, time: "", description: "" });
+      setShowModal(false);
+      setEditingTask(null);
+      // Close the selected-task detail only when we just edited it.
+      if (editingTask && selectedTask?.id === editingTask.id) {
+        setSelectedTask(null);
+      }
+      loadTasks();
+    } catch (e) {
+      toast.error(e instanceof Error && e.message ? e.message : "Nepodarilo sa uložiť");
     } finally {
       setSaving(false);
     }
@@ -468,7 +552,7 @@ function CalendarPageInner() {
                 />
               </div>
               <button
-                onClick={() => setShowModal(true)}
+                onClick={() => openEdit(null)}
                 className="px-3 md:px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-medium"
                 style={{ background: D.indigo, color: "white" }}
               >
@@ -654,41 +738,63 @@ function CalendarPageInner() {
                         <div className="flex-1 space-y-1.5 overflow-y-auto">
                           {dayTasks.length === 0 ? (
                             <button
-                              onClick={() => {
-                                setForm((f) => ({ ...f, date: iso }));
-                                setShowModal(true);
-                              }}
+                              onClick={() => openEdit(null, iso)}
                               className="w-full text-[0.65rem] py-2 rounded opacity-50 hover:opacity-100 transition-opacity"
                               style={{ color: D.mutedDark, background: "transparent", border: `1px dashed ${D.indigoBorder}` }}
                             >
                               + pridať
                             </button>
-                          ) : dayTasks.map((t) => (
-                            <div
-                              key={t.id}
-                              draggable
-                              onDragStart={(e) => handleDragStart(e, t.id)}
-                              onClick={() => setSelectedTask(t)}
-                              className="px-2 py-1.5 rounded-lg text-xs cursor-grab active:cursor-grabbing transition-all"
-                              style={{
-                                background: t.done ? "rgba(16,185,129,0.15)" : "rgba(99,102,241,0.2)",
-                                border: `1px solid ${t.done ? "rgba(16,185,129,0.3)" : D.indigoBorder}`,
-                                color: t.done ? D.emerald : "#c4b5fd",
-                              }}
-                            >
-                              {t.time && (
-                                <div className="text-[0.6rem] font-semibold mb-0.5" style={{ color: D.muted }}>
-                                  {t.time}
-                                </div>
-                              )}
+                          ) : dayTasks.map((t) => {
+                            // Mirror the month-view color logic so week view
+                            // reads the same: violet = local, sky (or the
+                            // user's calendar color) = Google, emerald = done.
+                            const isGoogle = !!t.googleEventId;
+                            const accent = t.done
+                              ? "#10b981"
+                              : isGoogle
+                              ? (t.calendarColor ?? "#0ea5e9")
+                              : "#8b5cf6";
+                            return (
                               <div
-                                className="font-medium leading-tight"
-                                style={{ textDecoration: t.done ? "line-through" : "none" }}
+                                key={t.id}
+                                draggable
+                                onDragStart={(e) => handleDragStart(e, t.id)}
+                                onClick={() => setSelectedTask(t)}
+                                className="px-2 py-1.5 rounded-lg text-xs cursor-grab active:cursor-grabbing transition-all"
+                                style={{
+                                  background: `${accent}1f`,
+                                  borderLeft: `3px solid ${accent}`,
+                                  border: `1px solid ${accent}55`,
+                                  borderLeftWidth: "3px",
+                                  color: "var(--app-text)",
+                                }}
+                                title={`${t.time ? t.time + " · " : ""}${t.title}${t.calendarName ? " · " + t.calendarName : ""}`}
                               >
-                                {t.title}
+                                {t.time && (
+                                  <div
+                                    className="text-[0.6rem] font-semibold mb-0.5"
+                                    style={{ color: accent }}
+                                  >
+                                    {t.time}
+                                  </div>
+                                )}
+                                <div
+                                  className="font-medium leading-tight"
+                                  style={{ textDecoration: t.done ? "line-through" : "none" }}
+                                >
+                                  {t.title}
+                                </div>
+                                {isGoogle && t.calendarName && (
+                                  <div
+                                    className="text-[9px] mt-0.5 truncate"
+                                    style={{ color: "var(--app-text-subtle)" }}
+                                  >
+                                    {t.calendarName}
+                                  </div>
+                                )}
                               </div>
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       </div>
                     );
@@ -723,7 +829,7 @@ function CalendarPageInner() {
                   action={
                     <div className="flex flex-col gap-2 w-full max-w-xs">
                       <button
-                        onClick={() => setShowModal(true)}
+                        onClick={() => openEdit(null)}
                         className="px-4 py-2.5 rounded-xl text-sm font-medium flex items-center justify-center gap-2 transition-all"
                         style={{ background: `linear-gradient(135deg,${D.indigo},${D.violet})`, color: "white" }}
                       >
@@ -737,7 +843,7 @@ function CalendarPageInner() {
                         💬 AI to naplánuje
                       </Link>
                       <button
-                        onClick={() => setShowModal(true)}
+                        onClick={() => openEdit(null)}
                         className="px-4 py-2.5 rounded-xl text-sm font-medium flex items-center justify-center gap-2 transition-all"
                         style={{ background: "rgba(99,102,241,0.06)", border: `1px solid ${D.indigoBorder}`, color: D.muted }}
                       >
@@ -781,43 +887,83 @@ function CalendarPageInner() {
             <h3 className="font-semibold mb-3 text-sm md:text-base" style={{ color: D.text }}>Detail</h3>
             {selectedTask ? (
               <div className="space-y-3">
-                <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start justify-between gap-2">
                   <h4 className="font-medium flex-1" style={{ color: D.text }}>{selectedTask.title}</h4>
+                  <button
+                    onClick={() => openEdit(selectedTask)}
+                    className="p-1.5 rounded-lg"
+                    style={{ color: D.muted }}
+                    title="Upraviť"
+                    aria-label="Upraviť"
+                  >
+                    <Pencil className="w-4 h-4" />
+                  </button>
                   <button
                     onClick={() => handleDelete(selectedTask.id)}
                     className="p-1.5 rounded-lg"
                     style={{ color: D.muted }}
                     onMouseEnter={(e) => (e.currentTarget.style.color = "#ef4444")}
                     onMouseLeave={(e) => (e.currentTarget.style.color = D.muted)}
+                    title="Zmazať"
+                    aria-label="Zmazať"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
+                {selectedTask.googleEventId && selectedTask.calendarName && (
+                  <div
+                    className="inline-flex items-center gap-1.5 text-[10px] font-semibold px-2 py-0.5 rounded-full"
+                    style={{
+                      background: `${selectedTask.calendarColor ?? "#0ea5e9"}22`,
+                      color: selectedTask.calendarColor ?? "#0ea5e9",
+                      border: `1px solid ${selectedTask.calendarColor ?? "#0ea5e9"}55`,
+                    }}
+                  >
+                    <CalendarDays className="w-3 h-3" />
+                    {selectedTask.calendarName}
+                  </div>
+                )}
                 <div className="flex items-center gap-2 text-sm" style={{ color: D.muted }}>
                   <Clock className="w-4 h-4" />
                   <span>{selectedTask.date}{selectedTask.time ? ` o ${selectedTask.time}` : ""}</span>
                 </div>
                 {selectedTask.description && (
                   <div
-                    className="p-3 rounded-xl text-sm"
+                    className="p-3 rounded-xl text-sm whitespace-pre-wrap"
                     style={{ background: D.indigoDim, border: `1px solid ${D.indigoBorder}`, color: D.text }}
                   >
                     {selectedTask.description}
                   </div>
                 )}
-                <button
-                  onClick={() => toggleDone(selectedTask)}
-                  className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-sm font-medium"
-                  style={
-                    selectedTask.done
-                      ? { background: "rgba(16,185,129,0.15)", border: "1px solid rgba(16,185,129,0.3)", color: D.emerald }
-                      : { background: D.indigoDim, border: `1px solid ${D.indigoBorder}`, color: D.text }
-                  }
-                >
-                  <Check className="w-4 h-4" />
-                  {selectedTask.done ? "Hotovo" : "Označiť ako hotové"}
-                </button>
-                <ShareButton resourceType="task" resourceId={selectedTask.id} fullWidth />
+                {!selectedTask.googleEventId && (
+                  <button
+                    onClick={() => toggleDone(selectedTask)}
+                    className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-sm font-medium"
+                    style={
+                      selectedTask.done
+                        ? { background: "rgba(16,185,129,0.15)", border: "1px solid rgba(16,185,129,0.3)", color: D.emerald }
+                        : { background: D.indigoDim, border: `1px solid ${D.indigoBorder}`, color: D.text }
+                    }
+                  >
+                    <Check className="w-4 h-4" />
+                    {selectedTask.done ? "Hotovo" : "Označiť ako hotové"}
+                  </button>
+                )}
+                {selectedTask.googleEventId && selectedTask.htmlLink && (
+                  <a
+                    href={selectedTask.htmlLink}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-xs font-medium"
+                    style={{ background: D.indigoDim, border: `1px solid ${D.indigoBorder}`, color: D.muted }}
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    Otvoriť v Google Kalendári
+                  </a>
+                )}
+                {!selectedTask.googleEventId && (
+                  <ShareButton resourceType="task" resourceId={selectedTask.id} fullWidth />
+                )}
               </div>
             ) : (
               <EmptyIllustration
@@ -843,12 +989,16 @@ function CalendarPageInner() {
             onClose={() => setSelectedDay(null)}
             onOpenTask={(t) => { setSelectedTask(t); }}
             onAddNew={() => {
-              setForm((f) => ({ ...f, date: selectedDay }));
+              const day = selectedDay;
               setSelectedDay(null);
-              setShowModal(true);
+              openEdit(null, day);
             }}
             onToggleDone={toggleDone}
             onDelete={handleDelete}
+            onEdit={(t) => {
+              setSelectedDay(null);
+              openEdit(t);
+            }}
           />
         )}
       </AnimatePresence>
@@ -862,7 +1012,7 @@ function CalendarPageInner() {
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 flex items-center justify-center p-4"
             style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}
-            onClick={() => !saving && setShowModal(false)}
+            onClick={() => { if (!saving) { setShowModal(false); setEditingTask(null); } }}
           >
             <motion.div
               initial={{ scale: 0.95, y: 10 }}
@@ -870,11 +1020,19 @@ function CalendarPageInner() {
               exit={{ scale: 0.95, y: 10 }}
               onClick={(e) => e.stopPropagation()}
               className="w-full max-w-md rounded-2xl p-6"
-              style={{ background: "#0a0d1a", border: `1px solid ${D.indigoBorder}` }}
+              style={{ background: "var(--app-surface)", border: `1px solid ${D.indigoBorder}` }}
             >
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-bold" style={{ color: D.text }}>Nová úloha</h2>
-                <button onClick={() => setShowModal(false)} disabled={saving} className="p-1">
+                <h2 className="text-lg font-bold" style={{ color: D.text }}>
+                  {editingTask
+                    ? (editingTask.googleEventId ? "Upraviť udalosť (Google)" : "Upraviť úlohu")
+                    : "Nová úloha"}
+                </h2>
+                <button
+                  onClick={() => { setShowModal(false); setEditingTask(null); }}
+                  disabled={saving}
+                  className="p-1"
+                >
                   <X className="w-5 h-5" style={{ color: D.muted }} />
                 </button>
               </div>
@@ -926,7 +1084,7 @@ function CalendarPageInner() {
               </div>
               <div className="flex gap-2 mt-5">
                 <button
-                  onClick={() => setShowModal(false)}
+                  onClick={() => { setShowModal(false); setEditingTask(null); }}
                   disabled={saving}
                   className="flex-1 py-2.5 rounded-lg text-sm font-medium"
                   style={{ background: D.indigoDim, border: `1px solid ${D.indigoBorder}`, color: D.text }}
@@ -934,13 +1092,13 @@ function CalendarPageInner() {
                   Zrušiť
                 </button>
                 <button
-                  onClick={handleAdd}
+                  onClick={handleSave}
                   disabled={saving || !form.title.trim() || !form.date}
                   className="flex-1 py-2.5 rounded-lg text-sm font-medium flex items-center justify-center gap-2 disabled:opacity-50"
                   style={{ background: `linear-gradient(135deg,${D.indigo},${D.violet})`, color: "white" }}
                 >
-                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-                  Uložiť
+                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : (editingTask ? <Check className="w-4 h-4" /> : <Plus className="w-4 h-4" />)}
+                  {editingTask ? "Uložiť zmeny" : "Uložiť"}
                 </button>
               </div>
             </motion.div>
@@ -981,7 +1139,7 @@ function CalendarLegend() {
 // are toggle-able / deletable; Google events are read-only with a
 // "Otvoriť v Googli" link.
 function DayDetailDrawer({
-  iso, tasks, onClose, onOpenTask, onAddNew, onToggleDone, onDelete,
+  iso, tasks, onClose, onOpenTask, onAddNew, onToggleDone, onDelete, onEdit,
 }: {
   iso: string;
   tasks: Task[];
@@ -990,6 +1148,7 @@ function DayDetailDrawer({
   onAddNew: () => void;
   onToggleDone: (t: Task) => void;
   onDelete: (id: string) => void;
+  onEdit: (t: Task) => void;
 }) {
   const d = new Date(iso + "T00:00:00");
   const title = d.toLocaleDateString("sk-SK", {
@@ -1117,27 +1276,40 @@ function DayDetailDrawer({
                       </p>
                     )}
                   </button>
-                  {isGoogle && t.htmlLink ? (
-                    <a
-                      href={t.htmlLink}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="p-1.5 rounded-md flex-shrink-0"
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    {/* Edit works for both local + Google — opens the
+                        unified modal which PATCHes the right endpoint. */}
+                    <button
+                      onClick={() => onEdit(t)}
+                      className="p-1.5 rounded-md"
                       style={{ color: "var(--app-text-muted)" }}
-                      title="Otvoriť v Google"
+                      title="Upraviť"
+                      aria-label="Upraviť"
                     >
-                      <CalendarDays className="w-3.5 h-3.5" />
-                    </a>
-                  ) : (
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
                     <button
                       onClick={() => onDelete(t.id)}
-                      className="p-1.5 rounded-md flex-shrink-0"
+                      className="p-1.5 rounded-md"
                       style={{ color: "#f43f5e" }}
                       title="Zmazať"
+                      aria-label="Zmazať"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
-                  )}
+                    {isGoogle && t.htmlLink && (
+                      <a
+                        href={t.htmlLink}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="p-1.5 rounded-md"
+                        style={{ color: "var(--app-text-subtle)" }}
+                        title="Otvoriť v Google Kalendári"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </a>
+                    )}
+                  </div>
                 </div>
               );
             })
