@@ -5,7 +5,7 @@
 
 import { useState, useEffect, useRef, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { User, CalendarCheck, Check, X, Loader2, TrendingUp, Pencil } from "lucide-react";
+import { User, CalendarCheck, Check, X, Loader2, TrendingUp, ChevronLeft, ChevronRight } from "lucide-react";
 
 export interface GuidedDraft {
   contact: Record<string, string>; // Meno, Email, Telefón, Firma, Poznámka
@@ -102,13 +102,17 @@ function SectionRow({
   );
 }
 
+type StepId = "contact" | "deal" | "task" | "summary";
+const STEP_META: Record<StepId, { label: string; icon: React.ElementType; color: string }> = {
+  contact: { label: "Kontakt",  icon: User,          color: "#6366f1" },
+  deal:    { label: "Deal",     icon: TrendingUp,    color: "#8b5cf6" },
+  task:    { label: "Termín",   icon: CalendarCheck, color: "#22d3ee" },
+  summary: { label: "Súhrn",    icon: Check,         color: "#10b981" },
+};
+
 export default function GuidedCard({ draft, onChange, onConfirm, onDismiss }: Props) {
   const [saving, setSaving] = useState(false);
-  // Default to COMPACT SUMMARY — show only the fields AI actually filled,
-  // as read-only chips. The card is "tu je súhrn toho, čo idem uložiť",
-  // not a blank wizard. User clicks "Upraviť" to expand the full editor
-  // when they want to dotiahnuť email/telefón/dátum.
-  const [editing, setEditing] = useState(false);
+  const [stepIdx, setStepIdx] = useState(0);
 
   // ── Flash-animate fields that just became filled (AI added them) ──
   const prevRef = useRef<GuidedDraft | null>(null);
@@ -167,11 +171,36 @@ export default function GuidedCard({ draft, onChange, onConfirm, onDismiss }: Pr
     try { await onConfirm(); } finally { setSaving(false); }
   };
 
-  // Compact summary when not editing
-  const meno = draft.contact["Meno"];
-  const uloha = draft.task["Úloha"];
-  const datum = draft.task["Dátum"];
-  const cas   = draft.task["Čas"];
+  // ── Build dynamic step list — only buckets that have data + final summary ──
+  const steps: StepId[] = useMemo(() => {
+    const out: StepId[] = [];
+    if (hasContact) out.push("contact");
+    if (hasDeal)    out.push("deal");
+    if (hasTask)    out.push("task");
+    out.push("summary");
+    return out;
+  }, [hasContact, hasDeal, hasTask]);
+
+  const safeIdx = Math.min(stepIdx, steps.length - 1);
+  const currentStep: StepId = steps[safeIdx];
+  const isFirst = safeIdx === 0;
+  const isLast  = safeIdx === steps.length - 1;
+  const goNext = () => setStepIdx((i) => Math.min(i + 1, steps.length - 1));
+  const goPrev = () => setStepIdx((i) => Math.max(i - 1, 0));
+
+  // Step header label for the active step
+  const stepHeading: Record<StepId, string> = {
+    contact: "Kontakt klienta",
+    deal:    "Deal v Pipeline",
+    task:    "Termín v kalendári",
+    summary: "Súhrn — pripravené uložiť",
+  };
+  const stepHint: Record<StepId, string> = {
+    contact: "Skontroluj meno, doplň email/telefón ak vieš.",
+    deal:    "Pomenuj obchod a vyber fázu (Lead → Vyhraté).",
+    task:    "Vyber dátum a čas — ide o placeholder, môžeš presunúť.",
+    summary: "Posledná kontrola pred uložením.",
+  };
 
   return (
     <AnimatePresence>
@@ -191,44 +220,33 @@ export default function GuidedCard({ draft, onChange, onConfirm, onDismiss }: Pr
           WebkitBackdropFilter: "blur(18px)",
         }}
       >
-        {/* Header — tells the user exactly what the card does.
-            Previously it said "Sprievodca · 0/9 polí" which left
-            users guessing what this widget is for. */}
+        {/* Header — wizard heading + close */}
         <div
           className="px-4 py-3"
           style={{ borderBottom: `1px solid ${D.border}` }}
         >
           <div className="flex items-start justify-between gap-3">
-            <div className="flex items-start gap-2">
+            <div className="flex items-start gap-2 min-w-0">
               <motion.div
-                className="w-6 h-6 rounded-lg flex items-center justify-center mt-0.5"
+                className="w-6 h-6 rounded-lg flex items-center justify-center mt-0.5 flex-shrink-0"
                 style={{
-                  background: "linear-gradient(135deg, rgba(99,102,241,0.3), rgba(139,92,246,0.3))",
-                  border: `1px solid ${D.border}`,
+                  background: `linear-gradient(135deg, ${STEP_META[currentStep].color}55, ${STEP_META[currentStep].color}22)`,
+                  border: `1px solid ${STEP_META[currentStep].color}55`,
                 }}
-                animate={{ boxShadow: ["0 0 4px #8b5cf6", "0 0 12px #8b5cf6", "0 0 4px #8b5cf6"] }}
+                animate={{ boxShadow: [`0 0 4px ${STEP_META[currentStep].color}`, `0 0 12px ${STEP_META[currentStep].color}`, `0 0 4px ${STEP_META[currentStep].color}`] }}
                 transition={{ duration: 2, repeat: Infinity }}
               >
-                <Check className="w-3.5 h-3.5 text-white" />
+                {(() => {
+                  const Icon = STEP_META[currentStep].icon;
+                  return <Icon className="w-3.5 h-3.5 text-white" />;
+                })()}
               </motion.div>
-              <div>
-                <p className="text-xs font-bold" style={{ color: D.text }}>
-                  {hasContact && hasTask && hasDeal
-                    ? "Pridať kontakt, Deal a naplánovať úlohu?"
-                    : hasContact && hasDeal
-                    ? "Pridať kontakt a Deal do Pipeline?"
-                    : hasTask && hasDeal
-                    ? "Založiť Deal a naplánovať úlohu?"
-                    : hasContact && hasTask
-                    ? "Pridať kontakt a naplánovať úlohu?"
-                    : hasContact
-                    ? "Pridať tento kontakt do CRM?"
-                    : hasDeal
-                    ? "Založiť Deal v Pipeline?"
-                    : "Naplánovať túto úlohu?"}
+              <div className="min-w-0">
+                <p className="text-xs font-bold truncate" style={{ color: D.text }}>
+                  Sprievodca · {safeIdx + 1}/{steps.length} · {stepHeading[currentStep]}
                 </p>
                 <p className="text-[0.65rem] mt-0.5" style={{ color: D.muted }}>
-                  Skontroluj údaje a klikni <strong style={{ color: D.text }}>Uložiť</strong>.
+                  {stepHint[currentStep]}
                 </p>
               </div>
             </div>
@@ -244,136 +262,78 @@ export default function GuidedCard({ draft, onChange, onConfirm, onDismiss }: Pr
           </div>
         </div>
 
+        {/* Stepper dots */}
+        <div className="flex items-center gap-1 px-4 py-2" style={{ background: "rgba(15,23,42,0.04)", borderBottom: `1px solid ${D.border}` }}>
+          {steps.map((s, i) => {
+            const meta = STEP_META[s];
+            const active = i === safeIdx;
+            const done = i < safeIdx;
+            return (
+              <button
+                key={s}
+                onClick={() => setStepIdx(i)}
+                disabled={saving}
+                className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-[0.65rem] font-medium transition-all disabled:opacity-50"
+                style={{
+                  background: active ? `${meta.color}22` : done ? "rgba(16,185,129,0.10)" : "transparent",
+                  border: `1px solid ${active ? meta.color + "55" : done ? "rgba(16,185,129,0.30)" : "transparent"}`,
+                  color: active ? meta.color : done ? "#10b981" : D.muted,
+                }}
+              >
+                <span
+                  className="w-4 h-4 rounded-full flex items-center justify-center text-[0.6rem]"
+                  style={{
+                    background: active ? meta.color : done ? "#10b981" : "rgba(148,163,184,0.20)",
+                    color: active || done ? "white" : D.muted,
+                  }}
+                >
+                  {done ? "✓" : i + 1}
+                </span>
+                <span className="hidden sm:inline">{meta.label}</span>
+              </button>
+            );
+          })}
+        </div>
+
         {/* Progress bar */}
         <div className="h-0.5 w-full" style={{ background: "rgba(99,102,241,0.08)" }}>
           <motion.div
             className="h-full"
             style={{ background: `linear-gradient(90deg, ${D.indigo}, ${D.sky})` }}
             initial={false}
-            animate={{ width: `${progress.pct}%` }}
-            transition={{ duration: 0.5, ease: "easeOut" }}
+            animate={{ width: `${Math.round(((safeIdx + 1) / steps.length) * 100)}%` }}
+            transition={{ duration: 0.4, ease: "easeOut" }}
           />
         </div>
 
-        {/* Compact summary OR editable sections */}
-        {!editing ? (
-          <div className="px-4 py-3 space-y-2">
-            {hasContact && (
-              <div className="flex items-center gap-2">
-                <div
-                  className="w-7 h-7 rounded-xl flex items-center justify-center flex-shrink-0"
-                  style={{
-                    background: "rgba(99,102,241,0.15)",
-                    border: `1px solid ${D.border}`,
-                  }}
-                >
-                  <User className="w-3.5 h-3.5" style={{ color: D.indigo }} />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-[0.6rem] uppercase tracking-widest" style={{ color: D.muted }}>
-                    Kontakt
-                  </p>
-                  <p className="text-sm truncate" style={{ color: D.text }}>
-                    {meno || <span style={{ color: D.muted }}>meno chýba</span>}
-                    {draft.contact["Telefón"] && (
-                      <span style={{ color: D.muted }}> · {draft.contact["Telefón"]}</span>
-                    )}
-                    {draft.contact["Email"] && (
-                      <span style={{ color: D.muted }}> · {draft.contact["Email"]}</span>
-                    )}
-                  </p>
-                </div>
-              </div>
-            )}
-            {hasTask && (
-              <div className="flex items-center gap-2">
-                <div
-                  className="w-7 h-7 rounded-xl flex items-center justify-center flex-shrink-0"
-                  style={{
-                    background: "rgba(34,211,238,0.12)",
-                    border: `1px solid ${D.borderSky}`,
-                  }}
-                >
-                  <CalendarCheck className="w-3.5 h-3.5" style={{ color: D.sky }} />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-[0.6rem] uppercase tracking-widest" style={{ color: D.muted }}>
-                    Termín
-                  </p>
-                  <p className="text-sm truncate" style={{ color: D.text }}>
-                    {uloha || <span style={{ color: D.muted }}>názov úlohy chýba</span>}
-                    {datum && (
-                      <span style={{ color: D.muted }}> · {formatDate(datum)}</span>
-                    )}
-                    {cas && <span style={{ color: D.muted }}> · {cas}</span>}
-                  </p>
-                </div>
-              </div>
-            )}
-            {hasDeal && draft.deal && (
-              <div className="flex items-center gap-2">
-                <div
-                  className="w-7 h-7 rounded-xl flex items-center justify-center flex-shrink-0"
-                  style={{
-                    background: "rgba(139,92,246,0.14)",
-                    border: `1px solid rgba(139,92,246,0.32)`,
-                  }}
-                >
-                  <TrendingUp className="w-3.5 h-3.5" style={{ color: D.violet }} />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-[0.6rem] uppercase tracking-widest" style={{ color: D.muted }}>
-                    Deal (Pipeline)
-                  </p>
-                  <p className="text-sm truncate" style={{ color: D.text }}>
-                    {draft.deal["Názov"] || <span style={{ color: D.muted }}>názov chýba</span>}
-                    {draft.deal["Fáza"] && (
-                      <span style={{ color: D.muted }}> · {draft.deal["Fáza"]}</span>
-                    )}
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className="px-4 py-3 space-y-4">
-            <div>
-              <p className="text-[0.6rem] uppercase tracking-widest mb-1" style={{ color: D.indigo }}>
-                Kontakt (CRM)
-              </p>
-              {CONTACT_FIELDS.map((f) => (
-                <SectionRow
-                  key={f.key}
-                  label={f.label}
-                  type={f.type}
-                  placeholder={f.placeholder}
-                  value={draft.contact[f.key] ?? ""}
-                  onChange={(v) => setContact(f.key, v)}
-                  flash={flashed.has(`contact:${f.key}`)}
-                />
-              ))}
-            </div>
-            <div>
-              <p className="text-[0.6rem] uppercase tracking-widest mb-1" style={{ color: D.sky }}>
-                Termín (Kalendár)
-              </p>
-              {TASK_FIELDS.map((f) => (
-                <SectionRow
-                  key={f.key}
-                  label={f.label}
-                  type={f.type}
-                  placeholder={f.placeholder}
-                  value={draft.task[f.key] ?? ""}
-                  onChange={(v) => setTask(f.key, v)}
-                  flash={flashed.has(`task:${f.key}`)}
-                />
-              ))}
-            </div>
-            {hasDeal && (
+        {/* Step body */}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={currentStep}
+            initial={{ opacity: 0, x: 16 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -16 }}
+            transition={{ duration: 0.18 }}
+            className="px-4 py-3"
+          >
+            {currentStep === "contact" && (
               <div>
-                <p className="text-[0.6rem] uppercase tracking-widest mb-1" style={{ color: D.violet }}>
-                  Deal (Pipeline)
-                </p>
+                {CONTACT_FIELDS.map((f) => (
+                  <SectionRow
+                    key={f.key}
+                    label={f.label}
+                    type={f.type}
+                    placeholder={f.placeholder}
+                    value={draft.contact[f.key] ?? ""}
+                    onChange={(v) => setContact(f.key, v)}
+                    flash={flashed.has(`contact:${f.key}`)}
+                  />
+                ))}
+              </div>
+            )}
+
+            {currentStep === "deal" && (
+              <div>
                 {DEAL_FIELDS.map((f) => (
                   <SectionRow
                     key={f.key}
@@ -387,53 +347,124 @@ export default function GuidedCard({ draft, onChange, onConfirm, onDismiss }: Pr
                 ))}
               </div>
             )}
-          </div>
-        )}
 
-        {/* Actions */}
+            {currentStep === "task" && (
+              <div>
+                {TASK_FIELDS.map((f) => (
+                  <SectionRow
+                    key={f.key}
+                    label={f.label}
+                    type={f.type}
+                    placeholder={f.placeholder}
+                    value={draft.task[f.key] ?? ""}
+                    onChange={(v) => setTask(f.key, v)}
+                    flash={flashed.has(`task:${f.key}`)}
+                  />
+                ))}
+              </div>
+            )}
+
+            {currentStep === "summary" && (
+              <div className="space-y-2">
+                {hasContact && (
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-xl flex items-center justify-center flex-shrink-0"
+                      style={{ background: "rgba(99,102,241,0.15)", border: `1px solid ${D.border}` }}>
+                      <User className="w-3.5 h-3.5" style={{ color: D.indigo }} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[0.6rem] uppercase tracking-widest" style={{ color: D.muted }}>Kontakt</p>
+                      <p className="text-sm truncate" style={{ color: D.text }}>
+                        {draft.contact["Meno"] || <span style={{ color: D.muted }}>meno chýba</span>}
+                        {draft.contact["Telefón"] && <span style={{ color: D.muted }}> · {draft.contact["Telefón"]}</span>}
+                        {draft.contact["Email"] && <span style={{ color: D.muted }}> · {draft.contact["Email"]}</span>}
+                      </p>
+                    </div>
+                  </div>
+                )}
+                {hasDeal && draft.deal && (
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-xl flex items-center justify-center flex-shrink-0"
+                      style={{ background: "rgba(139,92,246,0.14)", border: `1px solid rgba(139,92,246,0.32)` }}>
+                      <TrendingUp className="w-3.5 h-3.5" style={{ color: D.violet }} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[0.6rem] uppercase tracking-widest" style={{ color: D.muted }}>Deal (Pipeline)</p>
+                      <p className="text-sm truncate" style={{ color: D.text }}>
+                        {draft.deal["Názov"] || <span style={{ color: D.muted }}>názov chýba</span>}
+                        {draft.deal["Fáza"] && <span style={{ color: D.muted }}> · {draft.deal["Fáza"]}</span>}
+                      </p>
+                    </div>
+                  </div>
+                )}
+                {hasTask && (
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-xl flex items-center justify-center flex-shrink-0"
+                      style={{ background: "rgba(34,211,238,0.12)", border: `1px solid ${D.borderSky}` }}>
+                      <CalendarCheck className="w-3.5 h-3.5" style={{ color: D.sky }} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[0.6rem] uppercase tracking-widest" style={{ color: D.muted }}>Termín</p>
+                      <p className="text-sm truncate" style={{ color: D.text }}>
+                        {draft.task["Úloha"] || <span style={{ color: D.muted }}>názov úlohy chýba</span>}
+                        {draft.task["Dátum"] && <span style={{ color: D.muted }}> · {formatDate(draft.task["Dátum"])}</span>}
+                        {draft.task["Čas"] && <span style={{ color: D.muted }}> · {draft.task["Čas"]}</span>}
+                      </p>
+                    </div>
+                  </div>
+                )}
+                <p className="text-[0.65rem] pt-1" style={{ color: D.muted }}>
+                  {progress.filled}/{progress.total} polí vyplnených. Ak chceš dotiahnuť detaily, klikni Späť.
+                </p>
+              </div>
+            )}
+          </motion.div>
+        </AnimatePresence>
+
+        {/* Footer — Späť / Ďalej or Uložiť */}
         <div
           className="flex items-center justify-between gap-2 px-4 py-2.5"
           style={{ borderTop: `1px solid ${D.border}`, background: "var(--app-surface-2)" }}
         >
-          <span className="text-[0.65rem]" style={{ color: D.muted }}>
-            {editing ? "Uprav polia a klikni Uložiť." : `${progress.filled}/${progress.total} polí vyplnených`}
-          </span>
-          <div className="flex items-center gap-2">
+          <button
+            onClick={isFirst ? onDismiss : goPrev}
+            disabled={saving}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-colors disabled:opacity-50"
+            style={{ color: D.muted, background: "rgba(148,163,184,0.08)" }}
+          >
+            {isFirst ? <X className="w-3 h-3" /> : <ChevronLeft className="w-3 h-3" />}
+            {isFirst ? "Zrušiť" : "Späť"}
+          </button>
+
+          {!isLast ? (
             <button
-              onClick={() => setEditing((v) => !v)}
+              onClick={goNext}
               disabled={saving}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-colors disabled:opacity-50"
-              style={{ color: D.muted, background: "rgba(148,163,184,0.08)" }}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold disabled:opacity-50"
+              style={{
+                background: `linear-gradient(135deg, ${D.indigo}, ${D.violet})`,
+                color: "white",
+                boxShadow: "0 0 18px rgba(99,102,241,0.45)",
+              }}
             >
-              <Pencil className="w-3 h-3" />
-              {editing ? "Hotovo" : "Upraviť"}
+              Ďalej
+              <ChevronRight className="w-4 h-4" />
             </button>
-            <button
-              onClick={onDismiss}
-              disabled={saving}
-              className="px-3 py-1.5 rounded-xl text-xs font-medium transition-colors disabled:opacity-50"
-              style={{ color: D.muted, background: "rgba(148,163,184,0.08)" }}
-            >
-              Zrušiť
-            </button>
+          ) : (
             <button
               onClick={handleConfirm}
               disabled={saving || (!hasContact && !hasTask && !hasDeal)}
-              className="px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-1.5 disabled:opacity-50"
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold disabled:opacity-50"
               style={{
                 background: `linear-gradient(135deg, ${D.indigo}, ${D.violet})`,
                 color: "white",
                 boxShadow: "0 0 18px rgba(99,102,241,0.55)",
               }}
             >
-              {saving ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Check className="w-4 h-4" />
-              )}
-              {saving ? "Ukladám…" : "Uložiť"}
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+              {saving ? "Ukladám…" : "Uložiť všetko"}
             </button>
-          </div>
+          )}
         </div>
       </motion.div>
     </AnimatePresence>
