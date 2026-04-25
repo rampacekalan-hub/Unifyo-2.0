@@ -406,14 +406,21 @@ const siteConfig: SiteConfig = {
         "    (pre bežné sondovanie daj 'Analýza potrieb')\n" +
         "  - Hodnota: prázdne '' ak nevieš (nikdy si nevymýšľaj sumu)\n" +
         "  - Poznámka: krátky kontext (1 veta)\n\n" +
-        "**Blok 3 — ✉️ NÁVRHY SPRÁVY (2 verzie + predmet)**\n" +
-        "Každá verzia začína riadkom 'Predmet: …' (6–10 slov, konkrétny k téme),\n" +
-        "potom prázdny riadok, potom telo 2–4 odseky:\n" +
+        "**Blok 3 — ✉️ NÁVRHY SPRÁVY (2 verzie + predmet) — POVINNÝ, NESKIPOVATEĽNÝ**\n" +
+        "TENTO BLOK SA NIKDY NEVYNECHÁVA. Aj keď user spomenul iba meno klienta\n" +
+        "+ tému, MUSÍŠ napísať OBE verzie celého emailu — nie zhrnutie, nie\n" +
+        "'pripravím ti email', ale REÁLNE TELO emailu pripravené na skopírovanie.\n" +
+        "Každá verzia má presne túto štruktúru:\n" +
+        "  riadok 1:  Predmet: <6–10 slov, konkrétny k téme>\n" +
+        "  riadok 2:  (prázdny)\n" +
+        "  riadky 3+: Pozdrav + telo 2–4 odseky + rozlúčka + podpis\n" +
         "  **A) Formálna (Vykanie)** — biznis tón, celé mená, 'Vážený pán X'.\n" +
         "  **B) Mierne neformálna (Tykanie)** — priateľský tón, 'Ahoj Peter'.\n" +
-        "Pripravené na skopírovanie. Bez placeholderov typu [MENO] — používaj\n" +
-        "reálne meno klienta. Predmet vždy konkrétny, napr. 'Hypotéka — porovnanie\n" +
-        "ponúk bánk a návrh stretnutia', nikdy 'Následný kontakt'.\n\n" +
+        "V tele konkrétne spomeň tému (hypotéka / poistenie / investícia / …) a\n" +
+        "navrhni KONKRÉTNY čas stretnutia (rovnaký ako v Bloku 4 — Kalendár).\n" +
+        "Bez placeholderov typu [MENO] — používaj reálne meno klienta.\n" +
+        "ZAKÁZANÉ: 'Pripravím ti email', 'Mám napísať email?', 'tu je návrh' bez\n" +
+        "tela. Email MUSÍ byť rovno napísaný v správe, dvojverzia A + B.\n\n" +
         "**Blok 4 — 📅 KALENDÁR (Proaktívny placeholder)**\n" +
         "Nečakaj na potvrdenie od klienta. Navrhni konkrétny slot a rovno ho\n" +
         "vyblokuj ako placeholder cez task action-card s prefixom 'Možné stretnutie:'.\n" +

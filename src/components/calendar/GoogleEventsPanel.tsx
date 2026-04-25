@@ -1,12 +1,14 @@
 "use client";
 // src/components/calendar/GoogleEventsPanel.tsx
 // Compact "next 7 days" widget that sits above the local calendar grid.
-// Silently hides itself when Google isn't connected (409) so it doesn't
-// nag users who never intend to link Gmail. Errors are logged, not shown.
+// When NO calendar provider is connected, shows connect prompts for all
+// three (Google, Outlook, iCloud) — users shouldn't have to dig into
+// Settings → Integrations to find Outlook/iCloud just because the
+// dashboard nag only mentioned Google.
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Calendar, ExternalLink, Loader2, Link2 } from "lucide-react";
+import { Calendar, ExternalLink, Loader2 } from "lucide-react";
 
 interface GoogleCalendarEvent {
   id: string;
@@ -81,34 +83,7 @@ export default function GoogleEventsPanel() {
   }
 
   if (state.kind === "not_connected") {
-    return (
-      <Link
-        href="/settings/integrations"
-        className="block rounded-2xl px-4 py-3 mb-4 transition-colors"
-        style={{
-          background: "linear-gradient(135deg, rgba(99,102,241,0.05), rgba(139,92,246,0.05))",
-          border: `1px dashed ${D.indigoBorder}`,
-        }}
-      >
-        <div className="flex items-center gap-3">
-          <div
-            className="w-8 h-8 rounded-lg flex items-center justify-center"
-            style={{ background: "rgba(99,102,241,0.1)", border: `1px solid ${D.indigoBorder}` }}
-          >
-            <Calendar className="w-4 h-4" style={{ color: D.indigo }} />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="text-xs font-semibold" style={{ color: D.text }}>
-              Pripoj Google Kalendár
-            </div>
-            <div className="text-[11px]" style={{ color: D.muted }}>
-              Udalosti sa zobrazia vedľa tvojich úloh.
-            </div>
-          </div>
-          <Link2 className="w-3.5 h-3.5 flex-shrink-0" style={{ color: D.indigo }} />
-        </div>
-      </Link>
-    );
+    return <ConnectProviders />;
   }
 
   const upcoming = state.events.slice(0, 6);
@@ -164,6 +139,61 @@ export default function GoogleEventsPanel() {
       </ul>
     </div>
   );
+}
+
+// Multi-provider connect prompt. Three buttons (Google, Outlook, iCloud).
+// Google + Microsoft are OAuth — same /start pattern. Apple is app-password
+// based and lives behind the integrations page (CalDAV form).
+function ConnectProviders() {
+  return (
+    <div
+      className="rounded-2xl p-4 mb-4"
+      style={{
+        background: "linear-gradient(135deg, rgba(99,102,241,0.05), rgba(139,92,246,0.05))",
+        border: `1px dashed ${D.indigoBorder}`,
+      }}
+    >
+      <div className="flex items-center gap-2 mb-2">
+        <Calendar className="w-3.5 h-3.5" style={{ color: D.indigo }} />
+        <h3 className="text-xs font-bold tracking-wide" style={{ color: D.text }}>
+          PREPOJ KALENDÁR
+        </h3>
+      </div>
+      <p className="text-[11px] mb-3" style={{ color: D.muted }}>
+        Udalosti sa zobrazia vedľa tvojich úloh. Vyber poskytovateľa:
+      </p>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+        <a
+          href="/api/integrations/google/start"
+          className="flex items-center justify-center gap-2 text-[11px] font-semibold px-3 py-2 rounded-lg transition-colors"
+          style={{ background: "rgba(255,255,255,0.6)", border: `1px solid ${D.indigoBorder}`, color: D.text }}
+        >
+          <ProviderDot color="#ea4335" />
+          Google
+        </a>
+        <a
+          href="/api/integrations/microsoft/start"
+          className="flex items-center justify-center gap-2 text-[11px] font-semibold px-3 py-2 rounded-lg transition-colors"
+          style={{ background: "rgba(255,255,255,0.6)", border: `1px solid ${D.indigoBorder}`, color: D.text }}
+        >
+          <ProviderDot color="#0078d4" />
+          Outlook
+        </a>
+        <Link
+          href="/settings/integrations#apple"
+          className="flex items-center justify-center gap-2 text-[11px] font-semibold px-3 py-2 rounded-lg transition-colors"
+          style={{ background: "rgba(255,255,255,0.6)", border: `1px solid ${D.indigoBorder}`, color: D.text }}
+        >
+          <ProviderDot color="#1d1d1f" />
+          iCloud
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+function ProviderDot({ color }: { color: string }) {
+  return <span className="w-2 h-2 rounded-full inline-block" style={{ background: color }} />;
 }
 
 function formatWhen(e: GoogleCalendarEvent): string {
