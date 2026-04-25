@@ -98,10 +98,46 @@ export async function POST(req: NextRequest) {
     content: m.content,
   }));
 
+  // Inject real calendar context so AI can fill concrete ISO dates in
+  // task action-cards (placeholder meeting slots) instead of leaving them
+  // empty or echoing literal placeholders like "NAJBLIZSI_STVRTOK_ISO".
+  const now = new Date();
+  const dayNamesSk = ["nedeľa", "pondelok", "utorok", "streda", "štvrtok", "piatok", "sobota"];
+  const fmtIso = (d: Date) => d.toISOString().slice(0, 10);
+  const addDays = (n: number) => {
+    const d = new Date(now);
+    d.setDate(d.getDate() + n);
+    return d;
+  };
+  // Map weekday (Mon..Fri) -> next occurrence ISO
+  const upcoming: Record<string, string> = {};
+  for (let i = 1; i <= 14; i++) {
+    const d = addDays(i);
+    const wd = d.getDay(); // 0=Sun..6=Sat
+    if (wd >= 1 && wd <= 5) {
+      const name = dayNamesSk[wd];
+      if (!upcoming[name]) upcoming[name] = fmtIso(d);
+    }
+  }
+  const calendarContext =
+    "## DNEŠNÝ KALENDÁROVÝ KONTEXT (fakty — používaj reálne ISO dátumy)\n" +
+    `Dnes je ${dayNamesSk[now.getDay()]} ${fmtIso(now)}.\n` +
+    `Zajtra: ${fmtIso(addDays(1))}\n` +
+    `Pozajtra: ${fmtIso(addDays(2))}\n` +
+    `Najbližší pondelok: ${upcoming["pondelok"]}\n` +
+    `Najbližší utorok: ${upcoming["utorok"]}\n` +
+    `Najbližšia streda: ${upcoming["streda"]}\n` +
+    `Najbližší štvrtok: ${upcoming["štvrtok"]}\n` +
+    `Najbližší piatok: ${upcoming["piatok"]}\n` +
+    "Keď generuješ 'Dátum' v task action-card, VŽDY použi konkrétny ISO " +
+    "z tohto zoznamu — nikdy literál 'NAJBLIZSI_STVRTOK_ISO' ani prázdny string. " +
+    "Pre placeholder stretnutia vyber 2–5 pracovných dní dopredu (pon–pia, 9:00–17:00).\n";
+
   const systemPrompt = [
     policyLines,
     userPolicyLines,
     "Si Personal Neural OS pre život a prácu. Si diskrétny, empatický a zameraný na výsledky.",
+    calendarContext,
     config.ai.systemPrompts.base,
     config.ai.systemPrompts[module] ?? "",
     styleInstr,
