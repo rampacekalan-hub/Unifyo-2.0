@@ -309,11 +309,18 @@ export default function DashboardClient({ user }: DashboardClientProps) {
             email: draft.contact["Email"] || undefined,
             phone: draft.contact["Telefón"] || undefined,
             company: draft.contact["Firma"] || undefined,
+            // Carry the AI-extracted note through. Server attaches it as
+            // a CrmNote (append-only), giving each contact a chronological
+            // memory the AI can reference next turn.
+            note: draft.contact["Poznámka"] || undefined,
           }),
         });
         if (!res.ok) throw new Error("contact");
         const saved = await res.json().catch(() => null);
         contactId = saved?.id as string | undefined;
+        if (saved?._merged) {
+          toast.info(`${draft.contact["Meno"]} už bol v CRM — doplnili sme nové údaje a pridali poznámku.`);
+        }
       }
 
       // 2) Deal + task in parallel — task doesn't depend on contactId,

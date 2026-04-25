@@ -27,10 +27,62 @@ export async function POST(req: NextRequest) {
   const { session, response } = await requireAuth(req);
   if (response) return response;
   try {
-    const { name, company, email, phone } = await req.json();
+    const { name, company, email, phone, note } = await req.json();
     if (!name) return NextResponse.json({ error: "Meno je povinné" }, { status: 400 });
+
+    // ── DEDUPE ─────────────────────────────────────────────────────
+    // The AI assistant routinely re-creates the same person every turn
+    // because it can't read its own past output. Match by name
+    // (case-insensitive) for the same user and merge instead of
+    // duplicating. Empty incoming fields never overwrite stored ones —
+    // that prevents the wizard from blanking a real email when the LLM
+    // streams a follow-up card without it.
+    const existing = await prisma.crmContact.findFirst({
+      where: {
+        userId: session.userId,
+        name: { equals: String(name).trim(), mode: "insensitive" },
+      },
+      include: { notes: { orderBy: { createdAt: "desc" }, take: 1 } },
+    });
+
+    const trim = (s: unknown) => (typeof s === "string" ? s.trim() : "");
+    const incomingNote = trim(note);
+
+    if (existing) {
+      // Merge: only fill fields that are currently empty.
+      const patch: { company?: string; email?: string; phone?: string } = {};
+      if (!existing.company && trim(company)) patch.company = trim(company);
+      if (!existing.email && trim(email))     patch.email   = trim(email);
+      if (!existing.phone && trim(phone))     patch.phone   = trim(phone);
+
+      const lastNoteContent = existing.notes[0]?.content?.trim() ?? "";
+      const shouldAppendNote =
+        incomingNote.length > 0 && incomingNote !== lastNoteContent;
+
+      const updated = await prisma.crmContact.update({
+        where: { id: existing.id },
+        data: {
+          ...patch,
+          ...(shouldAppendNote
+            ? { notes: { create: { content: incomingNote } } }
+            : {}),
+        },
+        include: { notes: { orderBy: { createdAt: "desc" }, take: 5 } },
+      });
+      return NextResponse.json({ ...updated, _merged: true });
+    }
+
+    // No existing match → create + optional first note.
     const contact = await prisma.crmContact.create({
-      data: { userId: session.userId, name, company, email, phone },
+      data: {
+        userId: session.userId,
+        name: trim(name),
+        company: trim(company) || null,
+        email: trim(email) || null,
+        phone: trim(phone) || null,
+        ...(incomingNote ? { notes: { create: { content: incomingNote } } } : {}),
+      },
+      include: { notes: { orderBy: { createdAt: "desc" }, take: 5 } },
     });
     return NextResponse.json(contact);
   } catch { return NextResponse.json({ error: "DB error" }, { status: 500 }); }

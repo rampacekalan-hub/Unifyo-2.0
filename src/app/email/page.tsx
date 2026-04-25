@@ -304,54 +304,160 @@ function LoadingCard() {
   return <SkeletonList rows={5} />;
 }
 
-function NotConnectedCard() {
-  // Three-provider connect prompt — same UX as the calendar widget.
-  // Email schránka môže byť Gmail / Outlook / iCloud — používateľ si volí.
+// Brand glyphs — inline SVG so we never ship a 404 image and they
+// inherit the parent's font color when needed. Sized for 24px buckets.
+function GmailLogo() {
   return (
-    <div
-      className="rounded-2xl p-6 text-center"
+    <svg width="28" height="22" viewBox="0 0 24 18" aria-hidden>
+      <path fill="#4285F4" d="M0 18V4l5 3v11z" />
+      <path fill="#34A853" d="M19 18v-11l5-3v14z" />
+      <path fill="#FBBC04" d="M0 4l12 8 12-8v-2a2 2 0 00-2-2h-1L12 7 2 0H1a2 2 0 00-1 2z" />
+      <path fill="#EA4335" d="M0 4v0L12 12 24 4l-1.5-2L12 9 1.5 2z" opacity=".95" />
+      <path fill="#C5221F" d="M5 7L0 4v0L12 12l-7-5z" />
+    </svg>
+  );
+}
+function OutlookLogo() {
+  return (
+    <svg width="26" height="26" viewBox="0 0 32 32" aria-hidden>
+      <rect x="2" y="6" width="28" height="20" rx="2" fill="#0F78D4" />
+      <path fill="#fff" d="M14 24V8l16 4v8z" opacity=".15" />
+      <path fill="#fff" d="M2 8l14 8 14-8v18a2 2 0 01-2 2H4a2 2 0 01-2-2z" opacity=".0" />
+      <circle cx="10" cy="16" r="6" fill="#fff" />
+      <text x="10" y="20" textAnchor="middle" fontFamily="Arial" fontWeight="bold" fontSize="9" fill="#0F78D4">O</text>
+    </svg>
+  );
+}
+function ICloudLogo() {
+  return (
+    <svg width="30" height="22" viewBox="0 0 32 22" aria-hidden>
+      <path
+        fill="#cbd5e1"
+        d="M24.5 21H8a7 7 0 01-1.6-13.8A8 8 0 0122 6.5a5.5 5.5 0 012.5 14.5z"
+      />
+      <path
+        fill="#94a3b8"
+        d="M24.5 21H16V6.6A8 8 0 0122 6.5a5.5 5.5 0 012.5 14.5z"
+        opacity=".5"
+      />
+    </svg>
+  );
+}
+
+interface ProviderProps {
+  href: string;
+  Logo: React.FC;
+  name: string;
+  desc: string;
+  accent: string;
+}
+function ProviderTile({ href, Logo, name, desc, accent }: ProviderProps) {
+  return (
+    <a
+      href={href}
+      className="group flex flex-col items-center gap-3 p-5 rounded-2xl transition-all duration-200 hover:-translate-y-0.5"
       style={{
-        background: "linear-gradient(135deg, rgba(99,102,241,0.06), rgba(139,92,246,0.06))",
-        border: "1px dashed rgba(99,102,241,0.25)",
+        background: "var(--app-surface)",
+        border: "1px solid var(--app-border)",
+        boxShadow: "0 1px 0 rgba(255,255,255,0.04) inset, 0 8px 24px rgba(0,0,0,0.25)",
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.borderColor = accent;
+        e.currentTarget.style.boxShadow = `0 1px 0 rgba(255,255,255,0.04) inset, 0 12px 28px ${accent}33`;
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.borderColor = "var(--app-border)";
+        e.currentTarget.style.boxShadow = "0 1px 0 rgba(255,255,255,0.04) inset, 0 8px 24px rgba(0,0,0,0.25)";
       }}
     >
       <div
-        className="w-12 h-12 mx-auto rounded-xl flex items-center justify-center mb-3"
-        style={{ background: "rgba(99,102,241,0.12)", border: "1px solid rgba(99,102,241,0.25)" }}
+        className="w-14 h-14 rounded-2xl flex items-center justify-center"
+        style={{
+          background: "rgba(255,255,255,0.04)",
+          border: "1px solid var(--app-border)",
+        }}
       >
-        <Inbox className="w-5 h-5" style={{ color: "#818cf8" }} />
+        <Logo />
       </div>
-      <h3 className="text-sm font-bold mb-1" style={{ color: "var(--app-text)" }}>
-        Prepoj svoju schránku
-      </h3>
-      <p className="text-[12px] mb-4" style={{ color: D.muted }}>
-        Všetky emaily uvidíš tu, bez prepínania kariet. AI ich priradí ku kontaktom a navrhne follow-up.
-      </p>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 max-w-md mx-auto">
-        <a
+      <div className="text-center">
+        <div className="text-sm font-bold mb-0.5" style={{ color: "var(--app-text)" }}>
+          {name}
+        </div>
+        <div className="text-[11px]" style={{ color: D.muted }}>
+          {desc}
+        </div>
+      </div>
+      <span
+        className="text-[11px] font-semibold px-3 py-1.5 rounded-full transition-colors"
+        style={{
+          background: `${accent}1f`,
+          color: accent,
+          border: `1px solid ${accent}55`,
+        }}
+      >
+        Pripojiť →
+      </span>
+    </a>
+  );
+}
+
+function NotConnectedCard() {
+  return (
+    <div
+      className="rounded-3xl p-8"
+      style={{
+        background:
+          "radial-gradient(120% 100% at 50% 0%, rgba(99,102,241,0.10), rgba(139,92,246,0.04) 50%, transparent 80%)," +
+          " var(--app-surface-2)",
+        border: "1px solid var(--app-border)",
+      }}
+    >
+      <div className="text-center mb-6">
+        <div
+          className="inline-flex items-center justify-center w-14 h-14 rounded-2xl mb-3"
+          style={{
+            background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+            boxShadow: "0 8px 24px rgba(99,102,241,0.35)",
+          }}
+        >
+          <Inbox className="w-6 h-6 text-white" />
+        </div>
+        <h2 className="text-lg font-bold mb-1" style={{ color: "var(--app-text)" }}>
+          Prepoj svoju schránku
+        </h2>
+        <p className="text-[13px] max-w-md mx-auto" style={{ color: D.muted }}>
+          Bezpečné OAuth prepojenie. Tokeny šifrujeme, nikdy nečítame heslo.
+          Kedykoľvek odpojíš v Nastaveniach.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-2xl mx-auto">
+        <ProviderTile
           href="/api/integrations/google/start"
-          className="flex items-center justify-center gap-2 text-[12px] font-semibold px-3 py-2.5 rounded-lg transition-colors"
-          style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(99,102,241,0.25)", color: "var(--app-text)" }}
-        >
-          <span className="w-2 h-2 rounded-full" style={{ background: "#ea4335" }} />
-          Gmail
-        </a>
-        <a
+          Logo={GmailLogo}
+          name="Gmail"
+          desc="Google Workspace · @gmail.com"
+          accent="#ea4335"
+        />
+        <ProviderTile
           href="/api/integrations/microsoft/start"
-          className="flex items-center justify-center gap-2 text-[12px] font-semibold px-3 py-2.5 rounded-lg transition-colors"
-          style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(99,102,241,0.25)", color: "var(--app-text)" }}
-        >
-          <span className="w-2 h-2 rounded-full" style={{ background: "#0078d4" }} />
-          Outlook
-        </a>
-        <a
+          Logo={OutlookLogo}
+          name="Outlook"
+          desc="Microsoft 365 · @outlook.com"
+          accent="#0F78D4"
+        />
+        <ProviderTile
           href="/settings/integrations#apple"
-          className="flex items-center justify-center gap-2 text-[12px] font-semibold px-3 py-2.5 rounded-lg transition-colors"
-          style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(99,102,241,0.25)", color: "var(--app-text)" }}
-        >
-          <span className="w-2 h-2 rounded-full" style={{ background: "#cbd5e1" }} />
-          iCloud
-        </a>
+          Logo={ICloudLogo}
+          name="iCloud Mail"
+          desc="Apple ID · @icloud.com"
+          accent="#94a3b8"
+        />
+      </div>
+
+      <div className="flex items-center justify-center gap-2 mt-6 text-[11px]" style={{ color: D.mutedDark }}>
+        <span className="w-1 h-1 rounded-full" style={{ background: "#10b981" }} />
+        Šifrované cez TLS · žiadne dáta neopúšťajú EU
       </div>
     </div>
   );

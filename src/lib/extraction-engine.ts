@@ -282,6 +282,30 @@ function isValidName(s: string): boolean {
   return /[A-ZÁČŠŽÝÍÉÚÄÔŇ][a-záčšžýíéúäôň]{1,}/.test(s);
 }
 
+// Fabricated values that the LLM keeps echoing from prompt examples or
+// its training data. We strip these BEFORE the card reaches the UI so
+// the user never sees a wizard pre-filled with fake `+421 900 000 000`
+// or `peter@firma.sk`. The model is *told* not to fabricate, but model
+// adherence isn't 100% — server-side belt is required.
+const FABRICATED_PATTERNS: RegExp[] = [
+  // Phones with all-zero or all-same trailing digits
+  /^\+?\s*4?2?1?\s*9?\d?\d?\s*0{3}\s*0{3}\s*0{3}$/i,         // +421 900 000 000 / 421 9XX 000 000
+  /^\+?\s*\d[\d\s]*?(\d)\1{4,}\s*$/,                          // run of 5+ same digits
+  /^\+?\s*0{6,}/,                                              // leading 0000000
+  // Stock placeholder emails
+  /@(firma|email|test|example|domena|placeholder)\.(sk|cz|com|eu)$/i,
+  /^(test|placeholder|priklad|example|firma|info)@/i,
+  // Stock placeholder companies (Greek-letter / Test s.r.o.)
+  /^(Alfa|Beta|Gamma|Delta|Test|Vzor|Príklad|Firma\s+XYZ)\s+s\.?\s*r\.?\s*o\.?$/i,
+  /^(Firma|Spoločnosť)\s+[A-Z]\.?$/i,
+];
+
+function isFabricated(val: string): boolean {
+  const s = val.trim();
+  if (!s) return false;
+  return FABRICATED_PATTERNS.some((re) => re.test(s));
+}
+
 function sanitiseFields(fields: Record<string, string>): Record<string, string> {
   const out: Record<string, string> = {};
   for (const [k, v] of Object.entries(fields)) {
@@ -289,6 +313,10 @@ function sanitiseFields(fields: Record<string, string>): Record<string, string> 
     if (k === "Meno") {
       val = cleanName(val);
       out[k] = isValidName(val) ? val : "";
+    } else if (k === "Email" || k === "Telefón" || k === "Firma") {
+      // Drop fabricated contact details before they reach the UI.
+      if (isFabricated(val)) val = "";
+      out[k] = BAD_NAME.test(val) ? "" : val;
     } else {
       out[k] = BAD_NAME.test(val) ? "" : val;
     }

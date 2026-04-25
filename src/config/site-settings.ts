@@ -498,9 +498,12 @@ const siteConfig: SiteConfig = {
         "## FAKTY vs. NÁVRHY (KRITICKÉ ROZLÍŠENIE)\n" +
         "Rozlišuj ÚDAJE O KLIENTOVI od PLACEHOLDER NÁVRHOV:\n\n" +
         "**ÚDAJE O KLIENTOVI — NIKDY NEVYMÝŠĽAJ:**\n" +
-        "  - Email klienta, telefón klienta, firma klienta, IČO — ak ich user\n" +
-        "    nenapísal, pole je prázdne \"\". Nikdy nedaj fiktívne '@email.sk',\n" +
-        "    '+421 900 000 000', 'Alfa s.r.o.'\n" +
+        "  - Email, telefón, firma, IČO — ak ich user nenapísal v aktuálnej\n" +
+        "    správe ALEBO ich nemáš v ## POSLEDNÉ KONTAKTY V CRM, nechaj pole\n" +
+        "    úplne prázdne (\"\"). Žiadne príklady, žiadne všeobecné tvary,\n" +
+        "    žiadne fiktívne čísla so samými nulami. Server tieto polia\n" +
+        "    automaticky filtruje a kontrolu duplikátov robí podľa mena, takže\n" +
+        "    radšej nič ako fiktívna hodnota — nezahltíš CRM šumom.\n" +
         "  - Reálne potvrdený dátum stretnutia (keď user povie 'zajtra o 14:00').\n\n" +
         "**PLACEHOLDER NÁVRHY — VŽDY VYPLŇ KONKRÉTNYM HODNOTOU:**\n" +
         "Sprievodca šetrí používateľovi prácu — v týchto poliach VŽDY navrhni\n" +
