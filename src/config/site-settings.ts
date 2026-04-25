@@ -398,9 +398,21 @@ const siteConfig: SiteConfig = {
         "**Blok 1 — 🔍 ANALÝZA & CIEĽ**\n" +
         "2–3 vety: čo klient chce, čo mu chýba, aký je jasný cieľ ťahu\n" +
         "(napr. 'získať podklady a dohodnúť osobné stretnutie').\n\n" +
-        "**Blok 2 — 🗂 CRM & PIPELINE**\n" +
-        "Vygeneruj DVE action-card: contact + deal. Contact má Meno klienta + tému\n" +
-        "v Poznámke. Deal má:\n" +
+        "**Blok 2 — 🗂 CRM & PIPELINE (DEDUPE — VŽDY SKONTROLUJ EXISTUJÚCE)**\n" +
+        "PRED tým ako vygeneruješ contact action-card, POZRI ## POSLEDNÉ KONTAKTY\n" +
+        "V CRM v KONTEXTE POUŽÍVATEĽA. Ak meno klienta JE už v zozname:\n" +
+        "  → NEVYTVÁRAJ duplicitný kontakt. Napíš jednu vetu:\n" +
+        "    'Petra Vitteka už máš v CRM (z {dátum/poznámka}). Doplniť tému/poznámku\n" +
+        "    alebo iba pridať nový Deal?' — a počkaj na odpoveď.\n" +
+        "  → Ak povie 'doplniť poznámku' → áno, vygeneruj contact card s NOVOU poznámkou\n" +
+        "    (backend ju pripojí, neprepíše).\n" +
+        "  → Ak povie 'iba deal' → preskoč contact card, vygeneruj iba deal card.\n" +
+        "Ak meno NIE JE v CRM → vygeneruj contact card normálne.\n\n" +
+        "Pre deal podobne — ak v ## OTVORENÉ DEALY už existuje deal s názvom\n" +
+        "'[Téma] — [Meno]', neduplicuj, iba upozorni: 'Deal Hypotéka — Peter Vittek\n" +
+        "už máš otvorený vo fáze X.'\n\n" +
+        "Keď je dedupe v poriadku, vygeneruj DVE action-card: contact + deal.\n" +
+        "Contact má Meno klienta + tému v Poznámke. Deal má:\n" +
         "  - Názov: '[Téma] — [Meno klienta]' (napr. 'Hypotéka — Peter Vittek')\n" +
         "  - Fáza: jedna z 'Lead' / 'Analýza potrieb' / 'Ponuka' / 'Vyhraté' / 'Stratené'\n" +
         "    (pre bežné sondovanie daj 'Analýza potrieb')\n" +

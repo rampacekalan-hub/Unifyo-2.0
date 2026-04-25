@@ -21,7 +21,6 @@ import {
 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import { SkeletonList } from "@/components/ui/Skeleton";
-import EmptyState from "@/components/ui/EmptyState";
 
 interface GmailMessageSummary {
   id: string;
@@ -306,14 +305,55 @@ function LoadingCard() {
 }
 
 function NotConnectedCard() {
+  // Three-provider connect prompt — same UX as the calendar widget.
+  // Email schránka môže byť Gmail / Outlook / iCloud — používateľ si volí.
   return (
-    <EmptyState
-      Icon={Inbox}
-      tone="accent"
-      title="Pripoj Gmail"
-      description="Všetky emaily uvidíš tu, bez prepínania kariet. AI ich priradí ku kontaktom a navrhne follow-up."
-      cta={{ label: "Pripojiť Google", href: "/settings/integrations" }}
-    />
+    <div
+      className="rounded-2xl p-6 text-center"
+      style={{
+        background: "linear-gradient(135deg, rgba(99,102,241,0.06), rgba(139,92,246,0.06))",
+        border: "1px dashed rgba(99,102,241,0.25)",
+      }}
+    >
+      <div
+        className="w-12 h-12 mx-auto rounded-xl flex items-center justify-center mb-3"
+        style={{ background: "rgba(99,102,241,0.12)", border: "1px solid rgba(99,102,241,0.25)" }}
+      >
+        <Inbox className="w-5 h-5" style={{ color: "#818cf8" }} />
+      </div>
+      <h3 className="text-sm font-bold mb-1" style={{ color: "var(--app-text)" }}>
+        Prepoj svoju schránku
+      </h3>
+      <p className="text-[12px] mb-4" style={{ color: D.muted }}>
+        Všetky emaily uvidíš tu, bez prepínania kariet. AI ich priradí ku kontaktom a navrhne follow-up.
+      </p>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 max-w-md mx-auto">
+        <a
+          href="/api/integrations/google/start"
+          className="flex items-center justify-center gap-2 text-[12px] font-semibold px-3 py-2.5 rounded-lg transition-colors"
+          style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(99,102,241,0.25)", color: "var(--app-text)" }}
+        >
+          <span className="w-2 h-2 rounded-full" style={{ background: "#ea4335" }} />
+          Gmail
+        </a>
+        <a
+          href="/api/integrations/microsoft/start"
+          className="flex items-center justify-center gap-2 text-[12px] font-semibold px-3 py-2.5 rounded-lg transition-colors"
+          style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(99,102,241,0.25)", color: "var(--app-text)" }}
+        >
+          <span className="w-2 h-2 rounded-full" style={{ background: "#0078d4" }} />
+          Outlook
+        </a>
+        <a
+          href="/settings/integrations#apple"
+          className="flex items-center justify-center gap-2 text-[12px] font-semibold px-3 py-2.5 rounded-lg transition-colors"
+          style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(99,102,241,0.25)", color: "var(--app-text)" }}
+        >
+          <span className="w-2 h-2 rounded-full" style={{ background: "#cbd5e1" }} />
+          iCloud
+        </a>
+      </div>
+    </div>
   );
 }
 
