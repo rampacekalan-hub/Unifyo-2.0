@@ -13,6 +13,7 @@ import { confirmWithUndo } from "@/lib/undoable";
 import AppLayout from "@/components/layout/AppLayout";
 import EmptyIllustration from "@/components/ui/EmptyIllustration";
 import ShareButton from "@/components/ui/ShareButton";
+import CalendarConnectBanner from "@/components/calendar/CalendarConnectBanner";
 import { track } from "@/lib/analytics";
 
 interface Task {
@@ -448,6 +449,10 @@ function CalendarPageInner() {
       <div className="flex flex-col lg:flex-row h-full p-3 md:p-5 gap-3 md:gap-5">
         {/* ── Calendar grid ── */}
         <div className="flex-1 min-w-0 flex flex-col min-h-0">
+          {/* Banner appears only when no calendar provider is linked.
+              Independent from email — user can connect any of the
+              three (Google / Outlook / iCloud) here. */}
+          <CalendarConnectBanner />
           {/* Compact one-line legend on top, inline to save vertical
               space. Owner flagged that the grid didn't fit on screen. */}
           <CalendarLegend />
