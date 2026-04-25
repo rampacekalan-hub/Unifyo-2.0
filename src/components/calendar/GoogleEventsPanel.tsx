@@ -7,8 +7,8 @@
 // dashboard nag only mentioned Google.
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { Calendar, ExternalLink, Loader2 } from "lucide-react";
+import AppleConnectModal from "@/components/integrations/AppleConnectModal";
 
 interface GoogleCalendarEvent {
   id: string;
@@ -143,8 +143,11 @@ export default function GoogleEventsPanel() {
 
 // Multi-provider connect prompt. Three buttons (Google, Outlook, iCloud).
 // Google + Microsoft are OAuth — same /start pattern. Apple is app-password
-// based and lives behind the integrations page (CalDAV form).
+// based — opens an inline modal on this page rather than punting the
+// user to /settings, so they can pick a calendar provider independent
+// of whatever they chose for email.
 function ConnectProviders() {
+  const [appleOpen, setAppleOpen] = useState(false);
   return (
     <div
       className="rounded-2xl p-4 mb-4"
@@ -160,13 +163,13 @@ function ConnectProviders() {
         </h3>
       </div>
       <p className="text-[11px] mb-3" style={{ color: D.muted }}>
-        Udalosti sa zobrazia vedľa tvojich úloh. Vyber poskytovateľa:
+        Vyber si nezávisle od emailu — môžeš mať napr. Apple kalendár a Gmail e-mail:
       </p>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
         <a
           href="/api/integrations/google/start"
           className="flex items-center justify-center gap-2 text-[11px] font-semibold px-3 py-2 rounded-lg transition-colors"
-          style={{ background: "rgba(255,255,255,0.6)", border: `1px solid ${D.indigoBorder}`, color: D.text }}
+          style={{ background: "var(--app-surface-2)", border: `1px solid ${D.indigoBorder}`, color: D.text }}
         >
           <ProviderDot color="#ea4335" />
           Google
@@ -174,20 +177,22 @@ function ConnectProviders() {
         <a
           href="/api/integrations/microsoft/start"
           className="flex items-center justify-center gap-2 text-[11px] font-semibold px-3 py-2 rounded-lg transition-colors"
-          style={{ background: "rgba(255,255,255,0.6)", border: `1px solid ${D.indigoBorder}`, color: D.text }}
+          style={{ background: "var(--app-surface-2)", border: `1px solid ${D.indigoBorder}`, color: D.text }}
         >
           <ProviderDot color="#0078d4" />
           Outlook
         </a>
-        <Link
-          href="/settings/integrations#apple"
+        <button
+          type="button"
+          onClick={() => setAppleOpen(true)}
           className="flex items-center justify-center gap-2 text-[11px] font-semibold px-3 py-2 rounded-lg transition-colors"
-          style={{ background: "rgba(255,255,255,0.6)", border: `1px solid ${D.indigoBorder}`, color: D.text }}
+          style={{ background: "var(--app-surface-2)", border: `1px solid ${D.indigoBorder}`, color: D.text }}
         >
-          <ProviderDot color="#1d1d1f" />
+          <ProviderDot color="#cbd5e1" />
           iCloud
-        </Link>
+        </button>
       </div>
+      {appleOpen && <AppleConnectModal onClose={() => setAppleOpen(false)} />}
     </div>
   );
 }
