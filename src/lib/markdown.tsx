@@ -114,7 +114,24 @@ function renderInline(tokens: InlineToken[], keyBase: string): React.ReactNode[]
             {t.value}
           </code>
         );
-      case "link":
+      case "link": {
+        // In-app anchors (e.g. #unifyo-open-feedback) must NOT open a
+        // new tab — they're handled by global click listeners that
+        // open modals. The FeedbackWidget listener intercepts
+        // #unifyo-open-feedback specifically.
+        const isInAppAnchor = t.href.startsWith("#");
+        if (isInAppAnchor) {
+          return (
+            <a
+              key={key}
+              href={t.href}
+              className="underline decoration-dotted underline-offset-2 hover:opacity-80 cursor-pointer"
+              style={{ color: "#a5b4fc" }}
+            >
+              {t.label}
+            </a>
+          );
+        }
         return (
           <a
             key={key}
@@ -127,6 +144,7 @@ function renderInline(tokens: InlineToken[], keyBase: string): React.ReactNode[]
             {t.label}
           </a>
         );
+      }
       default:
         return <React.Fragment key={key}>{t.value}</React.Fragment>;
     }

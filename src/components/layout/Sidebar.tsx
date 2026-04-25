@@ -10,7 +10,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Bot, Calendar, Mail, Phone, BarChart3, Zap, Kanban,
   Lock, LogOut, ShieldAlert, Menu, X, Settings as SettingsIcon, LayoutDashboard,
+  MessageCircleHeart,
 } from "lucide-react";
+import { openFeedback } from "@/components/ui/FeedbackWidget";
 import Avatar from "@/components/ui/Avatar";
 import { usePrefs } from "@/lib/prefsContext";
 import type { AppId } from "@/lib/userPrefs";
@@ -287,6 +289,24 @@ export default function Sidebar({ user, liveToggles }: SidebarProps) {
             </div>
           </Link>
         )}
+
+        <button
+          type="button"
+          onClick={() => { if (isMobile) setMobileOpen(false); openFeedback(); }}
+          className="w-full flex items-center gap-2 px-3 py-2.5 rounded-2xl transition-all duration-200 mb-1"
+          style={{ color: D.muted }}
+          onMouseEnter={(e) => {
+            (e.currentTarget as HTMLButtonElement).style.color = D.text;
+            (e.currentTarget as HTMLButtonElement).style.background = D.indigoDim;
+          }}
+          onMouseLeave={(e) => {
+            (e.currentTarget as HTMLButtonElement).style.color = D.muted;
+            (e.currentTarget as HTMLButtonElement).style.background = "transparent";
+          }}
+        >
+          <MessageCircleHeart className="w-4 h-4 flex-shrink-0" />
+          <span className={`text-xs ${isMobile ? "block" : "hidden md:block"}`}>Feedback</span>
+        </button>
 
         <button
           type="button"

@@ -1,15 +1,17 @@
 "use client";
 // src/components/ui/FeedbackWidget.tsx
-// Floating feedback button — bottom-left (bottom-right is taken by the
-// floating AI widget / toast stack). Click → compact modal with 4
-// categories, a message field, optional 1–5 rating. Submits to
-// /api/feedback. Deliberately minimal friction; we'd rather take low-
-// signal feedback than lose high-signal feedback to form fatigue.
+// Event-driven feedback modal. There's no built-in trigger — anywhere
+// in the app can open it by dispatching `window.dispatchEvent(new
+// Event("unifyo:open-feedback"))`, or by clicking a link with href
+// "#unifyo-open-feedback" (which the modal intercepts). The earlier
+// floating button cluttered the chrome on every page; opt-in entry
+// points (sidebar item, AI suggestion link, error states) keep the
+// surface clean while feedback stays one click away when it matters.
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { toast } from "sonner";
-import { MessageCircleHeart, Bug, Lightbulb, ThumbsUp, MessageSquare, X, Loader2, Send } from "lucide-react";
+import { Bug, Lightbulb, ThumbsUp, MessageSquare, X, Loader2, Send } from "lucide-react";
 
 const D = {
   indigo: "#6366f1",
@@ -31,12 +33,51 @@ const KINDS: Array<{ id: Kind; label: string; Icon: React.ElementType; color: st
   { id: "general", label: "Ostatné",  Icon: MessageSquare, color: D.indigo },
 ];
 
+export const FEEDBACK_OPEN_EVENT = "unifyo:open-feedback";
+
+export function openFeedback(prefill?: { kind?: Kind; message?: string }) {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(
+    new CustomEvent(FEEDBACK_OPEN_EVENT, { detail: prefill ?? {} }),
+  );
+}
+
 export default function FeedbackWidget() {
   const [open, setOpen] = useState(false);
   const [kind, setKind] = useState<Kind>("general");
   const [message, setMessage] = useState("");
   const [rating, setRating] = useState<number | null>(null);
   const [sending, setSending] = useState(false);
+
+  // Listen for `unifyo:open-feedback` events + a magic anchor click.
+  // The anchor interceptor lets the AI emit a plain markdown link
+  // (`[Pošli mi feedback](#unifyo-open-feedback)`) and have it work
+  // without bespoke renderer code in the chat.
+  useEffect(() => {
+    const onOpen = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { kind?: Kind; message?: string } | undefined;
+      if (detail?.kind) setKind(detail.kind);
+      if (detail?.message) setMessage(detail.message);
+      setOpen(true);
+    };
+    const onClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (!target) return;
+      const a = target.closest("a") as HTMLAnchorElement | null;
+      if (!a) return;
+      const href = a.getAttribute("href") ?? "";
+      if (href === "#unifyo-open-feedback" || href.endsWith("#unifyo-open-feedback")) {
+        e.preventDefault();
+        setOpen(true);
+      }
+    };
+    window.addEventListener(FEEDBACK_OPEN_EVENT, onOpen);
+    window.addEventListener("click", onClick);
+    return () => {
+      window.removeEventListener(FEEDBACK_OPEN_EVENT, onOpen);
+      window.removeEventListener("click", onClick);
+    };
+  }, []);
 
   const submit = async () => {
     const msg = message.trim();
@@ -69,40 +110,6 @@ export default function FeedbackWidget() {
 
   return (
     <>
-      {/* Floating trigger — bottom-left so it doesn't collide with the
-          AI widget (bottom-right) or the sonner toasts. */}
-      <button
-        onClick={() => setOpen(true)}
-        data-press
-        aria-label="Pošli nám feedback"
-        className="fixed z-40 flex items-center gap-2 rounded-full py-2.5 text-xs font-semibold transition"
-        style={{
-          // On phones: above the bottom-nav. On md+ the sidebar
-          // (240px wide) occupies bottom-left, so we shift the widget
-          // clear of it. It sits in the free space between sidebar
-          // and the AI bubble on the right.
-          bottom: "calc(80px + env(safe-area-inset-bottom))",
-          left: "calc(250px + 12px)",
-          paddingLeft: 12,
-          paddingRight: 16,
-          background: "var(--app-surface)",
-          color: D.text,
-          border: `1px solid ${D.border}`,
-          boxShadow: "0 4px 20px rgba(0,0,0,0.4), 0 0 14px rgba(139,92,246,0.2)",
-          backdropFilter: "blur(16px)",
-        }}
-      >
-        <MessageCircleHeart className="w-4 h-4" style={{ color: D.violet }} />
-        <span className="hidden md:inline">Feedback</span>
-      </button>
-      {/* Scoped style — on sub-md viewports pull the widget back to
-          the left edge since there's no sidebar overlay. */}
-      <style jsx>{`
-        @media (max-width: 767px) {
-          button[aria-label="Pošli nám feedback"] { left: 12px !important; }
-        }
-      `}</style>
-
       <AnimatePresence>
         {open && (
           <>

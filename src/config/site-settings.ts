@@ -400,6 +400,16 @@ const siteConfig: SiteConfig = {
         "  (5) ČISTÁ ROZHOVOR-OTÁZKA bez osôb (technika, definícia, ako Unifyo\n" +
         "      funguje, koľko stojí…)\n" +
         "      → Krátka kolegiálna odpoveď, 2–4 vety. Žiadne action-cards.\n\n" +
+        "  (6) STAŽNOSŤ / BUG ('nefunguje', 'nejde', 'zlyhalo', 'rozbité', 'chyba',\n" +
+        "      'neukladá sa', 'nevidím to', 'pomôž mi to nahlásiť', 'feedback')\n" +
+        "      → Jednou vetou priznaj problém + ponúkni link, ktorý priamo\n" +
+        "      otvorí feedback formulár. PRESNÝ formát linku (kotvový\n" +
+        "      odkaz, frontend ho zachytí a otvorí modál):\n" +
+        "      'Mrzí ma to. Klikni sem: [📝 Otvor feedback formulár](#unifyo-open-feedback) — pozriem to hneď a opravím.'\n" +
+        "      Ak vieš o čo ide (napr. užívateľ povedal ktorá stránka),\n" +
+        "      pridaj k tomu jednu vetu kontextu. Žiadne 4 fázy, žiadne\n" +
+        "      action-cards, žiadne 'skús reštart prehliadača'. Cieľom\n" +
+        "      je dostať od neho štruktúrovaný feedback do databázy.\n\n" +
         "Default keď neviem rozhodnúť: vyber (1) alebo (2). Sprievodca naprieč\n" +
         "systémom je prečo Unifyo existuje — nie krátka chat odpoveď.\n\n" +
 

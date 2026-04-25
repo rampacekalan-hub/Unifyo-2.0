@@ -3,8 +3,7 @@
 // Gmail inbox + compose. Falls back to "not connected" state when the
 // user hasn't linked Google yet, with a direct CTA to /settings/integrations.
 
-import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
   Mail,
@@ -13,11 +12,11 @@ import {
   Search,
   Send,
   X,
-  Link2,
   Inbox,
   FileText,
   Star,
   Layers,
+  ExternalLink,
 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import { SkeletonList } from "@/components/ui/Skeleton";
@@ -345,17 +344,24 @@ function ICloudLogo() {
 }
 
 interface ProviderProps {
-  href: string;
+  href?: string;
+  onClick?: () => void;
   Logo: React.FC;
   name: string;
   desc: string;
   accent: string;
 }
-function ProviderTile({ href, Logo, name, desc, accent }: ProviderProps) {
+function ProviderTile({ href, onClick, Logo, name, desc, accent }: ProviderProps) {
+  // Either a navigation link (OAuth start) or a button that opens an
+  // inline form (Apple — no OAuth, needs app-specific password).
+  const Tag = (href ? "a" : "button") as "a" | "button";
+  const interactiveProps = href
+    ? { href }
+    : { type: "button" as const, onClick };
   return (
-    <a
-      href={href}
-      className="group flex flex-col items-center gap-3 p-5 rounded-2xl transition-all duration-200 hover:-translate-y-0.5"
+    <Tag
+      {...(interactiveProps as Record<string, unknown>)}
+      className="group flex flex-col items-center gap-3 p-5 rounded-2xl transition-all duration-200 hover:-translate-y-0.5 text-left"
       style={{
         background: "var(--app-surface)",
         border: "1px solid var(--app-border)",
@@ -397,11 +403,12 @@ function ProviderTile({ href, Logo, name, desc, accent }: ProviderProps) {
       >
         Pripojiť →
       </span>
-    </a>
+    </Tag>
   );
 }
 
 function NotConnectedCard() {
+  const [appleOpen, setAppleOpen] = useState(false);
   return (
     <div
       className="rounded-3xl p-8"
@@ -447,7 +454,7 @@ function NotConnectedCard() {
           accent="#0F78D4"
         />
         <ProviderTile
-          href="/settings/integrations#apple"
+          onClick={() => setAppleOpen(true)}
           Logo={ICloudLogo}
           name="iCloud Mail"
           desc="Apple ID · @icloud.com"
@@ -458,6 +465,170 @@ function NotConnectedCard() {
       <div className="flex items-center justify-center gap-2 mt-6 text-[11px]" style={{ color: D.mutedDark }}>
         <span className="w-1 h-1 rounded-full" style={{ background: "#10b981" }} />
         Šifrované cez TLS · žiadne dáta neopúšťajú EU
+      </div>
+
+      {appleOpen && <AppleConnectModal onClose={() => setAppleOpen(false)} />}
+    </div>
+  );
+}
+
+// Inline iCloud connect — Apple has no OAuth, the user must generate
+// an app-specific password at appleid.apple.com. We surface that flow
+// in-place rather than dropping the user on /settings/integrations,
+// which is jarring when they're sitting on the email page.
+function AppleConnectModal({ onClose }: { onClose: () => void }) {
+  const [appleId, setAppleId] = useState("");
+  const [pw, setPw] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  // Apple ASPs are 16 chars, displayed as 4-4-4-4 with hyphens. Strip
+  // spaces+hyphens before sending so users can paste either format.
+  const cleanedPw = pw.replace(/[\s-]/g, "");
+  const looksLikeASP = cleanedPw.length === 16;
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setErr(null);
+    if (!appleId.includes("@")) {
+      setErr("Zadaj celý Apple ID e-mail (napr. meno@icloud.com).");
+      return;
+    }
+    if (cleanedPw.length < 16) {
+      setErr("App-specific password má 16 znakov (formát xxxx-xxxx-xxxx-xxxx). Vygeneruj ho na appleid.apple.com — nezadávaj svoje bežné Apple ID heslo.");
+      return;
+    }
+    setBusy(true);
+    try {
+      const res = await fetch("/api/integrations/apple/connect", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ appleId: appleId.trim(), password: cleanedPw }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        // Apple's "auth_failed" almost always means the user pasted
+        // their normal Apple ID password. Spell that out — the
+        // generic "skontroluj heslo" hint costs us most of our
+        // iCloud connect attempts.
+        if (data.error === "auth_failed") {
+          throw new Error(
+            "Apple nás odmietol. Vygeneruj NOVÝ app-specific password na appleid.apple.com → Sign-In and Security → App-Specific Passwords. Bežné Apple ID heslo Apple cez CalDAV nepustí."
+          );
+        }
+        throw new Error(data.hint || data.error || `HTTP ${res.status}`);
+      }
+      toast.success("iCloud prepojený.");
+      onClose();
+      // Reload so the inbox state re-evaluates.
+      if (typeof window !== "undefined") window.location.reload();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Pripojenie zlyhalo.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-[90] flex items-center justify-center p-4"
+      style={{ background: "rgba(3,4,10,0.7)", backdropFilter: "blur(6px)" }}
+      onClick={onClose}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-md p-6 rounded-2xl"
+        style={{
+          background: "var(--app-surface)",
+          border: "1px solid var(--app-border)",
+          boxShadow: "0 20px 60px rgba(0,0,0,0.55)",
+        }}
+      >
+        <div className="flex items-start justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <div
+              className="w-11 h-11 rounded-xl flex items-center justify-center"
+              style={{ background: "rgba(255,255,255,0.04)", border: "1px solid var(--app-border)" }}
+            >
+              <ICloudLogo />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold" style={{ color: D.text }}>Prepoj iCloud</h3>
+              <p className="text-[11px]" style={{ color: D.muted }}>
+                Cez CalDAV. Heslo šifrujeme AES-256.
+              </p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-1" aria-label="Zavrieť">
+            <X className="w-4 h-4" style={{ color: D.muted }} />
+          </button>
+        </div>
+
+        <a
+          href="https://appleid.apple.com/account/manage"
+          target="_blank"
+          rel="noreferrer"
+          className="flex items-center justify-between gap-2 mb-4 px-3 py-2.5 rounded-lg text-[11px] font-semibold"
+          style={{
+            background: "rgba(99,102,241,0.08)",
+            border: "1px solid var(--app-border)",
+            color: D.indigo,
+          }}
+        >
+          <span>1) Vygeneruj app-specific password</span>
+          <ExternalLink className="w-3.5 h-3.5" />
+        </a>
+
+        <form onSubmit={submit} className="space-y-2.5">
+          <input
+            type="email"
+            value={appleId}
+            onChange={(e) => setAppleId(e.target.value)}
+            placeholder="meno@icloud.com"
+            autoComplete="email"
+            className="w-full text-xs px-3 py-2.5 rounded-lg outline-none"
+            style={{ background: "var(--app-surface-2)", border: "1px solid var(--app-border)", color: D.text }}
+          />
+          <input
+            type="password"
+            value={pw}
+            onChange={(e) => setPw(e.target.value)}
+            placeholder="xxxx-xxxx-xxxx-xxxx"
+            autoComplete="off"
+            className="w-full text-xs px-3 py-2.5 rounded-lg outline-none font-mono"
+            style={{ background: "var(--app-surface-2)", border: "1px solid var(--app-border)", color: D.text }}
+          />
+          <p className="text-[10px]" style={{ color: looksLikeASP ? "#10b981" : D.mutedDark }}>
+            {pw === ""
+              ? "16 znakov, formát xxxx-xxxx-xxxx-xxxx. NIE bežné Apple ID heslo."
+              : looksLikeASP
+              ? "✓ Formát vyzerá správne."
+              : `Zatiaľ ${cleanedPw.length}/16 znakov.`}
+          </p>
+
+          {err && (
+            <div
+              className="text-[11px] px-3 py-2 rounded-lg"
+              style={{ background: "rgba(244,63,94,0.08)", border: "1px solid rgba(244,63,94,0.3)", color: "#fda4af" }}
+            >
+              {err}
+            </div>
+          )}
+
+          <button
+            type="submit"
+            disabled={busy}
+            className="w-full inline-flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-xs font-bold disabled:opacity-60"
+            style={{
+              background: "linear-gradient(135deg,#6366f1,#8b5cf6)",
+              color: "white",
+              boxShadow: "0 0 14px rgba(99,102,241,0.3)",
+            }}
+          >
+            {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
+            Pripojiť iCloud
+          </button>
+        </form>
       </div>
     </div>
   );

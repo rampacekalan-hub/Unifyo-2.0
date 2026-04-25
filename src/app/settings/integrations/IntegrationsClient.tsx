@@ -632,8 +632,19 @@ function AppleCard({
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!appleId.includes("@") || password.trim().length < 10) {
-      toast.error("Zadaj Apple ID a app-specific password (aspoň 10 znakov).");
+    // Apple ASPs are 16 chars, surfaced as xxxx-xxxx-xxxx-xxxx. Strip
+    // spaces+hyphens so users can paste either format. The #1 failure
+    // mode in this form is the user typing their normal Apple ID
+    // password — call that out explicitly on auth_failed.
+    const cleaned = password.replace(/[\s-]/g, "");
+    if (!appleId.includes("@")) {
+      toast.error("Zadaj celý Apple ID e-mail.");
+      return;
+    }
+    if (cleaned.length !== 16) {
+      toast.error(
+        "App-specific password má 16 znakov (xxxx-xxxx-xxxx-xxxx). Vygeneruj ho na appleid.apple.com — bežné Apple heslo Apple cez CalDAV nepustí."
+      );
       return;
     }
     setConnecting(true);
@@ -641,11 +652,18 @@ function AppleCard({
       const res = await fetch("/api/integrations/apple/connect", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ appleId: appleId.trim(), password: password.trim() }),
+        body: JSON.stringify({ appleId: appleId.trim(), password: cleaned }),
       });
       const data = (await res.json().catch(() => ({}))) as { error?: string; hint?: string; email?: string };
       if (!res.ok) {
-        toast.error(data.hint ?? `Pripojenie zlyhalo: ${data.error ?? res.status}`);
+        if (data.error === "auth_failed") {
+          toast.error(
+            "Apple nás odmietol. Vygeneruj NOVÝ app-specific password — bežné Apple ID heslo cez CalDAV nefunguje.",
+            { duration: 8000 }
+          );
+        } else {
+          toast.error(data.hint ?? `Pripojenie zlyhalo: ${data.error ?? res.status}`);
+        }
         return;
       }
       setStatus({ connected: true, email: data.email ?? appleId.trim(), connectedAt: new Date() });
