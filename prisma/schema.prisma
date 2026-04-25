@@ -73,6 +73,13 @@ model User {
   // we can evolve it without migrations. See src/lib/userPrefs.ts.
   preferences           Json?
 
+  // Surface routing — which integration serves Mail vs Calendar.
+  // Null = auto-pick first connected provider. Allows mixing, e.g.
+  // Microsoft email + Google calendar. Values: "google" | "microsoft" | "apple".
+  // Validated at request time against actually-connected integrations.
+  emailProvider       String?
+  calendarProvider    String?
+
   aiRequests    AiRequest[]
   dailyUsage    DailyUsage[]
   neuralMemory  NeuralMemory[]

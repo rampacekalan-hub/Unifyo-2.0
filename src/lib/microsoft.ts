@@ -143,3 +143,263 @@ export async function msGraphGet<T>(token: string, path: string): Promise<T> {
   if (!res.ok) throw new Error(`graph_get:${path}:${res.status}`);
   return (await res.json()) as T;
 }
+
+// ── Mail adapters (shape-compatible with lib/google Gmail helpers) ───
+// These intentionally return the same TypeScript shapes as their Gmail
+// equivalents so the unified /api/mail routes can hand back identical
+// JSON regardless of provider — UI doesn't need provider awareness.
+
+export interface OutlookMessageSummary {
+  id: string;
+  threadId: string;
+  from: string;
+  to: string;
+  subject: string;
+  snippet: string;
+  date: string; // ISO
+  unread: boolean;
+}
+
+interface GraphMessage {
+  id: string;
+  conversationId?: string;
+  subject?: string;
+  bodyPreview?: string;
+  receivedDateTime?: string;
+  isRead?: boolean;
+  from?: { emailAddress?: { address?: string; name?: string } };
+  toRecipients?: { emailAddress?: { address?: string; name?: string } }[];
+  body?: { contentType?: "html" | "text"; content?: string };
+}
+
+function fmtAddr(a?: { address?: string; name?: string }): string {
+  if (!a) return "";
+  if (a.name && a.address) return `${a.name} <${a.address}>`;
+  return a.address ?? a.name ?? "";
+}
+
+/** Map Gmail-style label names to Graph well-known folder names. */
+function folderForLabel(label: "INBOX" | "SENT" | "DRAFT" | "STARRED" | "ALL"): string | null {
+  switch (label) {
+    case "INBOX": return "inbox";
+    case "SENT": return "sentitems";
+    case "DRAFT": return "drafts";
+    case "STARRED": return null; // emulated below via $filter=flag
+    case "ALL": return null;
+  }
+}
+
+export async function listOutlookInbox(
+  accessToken: string,
+  opts: {
+    maxResults?: number;
+    q?: string;
+    label?: "INBOX" | "SENT" | "DRAFT" | "STARRED" | "ALL";
+  } = {},
+): Promise<OutlookMessageSummary[]> {
+  const label = opts.label ?? "INBOX";
+  const folder = folderForLabel(label);
+  const top = String(opts.maxResults ?? 20);
+
+  // /me/mailFolders/{folder}/messages for INBOX/SENT/DRAFT, /me/messages for ALL+STARRED.
+  const base = folder
+    ? `${GRAPH_BASE}/me/mailFolders/${folder}/messages`
+    : `${GRAPH_BASE}/me/messages`;
+
+  const params = new URLSearchParams({
+    $top: top,
+    $select: "id,conversationId,subject,bodyPreview,receivedDateTime,isRead,from,toRecipients,flag",
+    $orderby: "receivedDateTime desc",
+  });
+  if (opts.q) params.set("$search", `"${opts.q.replace(/"/g, '\\"')}"`);
+  if (label === "STARRED") params.set("$filter", "flag/flagStatus eq 'flagged'");
+
+  const url = `${base}?${params}`;
+  // $search requires ConsistencyLevel: eventual — harmless when absent.
+  const headers: Record<string, string> = { Authorization: `Bearer ${accessToken}` };
+  if (opts.q) headers["ConsistencyLevel"] = "eventual";
+
+  const res = await fetch(url, { headers });
+  if (!res.ok) throw new Error(`outlook list failed: ${res.status}`);
+  const data = (await res.json()) as { value?: GraphMessage[] };
+  return (data.value ?? []).map((m) => ({
+    id: m.id,
+    threadId: m.conversationId ?? m.id,
+    from: fmtAddr(m.from?.emailAddress),
+    to: (m.toRecipients ?? []).map((r) => fmtAddr(r.emailAddress)).join(", "),
+    subject: m.subject || "(bez predmetu)",
+    snippet: m.bodyPreview ?? "",
+    date: m.receivedDateTime ?? new Date().toISOString(),
+    unread: m.isRead === false,
+  }));
+}
+
+/** Fetch a single Outlook message — returns html OR text body. */
+export async function getOutlookMessage(
+  accessToken: string,
+  id: string,
+): Promise<{
+  id: string;
+  threadId: string;
+  from: string;
+  to: string;
+  subject: string;
+  date: string;
+  html: string | null;
+  text: string | null;
+  snippet: string;
+}> {
+  const res = await fetch(
+    `${GRAPH_BASE}/me/messages/${encodeURIComponent(id)}?$select=id,conversationId,subject,bodyPreview,receivedDateTime,from,toRecipients,body`,
+    { headers: { Authorization: `Bearer ${accessToken}` } },
+  );
+  if (!res.ok) throw new Error(`outlook get failed: ${res.status}`);
+  const m = (await res.json()) as GraphMessage;
+  const isHtml = m.body?.contentType === "html";
+  return {
+    id: m.id,
+    threadId: m.conversationId ?? m.id,
+    from: fmtAddr(m.from?.emailAddress),
+    to: (m.toRecipients ?? []).map((r) => fmtAddr(r.emailAddress)).join(", "),
+    subject: m.subject || "(bez predmetu)",
+    date: m.receivedDateTime ?? new Date().toISOString(),
+    html: isHtml ? (m.body?.content ?? null) : null,
+    text: !isHtml ? (m.body?.content ?? null) : null,
+    snippet: m.bodyPreview ?? "",
+  };
+}
+
+/** Mark an Outlook message as read (mirrors markGmailRead). */
+export async function markOutlookRead(accessToken: string, id: string): Promise<void> {
+  const res = await fetch(`${GRAPH_BASE}/me/messages/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ isRead: true }),
+  });
+  if (!res.ok) throw new Error(`outlook mark-read failed: ${res.status}`);
+}
+
+/** Send an email via Graph /me/sendMail. */
+export async function sendOutlookMessage(
+  accessToken: string,
+  opts: { to: string; subject: string; body: string },
+): Promise<void> {
+  const res = await fetch(`${GRAPH_BASE}/me/sendMail`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      message: {
+        subject: opts.subject,
+        body: { contentType: "Text", content: opts.body },
+        toRecipients: [{ emailAddress: { address: opts.to } }],
+      },
+      saveToSentItems: true,
+    }),
+  });
+  if (!res.ok) {
+    const err = await res.text().catch(() => "");
+    throw new Error(`outlook send failed: ${res.status}:${err.slice(0, 200)}`);
+  }
+}
+
+/** Save a draft. Graph creates the message in /me/messages with isDraft=true. */
+export async function saveOutlookDraft(
+  accessToken: string,
+  opts: { to: string; subject: string; body: string },
+): Promise<{ id: string }> {
+  const res = await fetch(`${GRAPH_BASE}/me/messages`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      subject: opts.subject,
+      body: { contentType: "Text", content: opts.body },
+      toRecipients: [{ emailAddress: { address: opts.to } }],
+    }),
+  });
+  if (!res.ok) {
+    const err = await res.text().catch(() => "");
+    throw new Error(`outlook draft failed: ${res.status}:${err.slice(0, 200)}`);
+  }
+  const j = (await res.json()) as { id: string };
+  return { id: j.id };
+}
+
+// ── Calendar adapter (shape-compatible with GoogleCalendarEvent) ─────
+
+interface GraphEvent {
+  id: string;
+  subject?: string;
+  bodyPreview?: string;
+  webLink?: string;
+  isAllDay?: boolean;
+  start?: { dateTime?: string; timeZone?: string };
+  end?: { dateTime?: string; timeZone?: string };
+  location?: { displayName?: string };
+  attendees?: { emailAddress?: { address?: string; name?: string } }[];
+}
+
+export interface OutlookCalendarEvent {
+  id: string;
+  summary: string;
+  description?: string;
+  start: string;
+  end: string;
+  htmlLink?: string;
+  attendees?: { email: string; displayName?: string }[];
+  location?: string;
+  allDay: boolean;
+  calendarId?: string;
+  calendarName?: string;
+  calendarColor?: string;
+}
+
+/** Read events from the user's primary Outlook calendar across a window. */
+export async function listOutlookCalendarEvents(
+  accessToken: string,
+  opts: { timeMin?: Date; timeMax?: Date; maxResults?: number } = {},
+): Promise<OutlookCalendarEvent[]> {
+  const timeMin = (opts.timeMin ?? new Date()).toISOString();
+  const timeMax = (opts.timeMax ?? new Date(Date.now() + 30 * 24 * 3600 * 1000)).toISOString();
+
+  const params = new URLSearchParams({
+    startDateTime: timeMin,
+    endDateTime: timeMax,
+    $top: String(opts.maxResults ?? 100),
+    $orderby: "start/dateTime",
+    $select: "id,subject,bodyPreview,webLink,isAllDay,start,end,location,attendees",
+  });
+
+  const res = await fetch(`${GRAPH_BASE}/me/calendarView?${params}`, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      // calendarView requires UTC time hint header for predictable results.
+      Prefer: 'outlook.timezone="UTC"',
+    },
+  });
+  if (!res.ok) throw new Error(`outlook calendar failed: ${res.status}`);
+  const data = (await res.json()) as { value?: GraphEvent[] };
+  return (data.value ?? []).map<OutlookCalendarEvent>((e) => ({
+    id: e.id,
+    summary: e.subject || "(bez názvu)",
+    description: e.bodyPreview,
+    start: e.start?.dateTime ? new Date(e.start.dateTime + "Z").toISOString() : "",
+    end: e.end?.dateTime ? new Date(e.end.dateTime + "Z").toISOString() : "",
+    htmlLink: e.webLink,
+    location: e.location?.displayName,
+    attendees: (e.attendees ?? [])
+      .map((a) => a.emailAddress)
+      .filter((x): x is { address?: string; name?: string } => !!x)
+      .map((a) => ({ email: a.address ?? "", displayName: a.name })),
+    allDay: !!e.isAllDay,
+    calendarName: "Outlook",
+  }));
+}

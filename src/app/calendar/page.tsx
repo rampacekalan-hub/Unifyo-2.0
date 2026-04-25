@@ -104,12 +104,13 @@ function CalendarPageInner() {
   const loadTasks = useCallback(async () => {
     setLoading(true);
     try {
-      // Local tasks + Google events in parallel. Google is optional —
-      // 409 (not connected) silently drops. This replaces the old
-      // flow where Google events only appeared in a tiny top widget.
+      // Local tasks + remote events in parallel. The remote source is
+      // resolved server-side from user.calendarProvider — could be
+      // Google, Microsoft, or Apple. /api/calendar/events handles the
+      // routing; UI doesn't need to care which provider is in play.
       const [tasksRes, gcalRes] = await Promise.all([
         fetch("/api/calendar/tasks"),
-        fetch("/api/gcal/events").catch(() => null),
+        fetch("/api/calendar/events").catch(() => null),
       ]);
       const local: Task[] = tasksRes.ok ? await tasksRes.json() : [];
       let google: Task[] = [];

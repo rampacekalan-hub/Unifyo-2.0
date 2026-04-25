@@ -78,7 +78,7 @@ export default function DashboardOverviewPage() {
           fetch("/api/crm/contacts"),
           fetch("/api/calendar/tasks"),
           fetch("/api/conversations"),
-          fetch("/api/gcal/events").catch(() => null),
+          fetch("/api/calendar/events").catch(() => null),
         ]);
         if (!alive) return;
         if (cRes.ok) setContacts(await cRes.json());

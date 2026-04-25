@@ -81,7 +81,7 @@ export default function EmailPage() {
     // user can close the overlay and immediately click another item.
     setLoadingActive(id);
     try {
-      const res = await fetch(`/api/gmail/message/${id}`);
+      const res = await fetch(`/api/mail/message/${id}`);
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.hint ?? data.error ?? `HTTP ${res.status}`);
@@ -106,7 +106,7 @@ export default function EmailPage() {
     try {
       const params = new URLSearchParams({ label: f });
       if (q) params.set("q", q);
-      const res = await fetch(`/api/gmail/inbox?${params}`);
+      const res = await fetch(`/api/mail/inbox?${params}`);
       if (res.status === 409) {
         setState({ kind: "not_connected" });
         return;
@@ -662,7 +662,7 @@ function ComposeModal({
     if (sending) return;
     setSending(true);
     try {
-      const res = await fetch("/api/gmail/send", {
+      const res = await fetch("/api/mail/send", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ to, subject, body }),
@@ -682,7 +682,7 @@ function ComposeModal({
     if (savingDraft || (!subject.trim() && !body.trim())) return;
     setSavingDraft(true);
     try {
-      const res = await fetch("/api/gmail/draft", {
+      const res = await fetch("/api/mail/draft", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ to, subject, body }),

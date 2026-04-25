@@ -19,6 +19,7 @@ import {
   Shield,
 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
+import ProviderRouter from "./ProviderRouter";
 
 const D = {
   indigo: "#6366f1",
@@ -337,6 +338,10 @@ export default function IntegrationsClient({
           disconnecting={disconnectingApple}
           onDisconnect={handleDisconnectApple}
         />
+
+        {/* Per-surface provider chooser — only renders when ≥2 providers
+            connected. Lets user mix, e.g. Microsoft email + Google calendar. */}
+        <ProviderRouter />
 
         {/* Planned integrations — let users see what's coming and
             signal interest. Clicking "Chcem túto" records a waitlist
