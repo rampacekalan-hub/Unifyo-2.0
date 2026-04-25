@@ -61,11 +61,11 @@ export default function ProviderRouter() {
   const connectedCount = Object.values(pref.connected).filter(Boolean).length;
   if (connectedCount < 2) return null; // nothing to choose
 
-  const availableForSurface = (surface: "email" | "calendar"): Provider[] => {
-    // Apple inbox/calendar in unified API is not wired yet — surface
-    // it only when its adapter exists. For now Apple is hidden from
-    // both choosers; users with Apple-only get auto-pick fallback.
-    const all: Provider[] = ["google", "microsoft"];
+  const availableForSurface = (_surface: "email" | "calendar"): Provider[] => {
+    // All three providers are wired into the unified routes — order
+    // here decides UI order (we keep Apple last to match how the
+    // resolver auto-picks).
+    const all: Provider[] = ["google", "microsoft", "apple"];
     return all.filter((p) => pref.connected[p]);
   };
 

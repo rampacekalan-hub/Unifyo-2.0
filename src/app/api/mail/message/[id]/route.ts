@@ -6,6 +6,7 @@ import { requireAuth } from "@/lib/auth";
 import { resolveProvider } from "@/lib/userProvider";
 import { getValidAccessToken, getGmailMessage, markGmailRead } from "@/lib/google";
 import { getValidMsAccessToken, getOutlookMessage, markOutlookRead } from "@/lib/microsoft";
+import { getAppleMessage } from "@/lib/appleMail";
 
 export const dynamic = "force-dynamic";
 
@@ -34,6 +35,10 @@ export async function GET(
       if (!token) return NextResponse.json({ error: "not_connected" }, { status: 409 });
       const msg = await getOutlookMessage(token, id);
       markOutlookRead(token, id).catch(() => {});
+      return NextResponse.json(msg);
+    }
+    if (provider === "apple") {
+      const msg = await getAppleMessage(session.userId, id);
       return NextResponse.json(msg);
     }
     return NextResponse.json({ error: "provider_unsupported" }, { status: 501 });

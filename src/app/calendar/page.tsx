@@ -249,7 +249,7 @@ function CalendarPageInner() {
                 new Date(`${form.date}T${form.time}:00`).getTime() + durationMs,
               ).toISOString();
           const res = await fetch(
-            `/api/gcal/event/${encodeURIComponent(editingTask.googleEventId)}`,
+            `/api/calendar/event/${encodeURIComponent(editingTask.googleEventId)}`,
             {
               method: "PATCH",
               headers: { "Content-Type": "application/json" },
@@ -337,7 +337,7 @@ function CalendarPageInner() {
 
   // Drag-n-drop reschedule: move task to a new date. Optimistic update + rollback on fail.
   // Handles both local CalendarTask rows and Google Calendar events —
-  // prefix `g:` routes through /api/gcal/event/:id.
+  // prefix `g:` routes through /api/calendar/event/:id.
   async function moveTaskToDate(taskId: string, newDate: string) {
     const current = tasks.find((t) => t.id === taskId);
     if (!current || current.date === newDate) return;
@@ -353,7 +353,7 @@ function CalendarPageInner() {
         const durationMs = 60 * 60 * 1000;
         const endStart = new Date(`${newDate}T${current.time ?? "00:00"}:00`).getTime();
         const newEnd = allDay ? newDate : new Date(endStart + durationMs).toISOString();
-        const res = await fetch(`/api/gcal/event/${encodeURIComponent(gcalId)}`, {
+        const res = await fetch(`/api/calendar/event/${encodeURIComponent(gcalId)}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ start: newStart, end: newEnd, allDay }),
@@ -407,7 +407,7 @@ function CalendarPageInner() {
       setTasks((prev) => prev.filter((t) => t.id !== id));
       if (selectedTask?.id === id) setSelectedTask(null);
       try {
-        const res = await fetch(`/api/gcal/event/${encodeURIComponent(gcalId)}`, {
+        const res = await fetch(`/api/calendar/event/${encodeURIComponent(gcalId)}`, {
           method: "DELETE",
         });
         if (!res.ok) throw new Error();

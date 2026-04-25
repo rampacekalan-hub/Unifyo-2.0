@@ -8,6 +8,7 @@ import { rateLimit } from "@/lib/rate-limit";
 import { resolveProvider } from "@/lib/userProvider";
 import { getValidAccessToken, sendGmail } from "@/lib/google";
 import { getValidMsAccessToken, sendOutlookMessage } from "@/lib/microsoft";
+import { sendAppleMessage } from "@/lib/appleMail";
 
 export async function POST(req: NextRequest) {
   const csrf = requireSameOrigin(req);
@@ -48,6 +49,10 @@ export async function POST(req: NextRequest) {
       const token = await getValidMsAccessToken(session.userId);
       if (!token) return NextResponse.json({ error: "not_connected" }, { status: 409 });
       await sendOutlookMessage(token, { to, subject, body: bodyText });
+      return NextResponse.json({ ok: true, provider });
+    }
+    if (provider === "apple") {
+      await sendAppleMessage(session.userId, { to, subject, body: bodyText });
       return NextResponse.json({ ok: true, provider });
     }
     return NextResponse.json({ error: "provider_unsupported" }, { status: 501 });

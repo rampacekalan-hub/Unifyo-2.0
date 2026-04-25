@@ -8,6 +8,7 @@ import { rateLimit } from "@/lib/rate-limit";
 import { resolveProvider } from "@/lib/userProvider";
 import { getValidAccessToken, saveGmailDraft } from "@/lib/google";
 import { getValidMsAccessToken, saveOutlookDraft } from "@/lib/microsoft";
+import { saveAppleDraft } from "@/lib/appleMail";
 
 export const dynamic = "force-dynamic";
 
@@ -46,6 +47,10 @@ export async function POST(req: NextRequest) {
       const token = await getValidMsAccessToken(session.userId);
       if (!token) return NextResponse.json({ error: "not_connected" }, { status: 409 });
       const draft = await saveOutlookDraft(token, { to, subject, body: text });
+      return NextResponse.json({ ok: true, provider, draftId: draft.id });
+    }
+    if (provider === "apple") {
+      const draft = await saveAppleDraft(session.userId, { to, subject, body: text });
       return NextResponse.json({ ok: true, provider, draftId: draft.id });
     }
     return NextResponse.json({ error: "provider_unsupported" }, { status: 501 });

@@ -99,6 +99,12 @@ export interface AppleEvent {
   end: string;
   allDay: boolean;
   calendarName?: string;
+  // Full CalDAV resource URL for this event — used by PUT (update) and
+  // DELETE. Populated by listAppleEvents so the UI can pass it back.
+  url?: string;
+  // Original ICS payload — needed when we PUT a partial update so we
+  // can preserve fields we don't model in AppleEvent (RRULE, attendees…).
+  ics?: string;
 }
 
 function parseIcsBlocks(ics: string): Record<string, string>[] {
@@ -231,10 +237,16 @@ export async function listAppleEvents(userId: string, startIso: string, endIso: 
     });
     if (!res.ok) continue;
     const xml = await res.text();
-    // Extract every CDATA or plain calendar-data payload.
-    const icsBlocks = [...xml.matchAll(/<(?:\w+:)?calendar-data[^>]*>([\s\S]*?)<\/(?:\w+:)?calendar-data>/g)]
-      .map((m) => m[1].trim().replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&"));
-    for (const ics of icsBlocks) {
+    // Walk per <response> so we keep href ↔ calendar-data paired —
+    // we need the resource URL for later PUT/DELETE.
+    const responseChunks = xml.split(/<(?:\w+:)?response>/).slice(1);
+    for (const chunk of responseChunks) {
+      const hrefMatch = chunk.match(/<(?:\w+:)?href>([^<]+)<\/(?:\w+:)?href>/i);
+      const dataMatch = chunk.match(/<(?:\w+:)?calendar-data[^>]*>([\s\S]*?)<\/(?:\w+:)?calendar-data>/i);
+      if (!hrefMatch || !dataMatch) continue;
+      const href = hrefMatch[1];
+      const url = href.startsWith("http") ? href : `https://caldav.icloud.com${href}`;
+      const ics = dataMatch[1].trim().replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&");
       for (const rec of parseIcsBlocks(ics)) {
         const uid = rec["UID"];
         const summary = rec["SUMMARY"] ?? "(bez názvu)";
@@ -251,11 +263,117 @@ export async function listAppleEvents(userId: string, startIso: string, endIso: 
           end: end.value,
           allDay: start.allDay,
           calendarName: cal.name,
+          url,
+          ics,
         });
       }
     }
   }
   return events;
+}
+
+// ── CalDAV mutations ─────────────────────────────────────────────────
+// The unified /api/calendar/event/[id] route encodes Apple events with
+// composite id "apple::<base64url(url)>". updateAppleEvent rebuilds the
+// full ICS (preserving original fields) and PUTs it back; deleteAppleEvent
+// just DELETEs the resource. iCloud requires the original ETag isn't
+// strictly needed for a same-actor write here, so we omit If-Match.
+
+/** PUT a modified ICS to its CalDAV resource URL. Caller passes the
+ *  original ICS so we can swap the SUMMARY/DTSTART/DTEND/etc lines while
+ *  preserving everything else (UID, RRULE, ORGANIZER, …). */
+export async function updateAppleEvent(
+  userId: string,
+  eventUrl: string,
+  patch: {
+    summary?: string;
+    description?: string;
+    location?: string;
+    start?: string; // ISO datetime or "YYYY-MM-DD"
+    end?: string;
+    allDay?: boolean;
+  },
+): Promise<void> {
+  const row = await prisma.appleIntegration.findUnique({ where: { userId } });
+  if (!row) throw new Error("not_connected");
+  const password = decryptSecret(row.passwordEnc);
+  const auth = basicAuthHeader(row.appleId, password);
+
+  // Fetch current ICS so we have the latest payload to patch.
+  const cur = await fetch(eventUrl, {
+    method: "GET",
+    headers: { Authorization: auth, Accept: "text/calendar" },
+  });
+  if (!cur.ok) throw new Error(`apple_get:${cur.status}`);
+  let ics = await cur.text();
+
+  // Helpers — splice or append a property inside the first VEVENT block.
+  const setProp = (key: string, value: string) => {
+    const re = new RegExp(`(^|\\n)${key}(?:;[^:\\n]*)?:[^\\n]*`, "i");
+    if (re.test(ics)) {
+      ics = ics.replace(re, `$1${key}:${value}`);
+    } else {
+      ics = ics.replace(/END:VEVENT/i, `${key}:${value}\r\nEND:VEVENT`);
+    }
+  };
+  const fmtDateOnly = (iso: string) => iso.slice(0, 10).replace(/-/g, "");
+  const fmtDateTime = (iso: string) => {
+    // Convert "2026-04-25T15:30:00.000Z" → "20260425T153000Z" (UTC basic).
+    const d = new Date(iso);
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return (
+      d.getUTCFullYear() +
+      pad(d.getUTCMonth() + 1) +
+      pad(d.getUTCDate()) +
+      "T" +
+      pad(d.getUTCHours()) +
+      pad(d.getUTCMinutes()) +
+      pad(d.getUTCSeconds()) +
+      "Z"
+    );
+  };
+
+  if (patch.summary !== undefined) setProp("SUMMARY", patch.summary);
+  if (patch.description !== undefined) setProp("DESCRIPTION", patch.description.replace(/\n/g, "\\n"));
+  if (patch.location !== undefined) setProp("LOCATION", patch.location);
+  if (patch.start) {
+    if (patch.allDay) {
+      // VALUE=DATE form requires the ;VALUE=DATE param on the property name.
+      ics = ics.replace(/(^|\n)DTSTART(?:;[^:\n]*)?:[^\n]*/i, `$1DTSTART;VALUE=DATE:${fmtDateOnly(patch.start)}`);
+    } else {
+      ics = ics.replace(/(^|\n)DTSTART(?:;[^:\n]*)?:[^\n]*/i, `$1DTSTART:${fmtDateTime(patch.start)}`);
+    }
+  }
+  if (patch.end) {
+    if (patch.allDay) {
+      ics = ics.replace(/(^|\n)DTEND(?:;[^:\n]*)?:[^\n]*/i, `$1DTEND;VALUE=DATE:${fmtDateOnly(patch.end)}`);
+    } else {
+      ics = ics.replace(/(^|\n)DTEND(?:;[^:\n]*)?:[^\n]*/i, `$1DTEND:${fmtDateTime(patch.end)}`);
+    }
+  }
+
+  // Bump LAST-MODIFIED so iCloud rebuilds its caches.
+  setProp("LAST-MODIFIED", fmtDateTime(new Date().toISOString()));
+
+  const put = await fetch(eventUrl, {
+    method: "PUT",
+    headers: {
+      Authorization: auth,
+      "Content-Type": "text/calendar; charset=utf-8",
+    },
+    body: ics,
+  });
+  if (!put.ok) throw new Error(`apple_put:${put.status}`);
+}
+
+/** DELETE an event by its CalDAV resource URL. */
+export async function deleteAppleEvent(userId: string, eventUrl: string): Promise<void> {
+  const row = await prisma.appleIntegration.findUnique({ where: { userId } });
+  if (!row) throw new Error("not_connected");
+  const password = decryptSecret(row.passwordEnc);
+  const auth = basicAuthHeader(row.appleId, password);
+  const res = await fetch(eventUrl, { method: "DELETE", headers: { Authorization: auth } });
+  if (!res.ok && res.status !== 404) throw new Error(`apple_delete:${res.status}`);
 }
 
 export { encryptSecret };

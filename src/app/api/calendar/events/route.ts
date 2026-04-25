@@ -8,6 +8,7 @@ import { requireAuth } from "@/lib/auth";
 import { resolveProvider } from "@/lib/userProvider";
 import { getValidAccessToken, listCalendarEvents } from "@/lib/google";
 import { getValidMsAccessToken, listOutlookCalendarEvents } from "@/lib/microsoft";
+import { listAppleEvents } from "@/lib/apple";
 
 export const dynamic = "force-dynamic";
 
@@ -39,6 +40,38 @@ export async function GET(req: NextRequest) {
       const token = await getValidMsAccessToken(session.userId);
       if (!token) return NextResponse.json({ error: "not_connected" }, { status: 409 });
       const events = await listOutlookCalendarEvents(token, { timeMin, timeMax, maxResults: 100 });
+      return NextResponse.json({ provider, events });
+    }
+    if (provider === "apple") {
+      const apple = await listAppleEvents(
+        session.userId,
+        timeMin.toISOString(),
+        timeMax.toISOString(),
+      );
+      // Project AppleEvent → unified GoogleCalendarEvent shape so the
+      // /calendar UI can consume it without provider awareness. We
+      // encode the CalDAV resource URL into the id ("apple::<b64url>")
+      // because mutations need it but the UI treats id as opaque.
+      const events = apple.map((e) => {
+        const compositeId = e.url
+          ? `apple::${Buffer.from(e.url).toString("base64url")}`
+          : `apple::${e.uid}`;
+        const startIso = e.allDay
+          ? new Date(`${e.start}T00:00:00Z`).toISOString()
+          : new Date(e.start + "Z").toISOString();
+        const endIso = e.allDay
+          ? new Date(`${e.end}T00:00:00Z`).toISOString()
+          : new Date(e.end + "Z").toISOString();
+        return {
+          id: compositeId,
+          summary: e.summary,
+          description: e.description,
+          start: startIso,
+          end: endIso,
+          allDay: e.allDay,
+          calendarName: e.calendarName ?? "iCloud",
+        };
+      });
       return NextResponse.json({ provider, events });
     }
     return NextResponse.json({ error: "provider_unsupported" }, { status: 501 });

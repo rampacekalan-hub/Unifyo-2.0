@@ -362,6 +362,63 @@ export interface OutlookCalendarEvent {
   calendarColor?: string;
 }
 
+/** Update an Outlook calendar event. Patch shape mirrors updateCalendarEvent
+ *  in lib/google so the unified /api/calendar/event/[id] route can pass
+ *  the same body through regardless of provider. */
+export async function updateOutlookEvent(
+  accessToken: string,
+  eventId: string,
+  patch: {
+    summary?: string;
+    description?: string;
+    location?: string;
+    start?: string; // ISO datetime or "YYYY-MM-DD" for all-day
+    end?: string;
+    allDay?: boolean;
+  },
+): Promise<void> {
+  const body: Record<string, unknown> = {};
+  if (patch.summary !== undefined) body.subject = patch.summary;
+  if (patch.description !== undefined) body.body = { contentType: "Text", content: patch.description };
+  if (patch.location !== undefined) body.location = { displayName: patch.location };
+  if (patch.start) {
+    body.start = patch.allDay
+      ? { dateTime: `${patch.start.slice(0, 10)}T00:00:00`, timeZone: "UTC" }
+      : { dateTime: patch.start, timeZone: "UTC" };
+  }
+  if (patch.end) {
+    body.end = patch.allDay
+      ? { dateTime: `${patch.end.slice(0, 10)}T00:00:00`, timeZone: "UTC" }
+      : { dateTime: patch.end, timeZone: "UTC" };
+  }
+  if (patch.allDay !== undefined) body.isAllDay = patch.allDay;
+
+  const res = await fetch(`${GRAPH_BASE}/me/events/${encodeURIComponent(eventId)}`, {
+    method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const err = await res.text().catch(() => "");
+    throw new Error(`outlook event update failed: ${res.status} ${err.slice(0, 200)}`);
+  }
+}
+
+/** Delete an Outlook calendar event. 204 = ok, 404 = already gone (treat as ok). */
+export async function deleteOutlookEvent(accessToken: string, eventId: string): Promise<void> {
+  const res = await fetch(`${GRAPH_BASE}/me/events/${encodeURIComponent(eventId)}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!res.ok && res.status !== 404) {
+    const err = await res.text().catch(() => "");
+    throw new Error(`outlook event delete failed: ${res.status} ${err.slice(0, 200)}`);
+  }
+}
+
 /** Read events from the user's primary Outlook calendar across a window. */
 export async function listOutlookCalendarEvents(
   accessToken: string,

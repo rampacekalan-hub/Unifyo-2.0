@@ -8,6 +8,7 @@ import { requireAuth } from "@/lib/auth";
 import { resolveProvider } from "@/lib/userProvider";
 import { getValidAccessToken, listGmailInbox } from "@/lib/google";
 import { getValidMsAccessToken, listOutlookInbox } from "@/lib/microsoft";
+import { listAppleInbox } from "@/lib/appleMail";
 
 export const dynamic = "force-dynamic";
 
@@ -42,11 +43,11 @@ export async function GET(req: NextRequest) {
       const messages = await listOutlookInbox(token, { maxResults, q, label });
       return NextResponse.json({ provider, messages });
     }
-    // Apple inbox not yet implemented at the unified-route layer.
-    return NextResponse.json(
-      { error: "provider_unsupported", hint: "Apple inbox cez IMAP zatiaľ nie je v unified API." },
-      { status: 501 },
-    );
+    if (provider === "apple") {
+      const messages = await listAppleInbox(session.userId, { maxResults, q, label });
+      return NextResponse.json({ provider, messages });
+    }
+    return NextResponse.json({ error: "provider_unsupported" }, { status: 501 });
   } catch (e) {
     console.error("[mail:inbox]", e);
     const msg = e instanceof Error ? e.message : "";
