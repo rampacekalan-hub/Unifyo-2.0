@@ -252,19 +252,26 @@ export default function AutomationPage() {
                     </div>
                   </div>
 
-                  {/* Toggle */}
+                  {/* Toggle — explicit border so the off-state is always
+                      visible, even on backgrounds that match the off fill. */}
                   <button
                     onClick={() => toggle(r.id)}
                     className="relative rounded-full transition flex-shrink-0"
                     style={{
                       width: 36, height: 20,
-                      background: on ? r.color : "rgba(255,255,255,0.1)",
+                      background: on ? r.color : "rgba(148,163,184,0.25)",
+                      border: `1px solid ${on ? r.color : "rgba(148,163,184,0.45)"}`,
+                      boxShadow: on ? `0 0 10px ${r.color}66` : "none",
                     }}
                     aria-label={on ? "Vypnúť" : "Zapnúť"}
                   >
                     <div
-                      className="absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all"
-                      style={{ left: on ? 18 : 2 }}
+                      className="absolute top-[2px] w-[14px] h-[14px] rounded-full transition-all"
+                      style={{
+                        left: on ? 18 : 2,
+                        background: "#ffffff",
+                        boxShadow: "0 1px 2px rgba(0,0,0,0.4)",
+                      }}
                     />
                   </button>
                 </div>

@@ -4,8 +4,7 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, Sun, Moon } from "lucide-react";
-import { useTheme } from "next-themes";
+import { Menu, X } from "lucide-react";
 import { getSiteConfig } from "@/config/site-settings";
 
 const config = getSiteConfig();
@@ -14,17 +13,11 @@ export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
-  const { resolvedTheme, setTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => { setMounted(true); }, []);
-
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
-
-  const toggleTheme = () => setTheme(resolvedTheme === "dark" ? "light" : "dark");
 
   return (
     <header
@@ -73,28 +66,8 @@ export default function Navbar() {
           })}
         </div>
 
-        {/* Desktop CTA + theme toggle */}
+        {/* Desktop CTA — theme toggle removed (single dark identity). */}
         <div className="hidden md:flex items-center gap-2">
-          {/* Theme switcher — independent of account prefs on public
-              pages; persists via next-themes (localStorage).  */}
-          {mounted && (
-            <button
-              onClick={toggleTheme}
-              data-press
-              aria-label={resolvedTheme === "dark" ? "Prepnúť na svetlý" : "Prepnúť na tmavý"}
-              title={resolvedTheme === "dark" ? "Svetlý režim" : "Tmavý režim"}
-              className="w-9 h-9 rounded-lg flex items-center justify-center transition"
-              style={{
-                background: "var(--app-surface-2)",
-                border: "1px solid var(--app-border)",
-                color: "var(--app-text-muted)",
-              }}
-            >
-              {resolvedTheme === "dark"
-                ? <Sun className="w-4 h-4" />
-                : <Moon className="w-4 h-4" />}
-            </button>
-          )}
           <Link href="/login" className="text-sm px-4 py-2 rounded-lg transition-all duration-200"
             style={{ color: "var(--app-text-muted)" }}
             onMouseEnter={e => (e.currentTarget.style.color = "var(--app-text)")}
@@ -156,19 +129,6 @@ export default function Navbar() {
                 );
               })}
               <div className="pt-3 border-t mt-2 flex flex-col gap-2" style={{ borderColor: "var(--app-border)" }}>
-                {mounted && (
-                  <button
-                    onClick={toggleTheme}
-                    className="flex items-center justify-center gap-2 text-sm py-3 rounded-xl transition"
-                    style={{
-                      color: "var(--app-text-muted)",
-                      border: "1px solid var(--app-border)",
-                      background: "var(--app-surface-2)",
-                    }}
-                  >
-                    {resolvedTheme === "dark" ? <><Sun className="w-4 h-4" /> Svetlý režim</> : <><Moon className="w-4 h-4" /> Tmavý režim</>}
-                  </button>
-                )}
                 <Link href="/login" onClick={() => setMobileOpen(false)}
                   className="text-center text-sm py-3 rounded-xl transition-all duration-200"
                   style={{ color: "var(--app-text-muted)", border: "1px solid var(--app-border)" }}>

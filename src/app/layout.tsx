@@ -67,10 +67,14 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col bg-background text-foreground">
+        {/* Single visual identity — dark is the canonical, polished theme.
+            Light mode caused invisible-button bugs (automation toggles, etc)
+            and forked the design language. forcedTheme locks it everywhere
+            and ignores stored preference / system setting. */}
         <ThemeProvider
           attribute="class"
-          defaultTheme="dark"
-          enableSystem
+          forcedTheme="dark"
+          enableSystem={false}
           disableTransitionOnChange
         >
           <UserPrefsProvider>

@@ -7,14 +7,13 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { toast } from "sonner";
 import {
-  User, KeyRound, Bell, Sparkles, LogOut, Save, Loader2, Mail, Shield, Palette,
+  User, KeyRound, Bell, Sparkles, LogOut, Save, Loader2, Mail, Shield,
   Brain, Thermometer, MessageSquare, Camera, Trash2, Download, AlertTriangle,
   Monitor, Smartphone, Globe, CheckCircle2, XCircle, Upload,
   Gift, Copy, CreditCard, ChevronRight, BadgeCheck, HelpCircle, Sparkle,
   Link2, Fingerprint, Plus,
 } from "lucide-react";
 import Link from "next/link";
-import { useTheme } from "next-themes";
 import AppLayout from "@/components/layout/AppLayout";
 import { loadPrefs, savePrefs, type AiPrefs, type ResponseStyle } from "@/lib/aiPrefs";
 import Avatar, { useAvatar } from "@/components/ui/Avatar";
@@ -236,9 +235,8 @@ export default function SettingsPage() {
         <div id="notifikacie" className="scroll-mt-24" />
         <Section icon={Bell} title="Notifikácie" subtitle="Email, push, pripomienky úloh" comingSoon />
 
-        {/* ── Vzhľad ── */}
-        <div id="vzhlad" className="scroll-mt-24" />
-        <AppearanceSection />
+        {/* Vzhľad sekcia odstránená — Unifyo má jeden zjednotený dark vizuál,
+            žiadny prepínač, žiadne forky štýlov. */}
 
         {/* ── Prihlásenia & bezpečnosť ── */}
         <SessionsSection />
@@ -1937,7 +1935,6 @@ function SettingsSubnav() {
     { id: "bezpecnost",  label: "Bezpečnosť",   Icon: Shield },
     { id: "ai",          label: "AI",           Icon: Sparkles },
     { id: "notifikacie", label: "Notifikácie",  Icon: Bell },
-    { id: "vzhlad",      label: "Vzhľad",       Icon: Palette },
     { id: "integracie",  label: "Integrácie",   Icon: Link2 },
     { id: "plan",        label: "Plán",         Icon: CreditCard },
     { id: "data",        label: "Dáta",         Icon: Download },
@@ -1996,84 +1993,6 @@ function SettingsSubnav() {
   );
 }
 
-// ── Appearance (theme) section — live switcher tied to user prefs ──
-// Uses next-themes for the immediate DOM update; persists the choice
-// via /api/onboarding/complete (which accepts partial preferences). A
-// tiny beta badge on "Svetlý" warns the user that full light styling
-// is in progress — framing looks right, interiors of some modals are
-// still dark-first.
-function AppearanceSection() {
-  const { theme, setTheme, resolvedTheme } = useTheme();
-  const [saving, setSaving] = useState(false);
-
-  const pick = async (next: "dark" | "light" | "system") => {
-    setTheme(next);
-    setSaving(true);
-    try {
-      const mapped = next === "system" ? "auto" : next;
-      await fetch("/api/user/preferences", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ theme: mapped }),
-      });
-      toast.success("Uložené");
-    } catch {
-      toast.error("Uloženie zlyhalo");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const options: Array<{ id: "dark" | "light" | "system"; label: string; desc: string; beta?: boolean }> = [
-    { id: "dark",   label: "Tmavý",  desc: "Predvolené, plne vyladené" },
-    { id: "light",  label: "Svetlý", desc: "Rámec aplikácie, niektoré komponenty tmavé", beta: true },
-    { id: "system", label: "Auto",   desc: "Podľa OS" },
-  ];
-
-  const active = theme ?? "dark";
-
-  return (
-    <Section icon={Palette} title="Vzhľad" subtitle="Tmavý / svetlý režim">
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-        {options.map((o) => {
-          const on = active === o.id;
-          return (
-            <button
-              key={o.id}
-              onClick={() => pick(o.id)}
-              disabled={saving}
-              className="text-left p-3 rounded-xl transition"
-              style={{
-                background: on ? "rgba(139,92,246,0.15)" : "rgba(99,102,241,0.04)",
-                border: `1px solid ${on ? "rgba(139,92,246,0.45)" : D.indigoBorder}`,
-                color: D.text,
-              }}
-            >
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-xs font-semibold">{o.label}</span>
-                {o.beta && (
-                  <span
-                    className="text-[0.55rem] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded"
-                    style={{ background: "rgba(245,158,11,0.15)", color: "#f59e0b" }}
-                  >
-                    beta
-                  </span>
-                )}
-              </div>
-              <p className="text-[0.65rem]" style={{ color: D.muted }}>{o.desc}</p>
-            </button>
-          );
-        })}
-      </div>
-      {resolvedTheme === "light" && (
-        <p className="mt-3 text-[0.7rem]" style={{ color: D.muted }}>
-          Pracujeme na plnej svetlej verzii — rámec (sidebar, header, backgrounds) už svieti,
-          niektoré modály zostávajú zatiaľ tmavé.
-        </p>
-      )}
-    </Section>
-  );
-}
 
 // ── Privacy info — explains exactly where data goes ─────────────────
 // Owner asked for this explicitly. Honest disclosure beats a vague
