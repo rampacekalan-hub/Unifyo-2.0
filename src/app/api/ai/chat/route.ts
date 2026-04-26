@@ -6,7 +6,7 @@ import { rateLimit } from "@/lib/rate-limit";
 import { requireAiAccess } from "@/lib/verification-gate";
 import { getSiteConfig } from "@/config/site-settings";
 import {
-  checkDailyLimit,
+  checkUsageLimit,
   incrementDailyUsage,
   neuralInfer,
 } from "@/lib/ai/neural-core";
@@ -58,12 +58,16 @@ export async function POST(req: NextRequest) {
 
   const tier = user.membershipTier as MembershipTier;
 
-  // 5. Daily limit check (tier-based)
-  const { allowed, used, limit } = await checkDailyLimit(session.userId, tier);
-  if (!allowed) {
+  // 5. Daily + weekly limit check (tier-based, FUP)
+  const usage = await checkUsageLimit(session.userId, tier);
+  if (!usage.allowed) {
+    const message =
+      usage.reason === "DAILY_LIMIT"
+        ? "Dnes ste vyčerpali limit. Nové správy dostanete zajtra."
+        : "Tento týždeň ste vyčerpali férový limit (FUP). Reset prebehne v nasledujúcich dňoch.";
     return NextResponse.json(
-      { error: config.texts.errorStates.dailyLimitReached, used, limit },
-      { status: 402 }
+      { error: message, reason: usage.reason, message, used: usage.used, limit: usage.limit },
+      { status: 429 }
     );
   }
 
@@ -133,7 +137,6 @@ export async function POST(req: NextRequest) {
     tokensUsed: result.tokensUsed,
     memoriesUsed: result.memoriesUsed,
     usage: {
-      used: used + 1,
       limit: tierLimits.dailyRequests,
       tier,
     },

@@ -1,17 +1,14 @@
 "use client";
 
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { Check, Minus, ArrowRight } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { getSiteConfig } from "@/config/site-settings";
 
 const config = getSiteConfig();
-const YEARLY_DISCOUNT = 0.8;
 
 export default function PricingSection() {
-  const [yearly, setYearly] = useState(false);
   if (!config.features.showPricing) return null;
 
   return (
@@ -44,66 +41,19 @@ export default function PricingSection() {
           <p className="text-sm" style={{ color: "var(--app-text-muted)" }}>
             Žiadne skryté poplatky · Fakturácia v EUR · Zrušenie kedykoľvek
           </p>
-
-          {/* Toggle — styled as a segmented pill so it works on both
-              themes. Active side uses brand gradient, inactive side
-              stays transparent but keeps a crisp border. */}
-          <div
-            className="inline-flex items-center gap-1 mt-1 rounded-full p-1"
-            style={{
-              background: "var(--app-surface-2)",
-              border: "1px solid var(--app-border)",
-            }}
-          >
-            <button
-              onClick={() => setYearly(false)}
-              className="px-4 py-1.5 rounded-full text-sm font-semibold transition"
-              style={{
-                background: !yearly ? "var(--brand-gradient)" : "transparent",
-                color: !yearly ? "#fff" : "var(--app-text-muted)",
-                boxShadow: !yearly ? "0 0 14px rgba(139,92,246,0.35)" : "none",
-              }}
-            >
-              Mesačne
-            </button>
-            <button
-              onClick={() => setYearly(true)}
-              className="px-4 py-1.5 rounded-full text-sm font-semibold transition"
-              style={{
-                background: yearly ? "var(--brand-gradient)" : "transparent",
-                color: yearly ? "#fff" : "var(--app-text-muted)",
-                boxShadow: yearly ? "0 0 14px rgba(139,92,246,0.35)" : "none",
-              }}
-            >
-              Ročne
-            </button>
-            <AnimatePresence>
-              {yearly && (
-                <motion.span
-                  initial={{ opacity: 0, x: -6 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -6 }}
-                  transition={{ duration: 0.2 }}
-                  className="ml-1 mr-2 text-[0.68rem] font-bold px-2 py-0.5 rounded-full"
-                  style={{
-                    background: "var(--brand-success-soft)",
-                    border: "1px solid color-mix(in oklab, var(--brand-success) 40%, transparent)",
-                    color: "var(--brand-success)",
-                  }}
-                >
-                  −20%
-                </motion.span>
-              )}
-            </AnimatePresence>
-          </div>
+          <p className="text-xs mt-1 max-w-md mx-auto" style={{ color: "var(--app-text-subtle)" }}>
+            Ročné členstvo so zľavou 20% poskytujeme na vyžiadanie — napíš nám na{" "}
+            <a href="mailto:info@unifyo.online" style={{ color: "var(--brand-primary)" }}>
+              info@unifyo.online
+            </a>
+            .
+          </p>
         </motion.div>
 
         {/* Plans grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5 items-start">
           {config.pricing.map((plan, i) => {
-            const displayPrice = plan.price > 0
-              ? (yearly ? Math.round(plan.price * YEARLY_DISCOUNT * 100) / 100 : plan.price)
-              : 0;
+            const displayPrice = plan.price;
             const isHighlighted = plan.highlighted;
 
             return (
@@ -164,26 +114,16 @@ export default function PricingSection() {
 
                   {/* Price */}
                   <div className="mb-6 pb-6" style={{ borderBottom: "1px solid rgba(139,92,246,0.1)" }}>
-                    <AnimatePresence mode="wait">
-                      <motion.div
-                        key={`${plan.id}-${yearly}`}
-                        initial={{ opacity: 0, y: -6 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: 6 }}
-                        transition={{ duration: 0.18 }}
-                        className="flex items-end gap-1.5"
-                      >
-                        <span className="font-black tracking-tight leading-none" style={{ fontSize: "2.6rem", color: "var(--app-text)" }}>
-                          {displayPrice === 0 ? "Free" : `${plan.currency}${displayPrice}`}
+                    <div className="flex items-end gap-1.5">
+                      <span className="font-black tracking-tight leading-none" style={{ fontSize: "2.6rem", color: "var(--app-text)" }}>
+                        {displayPrice === 0 ? "Free" : `${plan.currency}${displayPrice}`}
+                      </span>
+                      {displayPrice > 0 && (
+                        <span className="text-xs mb-1.5 pb-0.5" style={{ color: "var(--app-text-muted)" }}>
+                          /{plan.interval}
                         </span>
-                        {displayPrice > 0 && (
-                          <span className="text-xs mb-1.5 pb-0.5" style={{ color: "var(--app-text-muted)" }}>
-                            /{yearly ? "mes" : plan.interval}
-                            {yearly && <span style={{ color: "var(--brand-success)" }}> · ročne</span>}
-                          </span>
-                        )}
-                      </motion.div>
-                    </AnimatePresence>
+                      )}
+                    </div>
                   </div>
 
                   {/* Features */}
@@ -227,6 +167,13 @@ export default function PricingSection() {
                       </li>
                     ))}
                   </ul>
+
+                  {/* Footnote (Enterprise contact note) */}
+                  {plan.footnote && (
+                    <p className="text-[0.7rem] mb-3 leading-relaxed" style={{ color: "var(--app-text-subtle)" }}>
+                      {plan.footnote}
+                    </p>
+                  )}
 
                   {/* CTA */}
                   <Link

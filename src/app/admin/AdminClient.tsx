@@ -9,8 +9,9 @@ import {
   Terminal, LogOut, ShieldAlert, Zap, TrendingUp,
   ChevronRight, Circle, Megaphone, X, Plus, Minus, Loader2, Trash2,
   Brain, Pencil, Check, FileText, BarChart2, ClipboardList, Download,
-  Square, CheckSquare, ArrowUpDown, Filter, AlertTriangle,
+  Square, CheckSquare, ArrowUpDown, Filter, AlertTriangle, Wallet,
 } from "lucide-react";
+import FinanceSection from "./_components/FinanceSection";
 import NeuralBackground, { type NeuralBackgroundHandle } from "@/components/ui/NeuralBackground";
 import { getSiteConfig } from "@/config/site-settings";
 import type { AdminLogEntry } from "@/lib/admin-store";
@@ -86,7 +87,7 @@ const DATETIME_STYLE: React.CSSProperties = {
 // TODO: add admin analytics view — query AnalyticsEvent counts (24h/7d/30d)
 // and distinct-userId "active users" stats. Skipped in this pass because the
 // admin dashboard is large and a focused Analytics tab deserves its own PR.
-type NavSection = "overview" | "users" | "toggles" | "logs" | "neural" | "governance" | "sandbox" | "policy" | "roi" | "audit" | "explorer" | "plans" | "identity";
+type NavSection = "overview" | "users" | "toggles" | "logs" | "neural" | "governance" | "sandbox" | "policy" | "roi" | "audit" | "explorer" | "plans" | "identity" | "finance";
 type MembershipTier = "BASIC" | "PREMIUM" | "ENTERPRISE";
 
 interface User {
@@ -161,6 +162,7 @@ const NAV_PRIMARY: { id: NavSection; icon: React.ElementType; label: string }[] 
   { id: "users",      icon: Users,         label: "Používatelia" },
   { id: "explorer",   icon: Users,         label: "User Explorer" },
   { id: "plans",      icon: BarChart2,     label: "Plány" },
+  { id: "finance",    icon: Wallet,        label: "Financie" },
   { id: "toggles",    icon: Zap,           label: "Feature flags" },
   { id: "audit",      icon: ClipboardList, label: "Audit trail" },
 ];
@@ -2205,6 +2207,15 @@ export default function AdminClient({ adminEmail, users: initUsers, stats, recen
                     })()}
                   </div>
                 )}
+              </motion.div>
+            )}
+
+            {/* ── FINANCE ── */}
+            {section === "finance" && (
+              <motion.div key="finance"
+                initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}>
+                <FinanceSection />
               </motion.div>
             )}
 

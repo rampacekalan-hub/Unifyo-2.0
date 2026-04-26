@@ -77,6 +77,7 @@ export interface NeuralResponse {
 
 interface PlanLimits {
   dailyRequests: number | null;
+  weeklyRequests: number | null;
   memorySlots: number;
   contextWindow: number;
   userPolicies: number;
@@ -88,6 +89,7 @@ export async function getPlanLimits(tier: MembershipTier): Promise<PlanLimits> {
     if (row) {
       return {
         dailyRequests: row.dailyRequests,
+        weeklyRequests: (row as { weeklyRequests?: number | null }).weeklyRequests ?? config.membership.tiers[tier].weeklyRequests,
         memorySlots: row.memorySlots,
         contextWindow: row.contextWindow,
         userPolicies: row.userPolicies,
@@ -96,7 +98,24 @@ export async function getPlanLimits(tier: MembershipTier): Promise<PlanLimits> {
   } catch { /* DB unavailable — fall through */ }
   // Fallback to static site-settings
   const s = config.membership.tiers[tier];
-  return { dailyRequests: s.dailyRequests, memorySlots: s.memorySlots, contextWindow: s.contextWindow, userPolicies: tier === "ENTERPRISE" ? 20 : tier === "PREMIUM" ? 5 : 2 };
+  return { dailyRequests: s.dailyRequests, weeklyRequests: s.weeklyRequests, memorySlots: s.memorySlots, contextWindow: s.contextWindow, userPolicies: tier === "ENTERPRISE" ? 20 : tier === "PREMIUM" ? 5 : 2 };
+}
+
+// ── Smart Routing ────────────────────────────────────────────────
+// Default everyone to gpt-4o-mini (fast + 5–10× cheaper). Enterprise
+// gets promoted to gpt-4o for *deep-analysis* prompts: long messages
+// or explicit analytical keywords. This keeps margins healthy on
+// short Q&A while still giving Enterprise the heavy model when it
+// matters.
+
+const DEEP_ANALYSIS_RX =
+  /\b(analyz|analýz|porovna|stratég|strategy|prognóz|forecast|odporú|recommend|plán|prepočít|investi|in[\s-]?depth|rozsiahl|komplexn)\w*/i;
+
+export function pickModel(tier: MembershipTier, userMessage: string): string {
+  if (tier !== "ENTERPRISE") return "gpt-4o-mini";
+  const isLong = userMessage.length > 600;
+  const isDeep = DEEP_ANALYSIS_RX.test(userMessage);
+  return (isLong || isDeep) ? "gpt-4o" : "gpt-4o-mini";
 }
 
 // ── Daily Usage Guard ────────────────────────────────────────────
@@ -132,6 +151,53 @@ export async function incrementDailyUsage(userId: string): Promise<void> {
     update: { count: { increment: 1 } },
     create: { userId, date: today, count: 1 },
   });
+}
+
+// ── Weekly Usage Guard (FUP — Fair Use Policy) ───────────────────
+// Computes weekly usage as a rolling sum of the last 7 days from
+// DailyUsage rows — no extra schema needed, matches calendar-week
+// expectations close enough and resets gracefully.
+
+export async function checkWeeklyLimit(
+  userId: string,
+  tier: MembershipTier
+): Promise<{ allowed: boolean; used: number; limit: number | null }> {
+  const limits = await getPlanLimits(tier);
+  if (limits.weeklyRequests === null) {
+    return { allowed: true, used: 0, limit: null };
+  }
+  // Last 7 days inclusive (today + 6 prior days).
+  const days: string[] = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date();
+    d.setUTCDate(d.getUTCDate() - i);
+    days.push(d.toISOString().slice(0, 10));
+  }
+  const rows = await prisma.dailyUsage.findMany({
+    where: { userId, date: { in: days } },
+    select: { count: true },
+  });
+  const used = rows.reduce((sum, r) => sum + r.count, 0);
+  return {
+    allowed: used < limits.weeklyRequests,
+    used,
+    limit: limits.weeklyRequests,
+  };
+}
+
+// Unified guard that returns the first limit hit (daily takes priority).
+export async function checkUsageLimit(
+  userId: string,
+  tier: MembershipTier
+): Promise<
+  | { allowed: true }
+  | { allowed: false; reason: "DAILY_LIMIT" | "WEEKLY_LIMIT"; used: number; limit: number | null }
+> {
+  const day = await checkDailyLimit(userId, tier);
+  if (!day.allowed) return { allowed: false, reason: "DAILY_LIMIT", used: day.used, limit: day.limit };
+  const week = await checkWeeklyLimit(userId, tier);
+  if (!week.allowed) return { allowed: false, reason: "WEEKLY_LIMIT", used: week.used, limit: week.limit };
+  return { allowed: true };
 }
 
 // ── GDPR Privacy Shield ────────────────────────────────────────
@@ -468,7 +534,7 @@ export async function neuralInfer(
       Authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
-      model:       config.ai.defaultModel,
+      model:       pickModel(ctx.tier, userMessage),
       max_tokens:  config.ai.maxTokens,
       temperature: gov.temperature,
       messages: [

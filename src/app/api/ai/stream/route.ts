@@ -5,7 +5,7 @@ import { requireAuth } from "@/lib/auth";
 import { rateLimit } from "@/lib/rate-limit";
 import { requireAiAccess } from "@/lib/verification-gate";
 import { getSiteConfig } from "@/config/site-settings";
-import { checkDailyLimit, incrementDailyUsage, retrieveContext, storeMemory, getActivePolicies, getUserPolicies } from "@/lib/ai/neural-core";
+import { checkUsageLimit, incrementDailyUsage, retrieveContext, storeMemory, getActivePolicies, getUserPolicies, pickModel } from "@/lib/ai/neural-core";
 import type { MembershipTier } from "@/lib/ai/neural-core";
 import { buildUserBusinessContext } from "@/lib/ai/userContext";
 
@@ -55,8 +55,17 @@ export async function POST(req: NextRequest) {
 
   const tier = user.membershipTier as MembershipTier;
 
-  const { allowed, used, limit } = await checkDailyLimit(session.userId, tier);
-  if (!allowed) return NextResponse.json({ error: config.texts.errorStates.dailyLimitReached, used, limit }, { status: 402 });
+  const usage = await checkUsageLimit(session.userId, tier);
+  if (!usage.allowed) {
+    const message =
+      usage.reason === "DAILY_LIMIT"
+        ? "Dnes ste vyčerpali limit. Nové správy dostanete zajtra."
+        : "Tento týždeň ste vyčerpali férový limit (FUP). Reset prebehne v nasledujúcich dňoch.";
+    return NextResponse.json(
+      { error: message, reason: usage.reason, message, used: usage.used, limit: usage.limit },
+      { status: 429 }
+    );
+  }
 
   if (!process.env.OPENAI_API_KEY) return NextResponse.json({ error: "AI nie je nakonfigurované — chýba OPENAI_API_KEY.", code: "MISSING_API_KEY" }, { status: 503 });
 
@@ -152,7 +161,7 @@ export async function POST(req: NextRequest) {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${process.env.OPENAI_API_KEY}` },
     body: JSON.stringify({
-      model: config.ai.defaultModel,
+      model: pickModel(tier, message),
       max_tokens: config.ai.maxTokens,
       temperature: prefs?.temperature ?? config.ai.temperature,
       stream: true,
@@ -200,7 +209,7 @@ export async function POST(req: NextRequest) {
           }
           const tokensUsed = json.usage?.total_tokens ?? 0;
           if (tokensUsed > 0) {
-            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ tokens: tokensUsed, done: true, used: used + 1, limit })}\n\n`));
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ tokens: tokensUsed, done: true })}\n\n`));
           }
         } catch { /* skip malformed chunks */ }
       };
@@ -231,7 +240,7 @@ export async function POST(req: NextRequest) {
           if (memoryEnabled) tasks.push(storeMemory(ctx, "assistant", fullContent));
           Promise.all(tasks).catch(e => console.error("[AI_STREAM] post-stream DB error:", e));
           // Final done signal with usage
-          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ done: true, used: used + 1, limit })}\n\n`));
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ done: true })}\n\n`));
         }
         controller.close();
       }

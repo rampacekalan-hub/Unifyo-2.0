@@ -11,9 +11,24 @@ import { ensureActiveDpa } from "@/lib/dpa";
 
 export const dynamic = "force-dynamic";
 
+// DPA podpis je B2B Compliance feature — dostupné iba pre Pro a Enterprise.
+// Basic používatelia dostanú TIER_LOCKED 403 a musia upgradnúť.
+const DPA_ALLOWED_TIERS = new Set<string>(["PREMIUM", "ENTERPRISE"]);
+function tierLocked() {
+  return NextResponse.json(
+    {
+      error: "Upgrade na Pro pre odomknutie DPA podpisu",
+      code: "TIER_LOCKED",
+      requiredTier: "PREMIUM",
+    },
+    { status: 403 },
+  );
+}
+
 export async function GET(req: NextRequest) {
   const { session, response } = await requireAuth(req);
   if (response) return response;
+  if (!DPA_ALLOWED_TIERS.has(session.membershipTier ?? "BASIC")) return tierLocked();
 
   const active = await ensureActiveDpa();
   const sig = await prisma.dpaSignature.findUnique({
@@ -42,6 +57,7 @@ export async function POST(req: NextRequest) {
   if (csrf) return csrf;
   const { session, response } = await requireAuth(req);
   if (response) return response;
+  if (!DPA_ALLOWED_TIERS.has(session.membershipTier ?? "BASIC")) return tierLocked();
 
   let body: { signerName?: string; signerRole?: string; companyName?: string; ico?: string; agree?: boolean };
   try { body = await req.json(); }

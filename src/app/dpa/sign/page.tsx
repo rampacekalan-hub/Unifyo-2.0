@@ -5,7 +5,8 @@
 // surface for logged-in users (esp. B2B Pro/Enterprise customers).
 
 import { useEffect, useState } from "react";
-import { ShieldCheck, FileSignature, CheckCircle2 } from "lucide-react";
+import Link from "next/link";
+import { ShieldCheck, FileSignature, CheckCircle2, Lock } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import { SkeletonCard } from "@/components/ui/Skeleton";
 
@@ -35,6 +36,7 @@ interface DpaState {
 
 export default function DpaSignPage() {
   const [state, setState] = useState<DpaState | null>(null);
+  const [tierLocked, setTierLocked] = useState(false);
   const [signerName, setSignerName] = useState("");
   const [signerRole, setSignerRole] = useState("Konateľ");
   const [companyName, setCompanyName] = useState("");
@@ -45,7 +47,13 @@ export default function DpaSignPage() {
 
   async function load() {
     const res = await fetch("/api/dpa");
-    if (res.ok) setState(await res.json());
+    if (res.ok) {
+      setState(await res.json());
+      setTierLocked(false);
+    } else if (res.status === 403) {
+      const j = await res.json().catch(() => null);
+      if (j?.code === "TIER_LOCKED") setTierLocked(true);
+    }
   }
   useEffect(() => { load(); }, []);
 
@@ -74,7 +82,39 @@ export default function DpaSignPage() {
   return (
     <AppLayout title="DPA — GDPR" subtitle="DPA —">
       <div className="p-4 md:p-8 max-w-3xl mx-auto space-y-4">
-        {!state ? (
+        {tierLocked ? (
+          <div
+            className="rounded-2xl p-6 flex flex-col items-start gap-4"
+            style={{
+              background: "linear-gradient(135deg, rgba(139,92,246,0.08), rgba(99,102,241,0.05))",
+              border: `1px solid ${D.border}`,
+            }}
+          >
+            <div className="flex items-center gap-3">
+              <div
+                className="w-10 h-10 rounded-xl flex items-center justify-center"
+                style={{ background: `linear-gradient(135deg, ${D.violet}, ${D.indigo})` }}
+              >
+                <Lock className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h2 className="text-base font-bold" style={{ color: D.text }}>
+                  Upgrade na Pro pre odomknutie DPA podpisu
+                </h2>
+                <p className="text-xs mt-1" style={{ color: D.muted }}>
+                  Elektronický DPA podpis je súčasťou Pro a Enterprise plánu (B2B compliance).
+                </p>
+              </div>
+            </div>
+            <Link
+              href="/settings/billing"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white"
+              style={{ background: `linear-gradient(135deg, ${D.violet}, ${D.indigo})` }}
+            >
+              Upgradovať plán
+            </Link>
+          </div>
+        ) : !state ? (
           <SkeletonCard lines={6} />
         ) : (
           <>

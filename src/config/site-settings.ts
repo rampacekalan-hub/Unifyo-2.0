@@ -40,6 +40,7 @@ export interface PricingPlan {
   highlighted: boolean;
   features: PricingFeature[];
   cta: string;
+  footnote?: string;
 }
 
 export interface SEOConfig {
@@ -251,6 +252,7 @@ export interface SecurityConfig {
 
 export interface TierLimits {
   dailyRequests: number | null;  // null = unlimited
+  weeklyRequests: number | null; // FUP weekly safeguard; null = unlimited
   memorySlots: number;           // max neural memories stored
   contextWindow: number;         // how many past memories sent to AI
   label: string;
@@ -669,9 +671,9 @@ const siteConfig: SiteConfig = {
   // ─── MEMBERSHIP TIERS ────────────────────────────────────────
   membership: {
     tiers: {
-      BASIC:      { dailyRequests: 50,   memorySlots: 200,  contextWindow: 5,  label: "Basic" },
-      PREMIUM:    { dailyRequests: 500,  memorySlots: 2000, contextWindow: 20, label: "Premium" },
-      ENTERPRISE: { dailyRequests: null, memorySlots: 10000, contextWindow: 50, label: "Enterprise" },
+      BASIC:      { dailyRequests: 40,  weeklyRequests: 200,  memorySlots: 200,   contextWindow: 5,  label: "Basic" },
+      PREMIUM:    { dailyRequests: 120, weeklyRequests: 600,  memorySlots: 2000,  contextWindow: 20, label: "Premium" },
+      ENTERPRISE: { dailyRequests: 400, weeklyRequests: 2000, memorySlots: 10000, contextWindow: 50, label: "Enterprise" },
     },
   },
 
@@ -832,16 +834,17 @@ const siteConfig: SiteConfig = {
       highlighted: false,
       cta: "Začať s Basic",
       features: [
-        { text: "AI chat po slovensky (50 správ/deň)", included: true },
+        { text: "AI chat po slovensky (40 správ/deň, 200/týždeň)", included: true },
         { text: "CRM — kontakty, poznámky, pipeline", included: true },
         { text: "Kalendár + sync (Google · Microsoft · Apple)", included: true },
         { text: "Email — čítať/odoslať (Gmail · Outlook · iCloud)", included: true },
         { text: "Prepis hovorov AI (Whisper, 5 / mes.)", included: true },
         { text: "Automatizácie (ranný súhrn, stale-deal alert)", included: true },
         { text: "CSV import/export, 2FA, GDPR export", included: true },
-        { text: "Prioritná podpora", included: false },
-        { text: "Vlastní AI agenti", included: false, tooltip: "Plánované" },
-        { text: "SLA & dedikovaná podpora", included: false },
+        { text: "Referral bonusy", included: true },
+        { text: "Štandardná podpora (e-mail)", included: true },
+        { text: "Vlastní AI agenti", included: false },
+        { text: "DPA podpis (B2B compliance)", included: false },
       ],
     },
     {
@@ -856,13 +859,13 @@ const siteConfig: SiteConfig = {
       cta: "Začať s Pro",
       features: [
         { text: "Všetko v Basic", included: true },
-        { text: "AI chat (500 správ/deň — 10× Basic)", included: true },
+        { text: "AI chat (120 správ/deň, 600/týždeň — 3× Basic)", included: true },
         { text: "Rozšírená pamäť (2000 slotov, kontext 20 správ)", included: true },
-        { text: "Neobmedzené prepisy hovorov", included: true },
+        { text: "Balík 50 prepisov hovorov / mes.", included: true },
         { text: "Analytika biznisu", included: true },
-        { text: "Referral bonusy", included: true },
-        { text: "Prioritná podpora (do 24h)", included: true },
         { text: "Vlastní AI agenti (3)", included: true },
+        { text: "B2B Compliance — DPA podpis", included: true },
+        { text: "Prioritná podpora (do 24h)", included: true },
         { text: "SLA & dedikovaná podpora", included: false },
       ],
     },
@@ -874,15 +877,18 @@ const siteConfig: SiteConfig = {
       currency: "€",
       interval: "mesiac",
       highlighted: false,
-      cta: "Kontaktovať nás",
+      cta: "Vybrať Enterprise",
+      footnote: "Väčšie tímy alebo individuálny deal? Napíš nám na info@unifyo.online.",
       features: [
         { text: "Všetko v Pro", included: true },
-        { text: "Neobmedzené AI správy", included: true },
+        { text: "Max. výkon — AI chat (400 správ/deň, 2000/týždeň)", included: true },
+        { text: "GPT-4o pre hĺbkové analýzy (smart routing)", included: true },
         { text: "10 000 pamäťových slotov, kontext 50 správ", included: true },
-        { text: "Priority support do 4h (urgent)", included: true },
-        { text: "Fakturácia SK/ČR formát", included: true },
-        { text: "GDPR súlad & DPA podpis", included: true },
+        { text: "Balík 200 prepisov hovorov / mes.", included: true },
         { text: "Vlastní AI agenti (10)", included: true },
+        { text: "Fakturácia SK/CZ formát", included: true },
+        { text: "Audit log + DPA podpis (rozšírený)", included: true },
+        { text: "SLA & garancia odozvy podpory (4h urgent)", included: true },
         { text: "Custom integrácie (Teams / Zoom)", included: false, tooltip: "Plánované" },
       ],
     },

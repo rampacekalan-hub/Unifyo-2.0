@@ -624,6 +624,7 @@ model MembershipPlan {
   tier          MembershipTier @id
   label         String
   dailyRequests Int?
+  weeklyRequests Int?
   memorySlots   Int
   contextWindow Int
   userPolicies  Int

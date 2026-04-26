@@ -56,28 +56,32 @@ export async function POST(req: NextRequest) {
   const rl = await rateLimit(req, { maxRequests: 10, windowMs: 3600_000 }, "calls-upload");
   if (rl) return rl;
 
-  // Per-tier monthly cap. Basic = 5 prepisov/mesiac, Pro/Enterprise = neobmedzene.
+  // Per-tier monthly cap. Basic = 5/mes, Pro = 50/mes, Enterprise = 200/mes.
   // Counted from CallRecording rows since the 1st of the current month.
   const tier = session.membershipTier ?? "BASIC";
-  const monthlyLimit = tier === "BASIC" ? 5 : null;
-  if (monthlyLimit !== null) {
-    const startOfMonth = new Date();
-    startOfMonth.setDate(1);
-    startOfMonth.setHours(0, 0, 0, 0);
-    const usedThisMonth = await prisma.callRecording.count({
-      where: { userId: session.userId, createdAt: { gte: startOfMonth } },
-    });
-    if (usedThisMonth >= monthlyLimit) {
-      return NextResponse.json(
-        {
-          error: `Mesačný limit ${monthlyLimit} prepisov vyčerpaný. Pre neobmedzené prepisy upgraduj na Pro.`,
-          code: "WHISPER_MONTHLY_LIMIT",
-          used: usedThisMonth,
-          limit: monthlyLimit,
-        },
-        { status: 429 },
-      );
-    }
+  const monthlyLimit = tier === "ENTERPRISE" ? 200 : tier === "PREMIUM" ? 50 : 5;
+  const startOfMonth = new Date();
+  startOfMonth.setDate(1);
+  startOfMonth.setHours(0, 0, 0, 0);
+  const usedThisMonth = await prisma.callRecording.count({
+    where: { userId: session.userId, createdAt: { gte: startOfMonth } },
+  });
+  if (usedThisMonth >= monthlyLimit) {
+    const upgradeHint =
+      tier === "ENTERPRISE"
+        ? "Pre rozšírenie nás kontaktuj na info@unifyo.online."
+        : tier === "PREMIUM"
+          ? "Pre 200 prepisov / mes. upgraduj na Enterprise."
+          : "Pre 50 prepisov / mes. upgraduj na Pro.";
+    return NextResponse.json(
+      {
+        error: `Mesačný limit ${monthlyLimit} prepisov vyčerpaný. ${upgradeHint}`,
+        code: "WHISPER_MONTHLY_LIMIT",
+        used: usedThisMonth,
+        limit: monthlyLimit,
+      },
+      { status: 429 },
+    );
   }
 
   let form: FormData;
