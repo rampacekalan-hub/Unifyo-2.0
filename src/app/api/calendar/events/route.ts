@@ -66,6 +66,7 @@ export async function GET(req: NextRequest) {
           id: compositeId,
           summary: e.summary,
           description: e.description,
+          location: e.location,
           start: startIso,
           end: endIso,
           allDay: e.allDay,

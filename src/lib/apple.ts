@@ -95,6 +95,7 @@ export interface AppleEvent {
   uid: string;
   summary: string;
   description?: string;
+  location?: string;
   start: string;   // "YYYY-MM-DD" for all-day, else "YYYY-MM-DDTHH:MM:SS"
   end: string;
   allDay: boolean;
@@ -259,6 +260,7 @@ export async function listAppleEvents(userId: string, startIso: string, endIso: 
           uid,
           summary,
           description: rec["DESCRIPTION"],
+          location: rec["LOCATION"],
           start: start.value,
           end: end.value,
           allDay: start.allDay,

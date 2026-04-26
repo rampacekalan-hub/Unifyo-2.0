@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
   const rl = await rateLimit(req, { maxRequests: 30, windowMs: 3600_000 }, "mail-send");
   if (rl) return rl;
 
-  let body: { to?: string; subject?: string; body?: string };
+  let body: { to?: string; subject?: string; body?: string; from?: "google" | "microsoft" | "apple" };
   try {
     body = await req.json();
   } catch {
@@ -35,7 +35,10 @@ export async function POST(req: NextRequest) {
   if (!bodyText.trim())
     return NextResponse.json({ error: "Telo správy je prázdne" }, { status: 400 });
 
-  const provider = await resolveProvider(session.userId, "email");
+  // Honor an explicit `from` (compose UI lets the user pick when multiple
+  // providers are connected); otherwise fall back to the user's pinned/
+  // auto-resolved email provider.
+  const provider = body.from ?? (await resolveProvider(session.userId, "email"));
   if (!provider) return NextResponse.json({ error: "not_connected" }, { status: 409 });
 
   try {

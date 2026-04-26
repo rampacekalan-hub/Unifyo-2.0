@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
   const rl = await rateLimit(req, { maxRequests: 100, windowMs: 3600_000 }, "mail-draft");
   if (rl) return rl;
 
-  let body: { to?: string; subject?: string; body?: string };
+  let body: { to?: string; subject?: string; body?: string; from?: "google" | "microsoft" | "apple" };
   try {
     body = await req.json();
   } catch {
@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "empty_draft" }, { status: 400 });
   }
 
-  const provider = await resolveProvider(session.userId, "email");
+  const provider = body.from ?? (await resolveProvider(session.userId, "email"));
   if (!provider) return NextResponse.json({ error: "not_connected" }, { status: 409 });
 
   try {

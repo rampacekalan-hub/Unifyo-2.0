@@ -16,6 +16,8 @@ import ShareButton from "@/components/ui/ShareButton";
 import CalendarConnectBanner from "@/components/calendar/CalendarConnectBanner";
 import { track } from "@/lib/analytics";
 
+type RemoteProvider = "google" | "microsoft" | "apple";
+
 interface Task {
   id: string;
   title: string;
@@ -24,13 +26,27 @@ interface Task {
   time: string | null; // HH:MM
   done: boolean;
   createdAt: string;
-  // When set, this row originated from Google Calendar — we show it
-  // with a different accent and disable edit/delete.
-  googleEventId?: string;
+  location?: string | null;
+  // When `provider` + `remoteEventId` are set, this row originated from
+  // a connected provider (Google / Microsoft / Apple). Local CalendarTask
+  // rows leave both undefined.
+  remoteEventId?: string;
+  provider?: RemoteProvider;
   htmlLink?: string;
   calendarName?: string;
   calendarColor?: string;
 }
+
+const PROVIDER_LABEL: Record<RemoteProvider, string> = {
+  google: "Google",
+  microsoft: "Microsoft",
+  apple: "Apple",
+};
+const PROVIDER_DOT: Record<RemoteProvider, string> = {
+  google: "#0ea5e9",
+  microsoft: "#0F78D4",
+  apple: "#94a3b8",
+};
 
 const D = {
   indigo: "#6366f1",
@@ -99,6 +115,10 @@ function CalendarPageInner() {
     date: toISO(today.getFullYear(), today.getMonth(), today.getDate()),
     time: "",
     description: "",
+    // Location only flows to provider events (Google/MS/Apple all support it).
+    // For local CalendarTask rows we keep the field but ignore it on save —
+    // the schema doesn't have a location column.
+    location: "",
   });
 
   // Destination for newly-created events. "local" = CalendarTask row;
@@ -145,13 +165,15 @@ function CalendarPageInner() {
         fetch("/api/calendar/events").catch(() => null),
       ]);
       const local: Task[] = tasksRes.ok ? await tasksRes.json() : [];
-      let google: Task[] = [];
+      let remote: Task[] = [];
       if (gcalRes && gcalRes.ok) {
         const json = (await gcalRes.json()) as {
+          provider?: RemoteProvider;
           events?: Array<{
             id: string;
             summary: string;
             description?: string;
+            location?: string;
             start: string;
             end: string;
             htmlLink?: string;
@@ -160,8 +182,9 @@ function CalendarPageInner() {
             calendarColor?: string;
           }>;
         };
-        google = (json.events ?? []).map((e) => {
-          // Google gives us ISO datetime (all-day = date only). We
+        const provider = json.provider;
+        remote = (json.events ?? []).map((e) => {
+          // Provider gives us ISO datetime (all-day = date only). We
           // want YYYY-MM-DD + HH:MM for the existing grid logic.
           const isAllDay = e.allDay || !/T/.test(e.start);
           const date = e.start.slice(0, 10);
@@ -170,18 +193,20 @@ function CalendarPageInner() {
             id: `g:${e.id}`,
             title: e.summary ?? "(bez názvu)",
             description: e.description ?? null,
+            location: e.location ?? null,
             date,
             time,
             done: false,
             createdAt: e.start,
-            googleEventId: e.id,
+            remoteEventId: e.id,
+            provider,
             htmlLink: e.htmlLink,
             calendarName: e.calendarName,
             calendarColor: e.calendarColor,
           };
         });
       }
-      setTasks([...local, ...google]);
+      setTasks([...local, ...remote]);
     } catch {
       toast.error("Nepodarilo sa načítať úlohy");
     } finally {
@@ -240,6 +265,7 @@ function CalendarPageInner() {
         date: task.date,
         time: task.time ?? "",
         description: task.description ?? "",
+        location: task.location ?? "",
       });
     } else {
       setForm({
@@ -247,6 +273,7 @@ function CalendarPageInner() {
         date: dateHint ?? form.date,
         time: "",
         description: "",
+        location: "",
       });
       // For brand-new events, default destination to the user's effective
       // calendar provider when one is set (and connected); otherwise
@@ -274,7 +301,7 @@ function CalendarPageInner() {
     try {
       // Editing an existing task/event → PATCH to the right endpoint.
       if (editingTask) {
-        if (editingTask.googleEventId) {
+        if (editingTask.remoteEventId) {
           // Google: build start/end ISO. All-day when time is empty.
           const allDay = !form.time.trim();
           const newStart = allDay ? form.date : `${form.date}T${form.time}:00`;
@@ -290,13 +317,14 @@ function CalendarPageInner() {
                 new Date(`${form.date}T${form.time}:00`).getTime() + durationMs,
               ).toISOString();
           const res = await fetch(
-            `/api/calendar/event/${encodeURIComponent(editingTask.googleEventId)}`,
+            `/api/calendar/event/${encodeURIComponent(editingTask.remoteEventId)}`,
             {
               method: "PATCH",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
                 summary: form.title.trim(),
                 description: form.description.trim() || undefined,
+                location: form.location.trim() || undefined,
                 start: newStart,
                 end: endDt,
                 allDay,
@@ -307,7 +335,9 @@ function CalendarPageInner() {
             const data = await res.json().catch(() => ({}));
             throw new Error(data.hint ?? data.error ?? "patch failed");
           }
-          toast.success("Uložené v Google Kalendári.");
+          toast.success(
+            `Uložené v ${PROVIDER_LABEL[editingTask.provider ?? "google"]} Kalendári.`,
+          );
         } else {
           const res = await fetch("/api/calendar/tasks", {
             method: "PATCH",
@@ -339,6 +369,7 @@ function CalendarPageInner() {
           body: JSON.stringify({
             summary: form.title.trim(),
             description: form.description.trim() || undefined,
+            location: form.location.trim() || undefined,
             start,
             end: endIso,
             allDay,
@@ -372,7 +403,7 @@ function CalendarPageInner() {
         track("task_created");
         toast.success("Úloha pridaná");
       }
-      setForm({ title: "", date: form.date, time: "", description: "" });
+      setForm({ title: "", date: form.date, time: "", description: "", location: "" });
       setShowModal(false);
       setEditingTask(null);
       // Close the selected-task detail only when we just edited it.
@@ -388,10 +419,12 @@ function CalendarPageInner() {
   }
 
   async function toggleDone(task: Task) {
-    if (task.googleEventId) {
+    if (task.remoteEventId) {
       // Google events are read-only here. User should complete them in
       // Google Calendar (or click the external-link icon).
-      toast.info("Udalosť z Google Kalendára uprav priamo v Googli.");
+      toast.info(
+        `Udalosť z ${PROVIDER_LABEL[task.provider ?? "google"]} Kalendára uprav priamo tam.`,
+      );
       return;
     }
     try {
@@ -419,9 +452,9 @@ function CalendarPageInner() {
     // Optimistic UI.
     setTasks((prev) => prev.map((t) => t.id === taskId ? { ...t, date: newDate } : t));
     try {
-      if (current.googleEventId) {
+      if (current.remoteEventId) {
         // Google expects ISO datetime for timed events, date-only for all-day.
-        const gcalId = current.googleEventId; // "calendarId::eventId" already
+        const gcalId = current.remoteEventId; // "calendarId::eventId" already
         const allDay = !current.time;
         const newStart = allDay ? newDate : `${newDate}T${current.time}:00`;
         // Preserve original duration if known; fall back to +1h for timed events.
@@ -475,9 +508,10 @@ function CalendarPageInner() {
     // Google event → route through gcal delete. Local task → normal API.
     if (id.startsWith("g:")) {
       const current = tasks.find((t) => t.id === id);
-      const gcalId = current?.googleEventId;
+      const gcalId = current?.remoteEventId;
       if (!gcalId) return;
-      if (!confirm("Zmazať túto udalosť aj v Google Kalendári?")) return;
+      const provLabel = PROVIDER_LABEL[current?.provider ?? "google"];
+      if (!confirm(`Zmazať túto udalosť aj v ${provLabel} Kalendári?`)) return;
       const snapshot = tasks;
       setTasks((prev) => prev.filter((t) => t.id !== id));
       if (selectedTask?.id === id) setSelectedTask(null);
@@ -486,7 +520,7 @@ function CalendarPageInner() {
           method: "DELETE",
         });
         if (!res.ok) throw new Error();
-        toast.success("Zmazané v Google Kalendári.");
+        toast.success(`Zmazané v ${provLabel} Kalendári.`);
       } catch {
         setTasks(snapshot);
         toast.error("Mazanie zlyhalo");
@@ -725,10 +759,10 @@ function CalendarPageInner() {
                       </div>
                       <div className="space-y-0.5 flex-1">
                         {dayTasks.slice(0, 3).map((t) => {
-                          const isGoogle = !!t.googleEventId;
+                          const isRemote = !!t.remoteEventId;
                           const accent = t.done
                             ? "#10b981"
-                            : isGoogle
+                            : isRemote
                             ? (t.calendarColor ?? "#0ea5e9") // sky-500 for Google
                             : "#8b5cf6"; // violet for local tasks
                           return (
@@ -829,10 +863,10 @@ function CalendarPageInner() {
                             // Mirror the month-view color logic so week view
                             // reads the same: violet = local, sky (or the
                             // user's calendar color) = Google, emerald = done.
-                            const isGoogle = !!t.googleEventId;
+                            const isRemote = !!t.remoteEventId;
                             const accent = t.done
                               ? "#10b981"
-                              : isGoogle
+                              : isRemote
                               ? (t.calendarColor ?? "#0ea5e9")
                               : "#8b5cf6";
                             return (
@@ -865,7 +899,7 @@ function CalendarPageInner() {
                                 >
                                   {t.title}
                                 </div>
-                                {isGoogle && t.calendarName && (
+                                {isRemote && t.calendarName && (
                                   <div
                                     className="text-[9px] mt-0.5 truncate"
                                     style={{ color: "var(--app-text-subtle)" }}
@@ -991,7 +1025,7 @@ function CalendarPageInner() {
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
-                {selectedTask.googleEventId && selectedTask.calendarName && (
+                {selectedTask.remoteEventId && selectedTask.calendarName && (
                   <div
                     className="inline-flex items-center gap-1.5 text-[10px] font-semibold px-2 py-0.5 rounded-full"
                     style={{
@@ -1016,7 +1050,7 @@ function CalendarPageInner() {
                     {selectedTask.description}
                   </div>
                 )}
-                {!selectedTask.googleEventId && (
+                {!selectedTask.remoteEventId && (
                   <button
                     onClick={() => toggleDone(selectedTask)}
                     className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-sm font-medium"
@@ -1030,7 +1064,7 @@ function CalendarPageInner() {
                     {selectedTask.done ? "Hotovo" : "Označiť ako hotové"}
                   </button>
                 )}
-                {selectedTask.googleEventId && selectedTask.htmlLink && (
+                {selectedTask.remoteEventId && selectedTask.htmlLink && (
                   <a
                     href={selectedTask.htmlLink}
                     target="_blank"
@@ -1039,10 +1073,10 @@ function CalendarPageInner() {
                     style={{ background: D.indigoDim, border: `1px solid ${D.indigoBorder}`, color: D.muted }}
                   >
                     <ExternalLink className="w-3.5 h-3.5" />
-                    Otvoriť v Google Kalendári
+                    Otvoriť v {PROVIDER_LABEL[selectedTask.provider ?? "google"]} Kalendári
                   </a>
                 )}
-                {!selectedTask.googleEventId && (
+                {!selectedTask.remoteEventId && (
                   <ShareButton resourceType="task" resourceId={selectedTask.id} fullWidth />
                 )}
               </div>
@@ -1106,7 +1140,9 @@ function CalendarPageInner() {
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-bold" style={{ color: D.text }}>
                   {editingTask
-                    ? (editingTask.googleEventId ? "Upraviť udalosť (Google)" : "Upraviť úlohu")
+                    ? (editingTask.remoteEventId
+                        ? `Upraviť udalosť (${PROVIDER_LABEL[editingTask.provider ?? "google"]})`
+                        : "Upraviť úlohu")
                     : "Nová úloha"}
                 </h2>
                 <button
@@ -1187,6 +1223,23 @@ function CalendarPageInner() {
                           );
                         })}
                     </div>
+                  </div>
+                )}
+                {/* Location only round-trips to Google/MS/Apple — local
+                    CalendarTask schema has no location column, so we hide
+                    the input when destination is local AND we're not
+                    editing an existing remote event. */}
+                {(editingTask?.remoteEventId || (!editingTask && destination !== "local")) && (
+                  <div>
+                    <label className="text-xs font-medium block mb-1" style={{ color: D.muted }}>Miesto</label>
+                    <input
+                      type="text"
+                      value={form.location}
+                      onChange={(e) => setForm((f) => ({ ...f, location: e.target.value }))}
+                      placeholder="Napr. Zoom, Office, Bratislava..."
+                      className="w-full px-3 py-2.5 rounded-lg text-sm outline-none"
+                      style={{ background: D.indigoDim, border: `1px solid ${D.indigoBorder}`, color: D.text }}
+                    />
                   </div>
                 )}
                 <div>
@@ -1326,10 +1379,10 @@ function DayDetailDrawer({
             </div>
           ) : (
             tasks.map((t) => {
-              const isGoogle = !!t.googleEventId;
+              const isRemote = !!t.remoteEventId;
               const accent = t.done
                 ? "#10b981"
-                : isGoogle
+                : isRemote
                 ? (t.calendarColor ?? "#0ea5e9")
                 : "#8b5cf6";
               return (
@@ -1342,7 +1395,7 @@ function DayDetailDrawer({
                     borderLeft: `3px solid ${accent}`,
                   }}
                 >
-                  {!isGoogle && (
+                  {!isRemote && (
                     <button
                       onClick={() => onToggleDone(t)}
                       className="w-4 h-4 rounded border mt-0.5 flex-shrink-0"
@@ -1356,11 +1409,11 @@ function DayDetailDrawer({
                       {t.done && <Check className="w-3 h-3 text-white m-auto" />}
                     </button>
                   )}
-                  {isGoogle && (
+                  {isRemote && (
                     <div
                       className="w-4 h-4 rounded-full mt-0.5 flex-shrink-0"
                       style={{ background: `${accent}44`, border: `1px solid ${accent}` }}
-                      title={t.calendarName ?? "Google Kalendár"}
+                      title={t.calendarName ?? `${PROVIDER_LABEL[t.provider ?? "google"]} Kalendár`}
                     />
                   )}
                   <button
@@ -1389,7 +1442,7 @@ function DayDetailDrawer({
                         {t.description}
                       </p>
                     )}
-                    {isGoogle && t.calendarName && (
+                    {isRemote && t.calendarName && (
                       <p className="text-[10px] mt-0.5" style={{ color: "var(--app-text-subtle)" }}>
                         {t.calendarName}
                       </p>
@@ -1416,14 +1469,14 @@ function DayDetailDrawer({
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
-                    {isGoogle && t.htmlLink && (
+                    {isRemote && t.htmlLink && (
                       <a
                         href={t.htmlLink}
                         target="_blank"
                         rel="noreferrer"
                         className="p-1.5 rounded-md"
                         style={{ color: "var(--app-text-subtle)" }}
-                        title="Otvoriť v Google Kalendári"
+                        title={`Otvoriť v ${PROVIDER_LABEL[t.provider ?? "google"]} Kalendári`}
                       >
                         <ExternalLink className="w-3.5 h-3.5" />
                       </a>

@@ -646,6 +646,19 @@ function MessageOverlay({
   );
 }
 
+type EmailProvider = "google" | "microsoft" | "apple";
+
+const EMAIL_PROVIDER_LABEL: Record<EmailProvider, string> = {
+  google: "Gmail",
+  microsoft: "Outlook",
+  apple: "iCloud",
+};
+const EMAIL_PROVIDER_COLOR: Record<EmailProvider, string> = {
+  google: "#ea4335",
+  microsoft: "#0F78D4",
+  apple: "#94a3b8",
+};
+
 function ComposeModal({
   onClose, onSent, prefill,
 }: {
@@ -658,6 +671,36 @@ function ComposeModal({
   const [body, setBody] = useState(prefill?.body ?? "");
   const [sending, setSending] = useState(false);
 
+  // Provider preference — fetch once so the "Z účtu:" picker only renders
+  // when the user has 2+ providers connected. Default to the effective
+  // (pinned-or-auto) email provider so a single-provider user never sees
+  // the chooser.
+  const [from, setFrom] = useState<EmailProvider | null>(null);
+  const [connected, setConnected] = useState<{
+    google: boolean; microsoft: boolean; apple: boolean;
+  }>({ google: false, microsoft: false, apple: false });
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const r = await fetch("/api/integrations/provider-preference");
+        if (!r.ok) return;
+        const j = (await r.json()) as {
+          connected: { google: boolean; microsoft: boolean; apple: boolean };
+          effective: { email: EmailProvider | null };
+        };
+        if (!alive) return;
+        setConnected(j.connected);
+        setFrom(j.effective.email);
+      } catch {}
+    })();
+    return () => { alive = false; };
+  }, []);
+  const connectedEmailProviders = (
+    ["google", "microsoft", "apple"] as EmailProvider[]
+  ).filter((p) => connected[p]);
+  const showFromPicker = connectedEmailProviders.length >= 2;
+
   async function submit() {
     if (sending) return;
     setSending(true);
@@ -665,7 +708,7 @@ function ComposeModal({
       const res = await fetch("/api/mail/send", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ to, subject, body }),
+        body: JSON.stringify({ to, subject, body, from: from ?? undefined }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
@@ -685,11 +728,12 @@ function ComposeModal({
       const res = await fetch("/api/mail/draft", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ to, subject, body }),
+        body: JSON.stringify({ to, subject, body, from: from ?? undefined }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.hint || json.error || `HTTP ${res.status}`);
-      toast.success("Uložené do Gmail Drafts — nájdeš ho aj v Gmail appke.");
+      const label = from ? EMAIL_PROVIDER_LABEL[from] : "Drafts";
+      toast.success(`Uložené do ${label} — nájdeš to aj v jeho aplikácii.`);
       onClose();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Uloženie zlyhalo");
@@ -721,6 +765,37 @@ function ComposeModal({
           </button>
         </div>
         <div className="space-y-3">
+          {showFromPicker && (
+            <div>
+              <label className="text-[10px] font-semibold block mb-1.5 uppercase tracking-wide" style={{ color: D.muted }}>
+                Z účtu
+              </label>
+              <div className="flex flex-wrap gap-1.5">
+                {connectedEmailProviders.map((p) => {
+                  const active = from === p;
+                  return (
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() => setFrom(p)}
+                      className="text-[11px] font-semibold px-2.5 py-1.5 rounded-lg transition-colors inline-flex items-center gap-1.5"
+                      style={{
+                        background: active ? `${EMAIL_PROVIDER_COLOR[p]}26` : "transparent",
+                        border: `1px solid ${active ? EMAIL_PROVIDER_COLOR[p] : D.indigoBorder}`,
+                        color: active ? EMAIL_PROVIDER_COLOR[p] : D.muted,
+                      }}
+                    >
+                      <span
+                        className="w-1.5 h-1.5 rounded-full inline-block"
+                        style={{ background: EMAIL_PROVIDER_COLOR[p] }}
+                      />
+                      {EMAIL_PROVIDER_LABEL[p]}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
           <input
             value={to}
             onChange={(e) => setTo(e.target.value)}
@@ -760,7 +835,7 @@ function ComposeModal({
                 color: D.indigo,
                 border: `1px solid ${D.indigoBorder}`,
               }}
-              title="Uložiť ako koncept v Gmail Drafts"
+              title={from ? `Uložiť ako koncept v ${EMAIL_PROVIDER_LABEL[from]}` : "Uložiť ako koncept"}
             >
               {savingDraft ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileText className="w-3.5 h-3.5" />}
               Uložiť koncept
