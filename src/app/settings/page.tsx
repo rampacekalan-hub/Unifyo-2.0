@@ -258,7 +258,7 @@ export default function SettingsPage() {
           href="/settings/integrations"
           icon={Link2}
           title="Integrácie"
-          subtitle="Pripoj Gmail, Google Kalendár a ďalšie služby"
+          subtitle="Pripoj e-mail a kalendár (Google · Microsoft · Apple)"
         />
 
         {/* ── FAQ (link) ── */}

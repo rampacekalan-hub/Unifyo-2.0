@@ -47,10 +47,10 @@ const GROUPS: Group[] = [
   {
     title: "E-mail & integrácie",
     rows: [
-      { label: "Gmail — čítať aj odoslať",       values: [true, true, true] },
-      { label: "Google Kalendár (multi-calendar)", values: [true, true, true] },
-      { label: "Uložiť ako Gmail koncept",       values: [true, true, true] },
-      { label: "Outlook + Teams",                values: [false, false, true],
+      { label: "E-mail — čítať aj odoslať (Gmail · Outlook · iCloud)", values: [true, true, true] },
+      { label: "Kalendár (Google · Microsoft · Apple)", values: [true, true, true] },
+      { label: "Uložiť ako koncept (Gmail · Outlook · iCloud)", values: [true, true, true] },
+      { label: "Microsoft Teams integrácia",     values: [false, false, true],
         hint: "Plánované" },
     ],
   },

@@ -148,14 +148,14 @@ function RegisterPageInner() {
             </span>
           </h1>
           <p className="text-base max-w-md leading-relaxed" style={{ color: B.textMuted }}>
-            AI asistent, CRM, kalendár, Gmail a hovory — všetko na jednom mieste,
+            AI asistent, CRM, kalendár, e-mail a hovory — všetko na jednom mieste,
             po slovensky. Od <strong>€8,99/mesiac</strong>, zrušenie kedykoľvek.
           </p>
           <ul className="mt-8 space-y-2">
             {[
               "AI asistent po slovensky (100 správ / deň)",
               "Neobmedzené kontakty + CRM + Pipeline",
-              "Gmail + Google Calendar integrácia",
+              "E-mail & kalendár (Google · Microsoft · Apple)",
               "Zrušenie kedykoľvek, dáta exportuješ",
             ].map((b) => (
               <li key={b} className="flex items-center gap-2 text-sm" style={{ color: B.text }}>

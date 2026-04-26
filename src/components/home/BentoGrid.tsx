@@ -28,7 +28,7 @@ const features: Feature[] = [
   {
     icon: Calendar,
     title: "Kalendár & úlohy",
-    desc: "Denný a mesačný prehľad, drag & drop preplánovanie. Plne synchronizované s Google Kalendárom.",
+    desc: "Denný a mesačný prehľad, drag & drop preplánovanie. Sync s Google · Microsoft · Apple kalendárom — môžeš ich aj kombinovať.",
     accent: "#06b6d4",
     bg: "rgba(6,182,212,0.07)",
     border: "rgba(6,182,212,0.15)",
@@ -36,8 +36,8 @@ const features: Feature[] = [
   },
   {
     icon: Mail,
-    title: "Gmail integrácia",
-    desc: "Doručené aj odoslané e-maily priamo v Unifyo. Odpovedaj, uloží ako Gmail koncept, AI ti napíše návrh s kontextom z CRM.",
+    title: "E-mail (Gmail · Outlook · iCloud)",
+    desc: "Doručené aj odoslané priamo v Unifyo. Odpovedaj, ulož koncept, AI ti napíše návrh s kontextom z CRM. Pripoj viac účtov a vyber pri každom maile, z ktorého pošleš.",
     accent: "#67e8f9",
     bg: "rgba(103,232,249,0.06)",
     border: "rgba(103,232,249,0.12)",

@@ -38,8 +38,8 @@ const D = {
 
 const APPS: Array<{ id: AppId; label: string; desc: string; Icon: React.ElementType; color: string }> = [
   { id: "dashboard",  label: "AI Dashboard",  desc: "Asistent na každý deň",   Icon: Bot,           color: D.violet },
-  { id: "email",      label: "E-mail",        desc: "Gmail cez Unifyo",        Icon: Mail,          color: D.sky },
-  { id: "calendar",   label: "Kalendár",      desc: "Google Calendar sync",    Icon: CalendarDays,  color: D.emerald },
+  { id: "email",      label: "E-mail",        desc: "Gmail · Outlook · iCloud", Icon: Mail,          color: D.sky },
+  { id: "calendar",   label: "Kalendár",      desc: "Google · Microsoft · Apple", Icon: CalendarDays, color: D.emerald },
   { id: "crm",        label: "CRM",           desc: "Kontakty + dealy",        Icon: Users,         color: D.indigo },
   { id: "pipeline",   label: "Pipeline",      desc: "Obchodné príležitosti",   Icon: LayoutDashboard, color: D.amber },
   { id: "calls",      label: "Hovory",        desc: "AI prepis + zhrnutie",    Icon: Phone,         color: "#ec4899" },

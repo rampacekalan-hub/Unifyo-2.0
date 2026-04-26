@@ -834,8 +834,8 @@ const siteConfig: SiteConfig = {
       features: [
         { text: "AI chat po slovensky (50 správ/deň)", included: true },
         { text: "CRM — kontakty, poznámky, pipeline", included: true },
-        { text: "Kalendár s úlohami + Google Calendar sync", included: true },
-        { text: "Gmail integrácia — čítať aj odoslať", included: true },
+        { text: "Kalendár + sync (Google · Microsoft · Apple)", included: true },
+        { text: "Email — čítať/odoslať (Gmail · Outlook · iCloud)", included: true },
         { text: "Prepis hovorov AI (Whisper, 5 / mes.)", included: true },
         { text: "Automatizácie (ranný súhrn, stale-deal alert)", included: true },
         { text: "CSV import/export, 2FA, GDPR export", included: true },
