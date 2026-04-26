@@ -14,6 +14,15 @@ export async function GET(req: NextRequest) {
   if (response) return response;
   const userId = session.userId;
 
+  // Pro+ feature. Basic users see an upgrade nudge instead.
+  const tier = session.membershipTier ?? "BASIC";
+  if (tier === "BASIC") {
+    return NextResponse.json(
+      { error: "Analytika je dostupná v Pro a Enterprise.", code: "TIER_LOCKED", requiredTier: "PRO" },
+      { status: 403 },
+    );
+  }
+
   const now = new Date();
   const weekAgo = new Date(now.getTime() - 7 * 24 * 3600_000);
   const monthAgo = new Date(now.getTime() - 30 * 24 * 3600_000);

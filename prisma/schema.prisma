@@ -102,6 +102,10 @@ model User {
   callRecordings    CallRecording[]
   feedbackItems     Feedback[]
   passkeys          Passkey[]
+  customAgents      CustomAgent[]
+  supportTickets    SupportTicket[]
+  invoices          Invoice[]
+  dpaSignatures     DpaSignature[]
 }
 
 // ── WebAuthn / FIDO2 passkeys ─────────────────────────────────────────
@@ -148,6 +152,132 @@ model Feedback {
   status    String   @default("NEW") // NEW | SEEN | ACTIONED | ARCHIVED
   createdAt DateTime @default(now())
   @@index([status, createdAt])
+}
+
+// ── DPA (Zmluva o spracúvaní os. údajov) ─────────────────────────
+// GDPR Article 28 requires a written processing agreement between
+// data controller (the user / their company) and processor (Unifyo).
+// We track an active version + a signature record per user. New
+// versions invalidate prior signatures — UI nudges users to re-sign.
+// Signature is "type your full name + checkbox + IP/timestamp" — not
+// a wet signature, but legally sufficient under eIDAS for B2B SaaS.
+model DpaVersion {
+  id          String   @id @default(cuid())
+  version     String   @unique // e.g. "1.0", "2.0"
+  body        String   @db.Text
+  effectiveAt DateTime
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  signatures  DpaSignature[]
+
+  @@index([isActive, effectiveAt])
+}
+
+model DpaSignature {
+  id          String     @id @default(cuid())
+  userId      String
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  versionId   String
+  version     DpaVersion @relation(fields: [versionId], references: [id], onDelete: Restrict)
+  signerName  String
+  signerRole  String     // e.g. "Konateľ", "Director"
+  companyName String
+  ico         String?
+  signedAt    DateTime   @default(now())
+  ipAddress   String?
+  userAgent   String?
+
+  @@unique([userId, versionId])
+  @@index([userId])
+}
+
+// ── Faktúry (Enterprise) ─────────────────────────────────────────
+// SK/CZ-compliant invoice generator. Stored as structured JSON so we
+// can re-render anytime; PDF export = HTML print view. items is
+// `{ description, quantity, unitPrice, vatRate }[]`. Totals computed
+// server-side and snapshotted at issue time so historical rows are
+// stable even if VAT rules change.
+model Invoice {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  invoiceNumber String   // user-controlled, unique per (userId, invoiceNumber)
+  country       String   @default("SK") // "SK" | "CZ"
+
+  // Issuer (the user's company)
+  issuerName    String
+  issuerAddress String
+  issuerIco     String?  // IČO
+  issuerDic     String?  // DIČ
+  issuerIcDph   String?  // IČ DPH (SK) / DIČ DPH (CZ)
+  issuerIban    String?
+  issuerEmail   String?
+
+  // Customer
+  customerName    String
+  customerAddress String
+  customerIco     String?
+  customerDic     String?
+  customerIcDph   String?
+  customerEmail   String?
+
+  // Line items + totals
+  items          Json     // [{description, quantity, unitPrice, vatRate}]
+  currency       String   @default("EUR")
+  subtotalCents  Int      // sum of (qty * unitPrice) in cents
+  vatTotalCents  Int      // total VAT in cents
+  totalCents     Int      // subtotal + vat
+
+  // Dates & status
+  issueDate     DateTime  @default(now())
+  dueDate       DateTime
+  taxableDate   DateTime?
+  variableSymbol String?  // CZ payment matching
+  notes         String?   @db.Text
+  status        String    @default("DRAFT") // DRAFT | ISSUED | PAID | CANCELLED
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, invoiceNumber])
+  @@index([userId, status])
+}
+
+// ── Support tickets (helpdesk) ────────────────────────────────────
+// Lightweight support inbox. User opens a ticket; admin replies via
+// the same thread (TicketReply rows). Status progresses
+// OPEN → IN_PROGRESS → RESOLVED → CLOSED. priority is one of
+// "low" | "normal" | "high" | "urgent" — Pro tier gets normal+,
+// Enterprise can flag urgent for SLA. Email-on-reply is wired in
+// the route, not the model.
+model SupportTicket {
+  id         String         @id @default(cuid())
+  userId     String
+  user       User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subject    String
+  body       String         @db.Text
+  status     String         @default("OPEN") // OPEN | IN_PROGRESS | RESOLVED | CLOSED
+  priority   String         @default("normal")
+  category   String         @default("general") // billing | bug | how-to | feature | general
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+  replies    TicketReply[]
+
+  @@index([userId, status])
+  @@index([status, createdAt])
+}
+
+model TicketReply {
+  id        String        @id @default(cuid())
+  ticketId  String
+  ticket    SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  authorId  String         // userId of author; admin replies still tied to a user
+  isStaff   Boolean        @default(false)
+  body      String         @db.Text
+  createdAt DateTime       @default(now())
+
+  @@index([ticketId, createdAt])
 }
 
 // ── Call recordings (Fáza A: upload + Whisper + AI summary) ────────
@@ -501,6 +631,28 @@ model MembershipPlan {
   description   String
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
+}
+
+// ── Custom AI agents (Pro/Enterprise) ───────────────────────────
+// User-defined assistants with their own system prompt + icon.
+// Pro = up to 3 agents, Enterprise = up to 10. Enforced at API level.
+// At chat time the user picks an agent and its systemPrompt is
+// prepended. Cascading delete when the user is removed.
+model CustomAgent {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name         String
+  description  String?
+  systemPrompt String
+  icon         String   @default("Bot") // lucide icon name
+  color        String   @default("#8b5cf6")
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([userId])
+  @@index([userId, isActive])
 }
 
 // ── Globálne neural policies (admin) ─────────────────────────────

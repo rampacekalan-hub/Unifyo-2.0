@@ -80,6 +80,7 @@ const MODULES: ModuleDef[] = [
   // takže zmena v admin konzole sa prejaví okamžite a rovnako všade.
   { id: "calls",     label: "Hovory",     href: "/calls",     icon: Phone,     appId: "calls" },
   { id: "analytics", label: "Analytika",  href: "/analytics", icon: BarChart3, always: true },
+  { id: "agents",    label: "AI Agenti",  href: "/agents",    icon: Bot,       always: true },
   { id: "automation",label: "Automatizácie", href: "/automation",icon: Zap,       appId: "automation" },
   { id: "settings",  label: "Nastavenia", href: "/settings",  icon: SettingsIcon, always: true },
 ];

@@ -7,8 +7,9 @@
 import { useEffect, useState } from "react";
 import {
   BarChart3, Users, Briefcase, CalendarDays, Phone, MessageSquare,
-  TrendingUp, Sparkles, Loader2,
+  TrendingUp, Sparkles, Loader2, Lock,
 } from "lucide-react";
+import Link from "next/link";
 import AppLayout from "@/components/layout/AppLayout";
 import { SkeletonCard } from "@/components/ui/Skeleton";
 
@@ -45,12 +46,18 @@ function formatEur(cents: number): string {
 export default function AnalyticsPage() {
   const [data, setData] = useState<Summary | null>(null);
   const [loading, setLoading] = useState(true);
+  const [tierLocked, setTierLocked] = useState(false);
 
   useEffect(() => {
     (async () => {
       try {
         const res = await fetch("/api/analytics/summary");
-        if (res.ok) setData(await res.json());
+        if (res.status === 403) {
+          const j = await res.json().catch(() => null);
+          if (j?.code === "TIER_LOCKED") setTierLocked(true);
+        } else if (res.ok) {
+          setData(await res.json());
+        }
       } finally {
         setLoading(false);
       }
@@ -71,6 +78,34 @@ export default function AnalyticsPage() {
               <SkeletonCard lines={2} />
             </div>
           </>
+        ) : tierLocked ? (
+          <div
+            className="rounded-2xl p-8 text-center"
+            style={{
+              background: "linear-gradient(135deg, rgba(139,92,246,0.08), rgba(99,102,241,0.04))",
+              border: `1px solid ${D.border}`,
+            }}
+          >
+            <div
+              className="w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-4"
+              style={{ background: `linear-gradient(135deg, ${D.violet}, ${D.indigo})` }}
+            >
+              <Lock className="w-5 h-5 text-white" />
+            </div>
+            <h2 className="text-xl font-bold mb-2" style={{ color: D.text }}>
+              Analytika je v Pro a Enterprise
+            </h2>
+            <p className="text-sm max-w-md mx-auto mb-6" style={{ color: D.muted }}>
+              Win rate, pipeline hodnota, AI usage a viac. Upgraduj svoj plán a získaj prehľad o svojom biznise.
+            </p>
+            <Link
+              href="/settings/billing"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-transform hover:scale-[1.02]"
+              style={{ background: `linear-gradient(135deg, ${D.violet}, ${D.indigo})` }}
+            >
+              <Sparkles className="w-4 h-4" /> Pozrieť plány
+            </Link>
+          </div>
         ) : !data ? (
           <p className="text-sm" style={{ color: D.muted }}>Dáta sa nepodarilo načítať.</p>
         ) : (
