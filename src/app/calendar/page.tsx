@@ -101,6 +101,38 @@ function CalendarPageInner() {
     description: "",
   });
 
+  // Destination for newly-created events. "local" = CalendarTask row;
+  // anything else delegates to /api/calendar/event (the unified create
+  // route) which dispatches to Google/Microsoft/Apple. Connected providers
+  // are fetched once from /api/integrations/provider-preference so we
+  // know which buttons to render and what the user's pinned default is.
+  type Destination = "local" | "google" | "microsoft" | "apple";
+  const [destination, setDestination] = useState<Destination>("local");
+  const [connectedProviders, setConnectedProviders] = useState<{
+    google: boolean; microsoft: boolean; apple: boolean;
+  }>({ google: false, microsoft: false, apple: false });
+  const [effectiveCalendar, setEffectiveCalendar] = useState<
+    "google" | "microsoft" | "apple" | null
+  >(null);
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const res = await fetch("/api/integrations/provider-preference");
+        if (!res.ok) return;
+        const j = (await res.json()) as {
+          connected: { google: boolean; microsoft: boolean; apple: boolean };
+          effective: { calendar: "google" | "microsoft" | "apple" | null };
+        };
+        if (!alive) return;
+        setConnectedProviders(j.connected);
+        setEffectiveCalendar(j.effective.calendar);
+      } catch {}
+    })();
+    return () => { alive = false; };
+  }, []);
+
   const loadTasks = useCallback(async () => {
     setLoading(true);
     try {
@@ -216,6 +248,15 @@ function CalendarPageInner() {
         time: "",
         description: "",
       });
+      // For brand-new events, default destination to the user's effective
+      // calendar provider when one is set (and connected); otherwise
+      // local. That way a Google-only user lands on "Google" without
+      // having to pick — same shape as the auto-pick in resolveProvider.
+      const defaultDest: Destination =
+        effectiveCalendar && connectedProviders[effectiveCalendar]
+          ? effectiveCalendar
+          : "local";
+      setDestination(defaultDest);
     }
     setShowModal(true);
   }
@@ -282,6 +323,40 @@ function CalendarPageInner() {
           if (!res.ok) throw new Error("patch failed");
           toast.success("Úloha upravená");
         }
+      } else if (destination !== "local") {
+        // Remote provider: build start/end ISO and dispatch through the
+        // unified /api/calendar/event create route. All-day when no time.
+        const allDay = !form.time.trim();
+        const start = allDay ? form.date : `${form.date}T${form.time}:00`;
+        const endIso = allDay
+          ? form.date
+          : new Date(
+              new Date(`${form.date}T${form.time}:00`).getTime() + 60 * 60 * 1000,
+            ).toISOString();
+        const res = await fetch("/api/calendar/event", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            summary: form.title.trim(),
+            description: form.description.trim() || undefined,
+            start,
+            end: endIso,
+            allDay,
+            destination,
+          }),
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.hint ?? data.error ?? "create failed");
+        }
+        track("task_created");
+        toast.success(
+          destination === "google"
+            ? "Pridané do Google Kalendára."
+            : destination === "microsoft"
+            ? "Pridané do Microsoft Kalendára."
+            : "Pridané do Apple Kalendára.",
+        );
       } else {
         const res = await fetch("/api/calendar/tasks", {
           method: "POST",
@@ -1076,6 +1151,44 @@ function CalendarPageInner() {
                     />
                   </div>
                 </div>
+                {!editingTask && (connectedProviders.google || connectedProviders.microsoft || connectedProviders.apple) && (
+                  <div>
+                    <label className="text-xs font-medium block mb-1.5" style={{ color: D.muted }}>
+                      Kam uložiť
+                    </label>
+                    <div className="flex flex-wrap gap-1.5">
+                      {([
+                        { key: "local", label: "Lokálna úloha", color: "#8b5cf6", show: true },
+                        { key: "google", label: "Google", color: "#ea4335", show: connectedProviders.google },
+                        { key: "microsoft", label: "Microsoft", color: "#0F78D4", show: connectedProviders.microsoft },
+                        { key: "apple", label: "Apple", color: "#94a3b8", show: connectedProviders.apple },
+                      ] as { key: Destination; label: string; color: string; show: boolean }[])
+                        .filter((o) => o.show)
+                        .map((o) => {
+                          const active = destination === o.key;
+                          return (
+                            <button
+                              key={o.key}
+                              type="button"
+                              onClick={() => setDestination(o.key)}
+                              className="text-[11px] font-semibold px-2.5 py-1.5 rounded-lg transition-colors inline-flex items-center gap-1.5"
+                              style={{
+                                background: active ? `${o.color}26` : "transparent",
+                                border: `1px solid ${active ? o.color : D.indigoBorder}`,
+                                color: active ? o.color : D.muted,
+                              }}
+                            >
+                              <span
+                                className="w-1.5 h-1.5 rounded-full inline-block"
+                                style={{ background: o.color }}
+                              />
+                              {o.label}
+                            </button>
+                          );
+                        })}
+                    </div>
+                  </div>
+                )}
                 <div>
                   <label className="text-xs font-medium block mb-1" style={{ color: D.muted }}>Poznámka</label>
                   <textarea

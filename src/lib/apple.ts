@@ -366,6 +366,102 @@ export async function updateAppleEvent(
   if (!put.ok) throw new Error(`apple_put:${put.status}`);
 }
 
+/** Create a new event in the user's first writable iCloud calendar.
+ *  Builds a minimal VEVENT and PUTs it to <calendar>/<uid>.ics.
+ *  Returns the composite id the rest of the app uses for Apple events. */
+export async function createAppleEvent(
+  userId: string,
+  ev: {
+    summary: string;
+    description?: string;
+    location?: string;
+    start: string; // ISO datetime or "YYYY-MM-DD"
+    end: string;
+    allDay?: boolean;
+  },
+): Promise<{ id: string; url: string }> {
+  const row = await prisma.appleIntegration.findUnique({ where: { userId } });
+  if (!row || !row.calendarHomeUrl) throw new Error("not_connected");
+  const password = decryptSecret(row.passwordEnc);
+  const auth = basicAuthHeader(row.appleId, password);
+
+  const calendars = await listCalendars({
+    appleId: row.appleId,
+    password,
+    calendarHomeUrl: row.calendarHomeUrl,
+  });
+  if (!calendars.length) throw new Error("no_calendar");
+  // Prefer a calendar that looks like the user's primary one; fall back to first.
+  const target =
+    calendars.find((c) => /home|personal|calendar|kalend/i.test(c.name)) ??
+    calendars[0];
+
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const fmtDateTime = (iso: string) => {
+    const d = new Date(iso);
+    return (
+      d.getUTCFullYear() +
+      pad(d.getUTCMonth() + 1) +
+      pad(d.getUTCDate()) +
+      "T" +
+      pad(d.getUTCHours()) +
+      pad(d.getUTCMinutes()) +
+      pad(d.getUTCSeconds()) +
+      "Z"
+    );
+  };
+  const fmtDateOnly = (iso: string) => iso.slice(0, 10).replace(/-/g, "");
+
+  const uid = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}@unifyo`;
+  const dtstamp = fmtDateTime(new Date().toISOString());
+  const dtstart = ev.allDay
+    ? `DTSTART;VALUE=DATE:${fmtDateOnly(ev.start)}`
+    : `DTSTART:${fmtDateTime(ev.start)}`;
+  const dtend = ev.allDay
+    ? `DTEND;VALUE=DATE:${fmtDateOnly(ev.end)}`
+    : `DTEND:${fmtDateTime(ev.end)}`;
+
+  // Escape per RFC 5545: \, ; , and newlines.
+  const esc = (s: string) =>
+    s.replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\n/g, "\\n");
+
+  const lines = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//Unifyo//CalDAV//EN",
+    "CALSCALE:GREGORIAN",
+    "BEGIN:VEVENT",
+    `UID:${uid}`,
+    `DTSTAMP:${dtstamp}`,
+    dtstart,
+    dtend,
+    `SUMMARY:${esc(ev.summary)}`,
+    ...(ev.description ? [`DESCRIPTION:${esc(ev.description)}`] : []),
+    ...(ev.location ? [`LOCATION:${esc(ev.location)}`] : []),
+    "END:VEVENT",
+    "END:VCALENDAR",
+  ];
+  const ics = lines.join("\r\n") + "\r\n";
+
+  // Resource URL: append "<uid>.ics" to the calendar collection URL.
+  const base = target.url.endsWith("/") ? target.url : `${target.url}/`;
+  const eventUrl = `${base}${encodeURIComponent(uid)}.ics`;
+
+  const put = await fetch(eventUrl, {
+    method: "PUT",
+    headers: {
+      Authorization: auth,
+      "Content-Type": "text/calendar; charset=utf-8",
+      "If-None-Match": "*", // create-only, don't clobber
+    },
+    body: ics,
+  });
+  if (!put.ok) throw new Error(`apple_create:${put.status}`);
+
+  const id = `apple::${Buffer.from(eventUrl).toString("base64url")}`;
+  return { id, url: eventUrl };
+}
+
 /** DELETE an event by its CalDAV resource URL. */
 export async function deleteAppleEvent(userId: string, eventUrl: string): Promise<void> {
   const row = await prisma.appleIntegration.findUnique({ where: { userId } });

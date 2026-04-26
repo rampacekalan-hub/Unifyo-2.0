@@ -362,6 +362,50 @@ export interface OutlookCalendarEvent {
   calendarColor?: string;
 }
 
+/** Create a new event on the user's default Outlook calendar. Mirrors
+ *  the createCalendarEvent shape in lib/google so the unified route can
+ *  pass the same body to either provider. */
+export async function createOutlookEvent(
+  accessToken: string,
+  ev: {
+    summary: string;
+    description?: string;
+    location?: string;
+    start: string;
+    end: string;
+    allDay?: boolean;
+  },
+): Promise<{ id: string; htmlLink?: string }> {
+  const body: Record<string, unknown> = {
+    subject: ev.summary,
+    isAllDay: !!ev.allDay,
+    start: {
+      dateTime: ev.allDay ? `${ev.start.slice(0, 10)}T00:00:00` : ev.start,
+      timeZone: "UTC",
+    },
+    end: {
+      dateTime: ev.allDay ? `${ev.end.slice(0, 10)}T00:00:00` : ev.end,
+      timeZone: "UTC",
+    },
+    ...(ev.description ? { body: { contentType: "Text", content: ev.description } } : {}),
+    ...(ev.location ? { location: { displayName: ev.location } } : {}),
+  };
+  const res = await fetch(`${GRAPH_BASE}/me/events`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const err = await res.text().catch(() => "");
+    throw new Error(`outlook event create failed: ${res.status} ${err.slice(0, 200)}`);
+  }
+  const j = (await res.json()) as { id: string; webLink?: string };
+  return { id: j.id, htmlLink: j.webLink };
+}
+
 /** Update an Outlook calendar event. Patch shape mirrors updateCalendarEvent
  *  in lib/google so the unified /api/calendar/event/[id] route can pass
  *  the same body through regardless of provider. */

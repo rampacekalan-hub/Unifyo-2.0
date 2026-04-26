@@ -422,6 +422,50 @@ export async function sendGmail(
   return (await res.json()) as { id: string; threadId: string };
 }
 
+/** Create a new event on the user's primary Google Calendar. Returns
+ *  the composite "primary::<eventId>" id so the caller can immediately
+ *  reference the event for follow-up edits without re-listing. */
+export async function createCalendarEvent(
+  accessToken: string,
+  ev: {
+    summary: string;
+    description?: string;
+    location?: string;
+    start: string;   // ISO datetime, or "YYYY-MM-DD" when allDay
+    end: string;
+    allDay?: boolean;
+  },
+): Promise<{ id: string; htmlLink?: string }> {
+  const body: Record<string, unknown> = {
+    summary: ev.summary,
+    ...(ev.description !== undefined ? { description: ev.description } : {}),
+    ...(ev.location !== undefined ? { location: ev.location } : {}),
+    start: ev.allDay
+      ? { date: ev.start.slice(0, 10) }
+      : { dateTime: ev.start },
+    end: ev.allDay
+      ? { date: ev.end.slice(0, 10) }
+      : { dateTime: ev.end },
+  };
+  const res = await fetch(
+    "https://www.googleapis.com/calendar/v3/calendars/primary/events",
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    },
+  );
+  if (!res.ok) {
+    const err = await res.text().catch(() => "");
+    throw new Error(`calendar create failed: ${res.status} ${err.slice(0, 200)}`);
+  }
+  const data = (await res.json()) as { id: string; htmlLink?: string };
+  return { id: `primary::${data.id}`, htmlLink: data.htmlLink };
+}
+
 /** PATCH an existing calendar event. `eventId` format is "calendarId::id"
  *  (what listCalendarEvents returns). Pass only the fields you want to
  *  change. Throws on non-OK so callers can surface a toast. */
