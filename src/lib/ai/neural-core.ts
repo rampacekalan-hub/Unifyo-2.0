@@ -69,6 +69,9 @@ export interface MemoryEntry {
 export interface NeuralResponse {
   answer: string;
   tokensUsed: number;
+  inputTokens: number;
+  outputTokens: number;
+  model: string;
   memoriesUsed: number;
   newMemoryId: string;
 }
@@ -553,6 +556,9 @@ export async function neuralInfer(
   const data = await openaiRes.json();
   const answer: string = data.choices?.[0]?.message?.content ?? "";
   const tokensUsed: number = data.usage?.total_tokens ?? 0;
+  const inputTokens: number = data.usage?.prompt_tokens ?? 0;
+  const outputTokens: number = data.usage?.completion_tokens ?? 0;
+  const usedModel: string = (data.model as string) ?? pickModel(ctx.tier, userMessage);
 
   // 6. Store AI response with confidence evaluation
   const confidence = evalConfidence(answer);
@@ -565,6 +571,9 @@ export async function neuralInfer(
   return {
     answer,
     tokensUsed,
+    inputTokens,
+    outputTokens,
+    model: usedModel,
     memoriesUsed: memories.length,
     newMemoryId,
   };

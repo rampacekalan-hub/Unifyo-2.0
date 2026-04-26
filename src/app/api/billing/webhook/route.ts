@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { stripe, syncSubscriptionToDb } from "@/lib/stripe";
+import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 // Webhook must read the RAW body for signature verification — Next.js
@@ -58,6 +59,52 @@ export async function POST(req: NextRequest) {
       case "customer.subscription.deleted": {
         const sub = event.data.object as Stripe.Subscription;
         await syncSubscriptionToDb(sub);
+        break;
+      }
+      case "invoice.paid":
+      case "invoice.payment_succeeded": {
+        // Authoritative revenue record. Idempotent via stripeInvoiceId
+        // unique constraint — Stripe occasionally re-delivers, and both
+        // event types fire for the same invoice; upsert handles it.
+        const inv = event.data.object as Stripe.Invoice;
+        const customerId = typeof inv.customer === "string" ? inv.customer : inv.customer?.id ?? null;
+        const subId =
+          typeof (inv as Stripe.Invoice & { subscription?: string | Stripe.Subscription | null }).subscription === "string"
+            ? ((inv as Stripe.Invoice & { subscription?: string }).subscription ?? null)
+            : ((inv as Stripe.Invoice & { subscription?: Stripe.Subscription }).subscription?.id ?? null);
+        if (!inv.id || !customerId) break;
+
+        // Resolve userId via StripeSubscription mirror (created on
+        // checkout.session.completed). If the user isn't linked yet we
+        // skip and let Stripe retry — by next delivery the sync will
+        // have caught up.
+        const sub = await prisma.stripeSubscription.findFirst({
+          where: { customerId },
+          select: { userId: true },
+        });
+        if (!sub) break;
+
+        await prisma.payment.upsert({
+          where: { stripeInvoiceId: inv.id },
+          update: {
+            amountCents: inv.amount_paid ?? 0,
+            currency: inv.currency ?? "eur",
+            status: "paid",
+            paidAt: new Date((inv.status_transitions?.paid_at ?? inv.created) * 1000),
+            stripeCustomerId: customerId,
+            stripeSubscriptionId: subId,
+          },
+          create: {
+            userId: sub.userId,
+            stripeInvoiceId: inv.id,
+            stripeCustomerId: customerId,
+            stripeSubscriptionId: subId,
+            amountCents: inv.amount_paid ?? 0,
+            currency: inv.currency ?? "eur",
+            status: "paid",
+            paidAt: new Date((inv.status_transitions?.paid_at ?? inv.created) * 1000),
+          },
+        });
         break;
       }
       case "invoice.payment_failed": {

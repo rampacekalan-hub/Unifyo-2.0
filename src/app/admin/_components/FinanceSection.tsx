@@ -20,12 +20,25 @@ interface FinanceRow {
   calls:    { all: number; month: number; year: number };
   cost:     { all: number; month: number; year: number };
   revenue:  { all: number; month: number; year: number };
+  revenueSource: "payments" | "estimated";
   net:      { all: number; month: number; year: number };
+}
+
+interface ModelBreakdown {
+  model: string;
+  requests: number;
+  tokens: number;
+  cost: number;
 }
 
 interface FinanceData {
   asOf: string;
-  rates: { costPerTokenEur: number; costPerCallEur: number };
+  revenueSource: "payments" | "estimated";
+  pricing: {
+    usdToEur: number;
+    models: Record<string, { inputPerMUsd: number; outputPerMUsd: number }>;
+    whisperUsdPerMin: number;
+  };
   totals: {
     users: number;
     paying: number;
@@ -35,6 +48,7 @@ interface FinanceData {
     requests:{ all: number; month: number; year: number };
     calls:   { all: number; month: number; year: number };
   };
+  modelBreakdown: ModelBreakdown[];
   perUser: FinanceRow[];
 }
 
@@ -148,9 +162,64 @@ export default function FinanceSection() {
         />
       </div>
 
-      <p className="text-[0.7rem]" style={{ color: "var(--app-text-subtle)" }}>
-        Sadzby: AI ~{(data.rates.costPerTokenEur * 1_000_000).toFixed(2)} €/M tokenov, hovor ~{data.rates.costPerCallEur.toFixed(3)} € (odhad pri 4 min). Príjmy odhadnuté zo Stripe subscription createdAt × cena tarify.
-      </p>
+      {/* Pricing transparency */}
+      <div
+        className="rounded-xl p-4 text-[0.7rem]"
+        style={{ background: "var(--app-surface-2)", border: "1px solid var(--app-border)", color: "var(--app-text-muted)" }}
+      >
+        <div className="font-semibold mb-1.5" style={{ color: "var(--app-text)" }}>Sadzby (OpenAI list price → EUR @ {data.pricing.usdToEur.toFixed(2)})</div>
+        <div className="flex flex-wrap gap-x-5 gap-y-1">
+          {Object.entries(data.pricing.models).map(([m, p]) => (
+            <span key={m}>
+              <span className="font-mono" style={{ color: "var(--app-text)" }}>{m}</span>
+              {" — "}
+              ${p.inputPerMUsd.toFixed(2)}/M in · ${p.outputPerMUsd.toFixed(2)}/M out
+            </span>
+          ))}
+          <span>Whisper — ${data.pricing.whisperUsdPerMin.toFixed(3)}/min</span>
+        </div>
+        <div className="mt-1.5">
+          Príjmy:{" "}
+          {data.revenueSource === "payments"
+            ? "Stripe Payment ledger (presné, z webhooku invoice.paid)"
+            : "odhad zo subscription createdAt × cena tarify (zatiaľ žiadne Payment záznamy)"}
+        </div>
+      </div>
+
+      {/* Model breakdown for current month */}
+      {data.modelBreakdown.length > 0 && (
+        <div
+          className="rounded-xl p-4"
+          style={{ background: "var(--app-surface)", border: "1px solid var(--app-border)" }}
+        >
+          <div className="text-xs font-semibold mb-2" style={{ color: "var(--app-text)" }}>
+            AI náklady tento mesiac podľa modelu
+          </div>
+          <div className="flex flex-col gap-1.5">
+            {data.modelBreakdown.map((m) => {
+              const totalCost = data.totals.cost.month || 1;
+              const pct = Math.round((m.cost / totalCost) * 100);
+              return (
+                <div key={m.model} className="flex items-center gap-3 text-xs">
+                  <span className="font-mono w-32 shrink-0" style={{ color: "var(--app-text)" }}>{m.model}</span>
+                  <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: "var(--app-surface-2)" }}>
+                    <div className="h-full" style={{
+                      width: `${pct}%`,
+                      background: m.model.includes("gpt-4o-mini") ? "#a78bfa" : "#34d399",
+                    }} />
+                  </div>
+                  <span className="tabular-nums w-20 text-right" style={{ color: "var(--app-text-muted)" }}>
+                    {fmtInt(m.requests)} req
+                  </span>
+                  <span className="tabular-nums w-24 text-right" style={{ color: "var(--app-text)" }}>
+                    {fmt(m.cost)}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Filter */}
       <div className="flex flex-wrap items-center gap-2">

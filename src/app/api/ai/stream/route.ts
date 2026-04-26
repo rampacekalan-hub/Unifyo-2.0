@@ -157,14 +157,19 @@ export async function POST(req: NextRequest) {
   // Update lastActiveAt async
   prisma.user.update({ where: { id: session.userId }, data: { lastActiveAt: new Date() } }).catch(() => {});
 
+  const chosenModel = pickModel(tier, message);
   const openaiRes = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${process.env.OPENAI_API_KEY}` },
     body: JSON.stringify({
-      model: pickModel(tier, message),
+      model: chosenModel,
       max_tokens: config.ai.maxTokens,
       temperature: prefs?.temperature ?? config.ai.temperature,
       stream: true,
+      // Required for OpenAI to send the final usage frame in SSE — bez
+      // toho nedostaneme prompt_tokens / completion_tokens a nevieme
+      // spočítať presný náklad.
+      stream_options: { include_usage: true },
       messages: [
         { role: "system", content: systemPrompt },
         ...historyMessages,
@@ -185,6 +190,10 @@ export async function POST(req: NextRequest) {
   // Stream response back to client
   const encoder = new TextEncoder();
   let fullContent = "";
+  let totalTokens = 0;
+  let inputTokens = 0;
+  let outputTokens = 0;
+  let usedModel = chosenModel;
 
   const stream = new ReadableStream({
     async start(controller) {
@@ -202,14 +211,19 @@ export async function POST(req: NextRequest) {
         if (data === "[DONE]") return;
         try {
           const json = JSON.parse(data);
+          if (json.model) usedModel = json.model;
           const delta = json.choices?.[0]?.delta?.content ?? "";
           if (delta) {
             fullContent += delta;
             controller.enqueue(encoder.encode(`data: ${JSON.stringify({ delta })}\n\n`));
           }
-          const tokensUsed = json.usage?.total_tokens ?? 0;
-          if (tokensUsed > 0) {
-            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ tokens: tokensUsed, done: true })}\n\n`));
+          if (json.usage) {
+            totalTokens  = json.usage.total_tokens      ?? totalTokens;
+            inputTokens  = json.usage.prompt_tokens     ?? inputTokens;
+            outputTokens = json.usage.completion_tokens ?? outputTokens;
+            if (totalTokens > 0) {
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ tokens: totalTokens, done: true })}\n\n`));
+            }
           }
         } catch { /* skip malformed chunks */ }
       };
@@ -235,7 +249,16 @@ export async function POST(req: NextRequest) {
         if (fullContent) {
           const tasks: Promise<unknown>[] = [
             incrementDailyUsage(session.userId),
-            prisma.aiRequest.create({ data: { userId: session.userId, module, tokens: 0 } }),
+            prisma.aiRequest.create({
+              data: {
+                userId: session.userId,
+                module,
+                tokens: totalTokens,
+                inputTokens,
+                outputTokens,
+                model: usedModel,
+              },
+            }),
           ];
           if (memoryEnabled) tasks.push(storeMemory(ctx, "assistant", fullContent));
           Promise.all(tasks).catch(e => console.error("[AI_STREAM] post-stream DB error:", e));

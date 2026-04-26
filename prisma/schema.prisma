@@ -99,6 +99,7 @@ model User {
   microsoftIntegration MicrosoftIntegration?
   appleIntegration  AppleIntegration?
   stripeSubscription StripeSubscription?
+  payments           Payment[]
   callRecordings    CallRecording[]
   feedbackItems     Feedback[]
   passkeys          Passkey[]
@@ -462,14 +463,21 @@ model LoginEvent {
 
 // ── AI requesty (audit / usage) ──────────────────────────────────
 model AiRequest {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  module    String
-  tokens    Int      @default(0)
-  createdAt DateTime @default(now())
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  module       String
+  // Total tokens kept for backward compat; new rows also fill the
+  // input/output split so admin Financie môže rátať presne podľa OpenAI
+  // sadzieb (gpt-4o-mini: $0.15 in / $0.60 out per 1M; gpt-4o: $2.50 / $10).
+  tokens       Int      @default(0)
+  inputTokens  Int      @default(0)
+  outputTokens Int      @default(0)
+  model        String?  // e.g. "gpt-4o-mini", "gpt-4o"
+  createdAt    DateTime @default(now())
 
   @@index([userId, createdAt])
+  @@index([model, createdAt])
 }
 
 // ── Denný usage counter (tier limit) ─────────────────────────────
@@ -617,6 +625,27 @@ model ConversationMsg {
   createdAt      DateTime     @default(now())
 
   @@index([conversationId, createdAt])
+}
+
+// ── Stripe payments (každá zaplatená Stripe invoice = jeden riadok) ─
+// Authoritative revenue ledger. Webhook `invoice.paid` upserts here so
+// admin Financie sekcia má presné príjmy bez dopočítavania zo subscription
+// createdAt. Idempotentné cez stripeInvoiceId (unique).
+model Payment {
+  id                String   @id @default(cuid())
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stripeInvoiceId   String   @unique
+  stripeCustomerId  String?
+  stripeSubscriptionId String?
+  amountCents       Int      // gross amount paid (incl. VAT) in cents
+  currency          String   @default("eur")
+  status            String   @default("paid") // paid | refunded | uncollectible
+  paidAt            DateTime
+  createdAt         DateTime @default(now())
+
+  @@index([userId, paidAt])
+  @@index([paidAt])
 }
 
 // ── Membership plans (upraviteľné adminom v reálnom čase) ────────

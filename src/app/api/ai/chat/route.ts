@@ -123,7 +123,14 @@ export async function POST(req: NextRequest) {
     await Promise.all([
       incrementDailyUsage(session.userId),
       prisma.aiRequest.create({
-        data: { userId: session.userId, module, tokens: result.tokensUsed },
+        data: {
+          userId: session.userId,
+          module,
+          tokens: result.tokensUsed,
+          inputTokens: result.inputTokens,
+          outputTokens: result.outputTokens,
+          model: result.model,
+        },
       }),
     ]);
   } catch (err) {
