@@ -30,11 +30,11 @@ const DISMISS_KEY = "unifyo.calendar-connect-dismissed.v1";
 
 type ProviderState = "checking" | "none" | "connected";
 
-// Brand logos — inline SVG, identical glyphs to the email page so the
-// two surfaces feel like the same product. No external image fetches.
+// Brand logos sized for chip context (12-14px tall). Same glyphs as
+// /email's NotConnectedCard so the surfaces feel cohesive.
 function GmailLogo() {
   return (
-    <svg width="28" height="22" viewBox="0 0 24 18" aria-hidden>
+    <svg width="14" height="11" viewBox="0 0 24 18" aria-hidden>
       <path fill="#4285F4" d="M0 18V4l5 3v11z" />
       <path fill="#34A853" d="M19 18v-11l5-3v14z" />
       <path fill="#FBBC04" d="M0 4l12 8 12-8v-2a2 2 0 00-2-2h-1L12 7 2 0H1a2 2 0 00-1 2z" />
@@ -45,9 +45,8 @@ function GmailLogo() {
 }
 function OutlookLogo() {
   return (
-    <svg width="26" height="26" viewBox="0 0 32 32" aria-hidden>
+    <svg width="13" height="13" viewBox="0 0 32 32" aria-hidden>
       <rect x="2" y="6" width="28" height="20" rx="2" fill="#0F78D4" />
-      <path fill="#fff" d="M14 24V8l16 4v8z" opacity=".15" />
       <circle cx="10" cy="16" r="6" fill="#fff" />
       <text
         x="10" y="20" textAnchor="middle"
@@ -60,7 +59,7 @@ function OutlookLogo() {
 }
 function ICloudLogo() {
   return (
-    <svg width="30" height="22" viewBox="0 0 32 22" aria-hidden>
+    <svg width="15" height="11" viewBox="0 0 32 22" aria-hidden>
       <path
         fill="#cbd5e1"
         d="M24.5 21H8a7 7 0 01-1.6-13.8A8 8 0 0122 6.5a5.5 5.5 0 012.5 14.5z"
@@ -71,68 +70,6 @@ function ICloudLogo() {
         opacity=".5"
       />
     </svg>
-  );
-}
-
-// Same ProviderTile used by /email — large logo, centred name + desc,
-// brand-coloured "Pripojiť →" pill that lights the border on hover.
-interface TileProps {
-  href?: string;
-  onClick?: () => void;
-  Logo: React.FC;
-  name: string;
-  desc: string;
-  accent: string;
-}
-function ProviderTile({ href, onClick, Logo, name, desc, accent }: TileProps) {
-  const Tag = (href ? "a" : "button") as "a" | "button";
-  const interactiveProps = href ? { href } : { type: "button" as const, onClick };
-  return (
-    <Tag
-      {...(interactiveProps as Record<string, unknown>)}
-      className="group flex flex-col items-center gap-3 p-5 rounded-2xl transition-all duration-200 hover:-translate-y-0.5 text-left"
-      style={{
-        background: "var(--app-surface)",
-        border: `1px solid ${D.border}`,
-        boxShadow: "0 1px 0 rgba(255,255,255,0.04) inset, 0 8px 24px rgba(0,0,0,0.25)",
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.borderColor = accent;
-        e.currentTarget.style.boxShadow = `0 1px 0 rgba(255,255,255,0.04) inset, 0 12px 28px ${accent}33`;
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.borderColor = D.border;
-        e.currentTarget.style.boxShadow = "0 1px 0 rgba(255,255,255,0.04) inset, 0 8px 24px rgba(0,0,0,0.25)";
-      }}
-    >
-      <div
-        className="w-14 h-14 rounded-2xl flex items-center justify-center"
-        style={{
-          background: "rgba(255,255,255,0.04)",
-          border: `1px solid ${D.border}`,
-        }}
-      >
-        <Logo />
-      </div>
-      <div className="text-center">
-        <div className="text-sm font-bold mb-0.5" style={{ color: D.text }}>
-          {name}
-        </div>
-        <div className="text-[11px]" style={{ color: D.muted }}>
-          {desc}
-        </div>
-      </div>
-      <span
-        className="text-[11px] font-semibold px-3 py-1.5 rounded-full transition-colors"
-        style={{
-          background: `${accent}1f`,
-          color: accent,
-          border: `1px solid ${accent}55`,
-        }}
-      >
-        Pripojiť →
-      </span>
-    </Tag>
   );
 }
 
@@ -176,22 +113,80 @@ export default function CalendarConnectBanner() {
 
   if (state !== "none" || dismissed) return null;
 
+  // Compact one-row strip — calendar grid is the primary thing on this
+  // page, so the connect prompt can't dominate. We keep the three brand
+  // chips for one-click consent and tuck the dismissal X on the right.
+  // The full marketing card (logos, EU-data note) lives on
+  // /settings/integrations for users who want it.
+  const ChipBase: React.CSSProperties = {
+    background: "var(--app-surface)",
+    border: `1px solid ${D.border}`,
+  };
   return (
     <div
-      className="rounded-3xl p-6 mb-3 relative"
+      className="rounded-2xl px-4 py-2.5 mb-3 flex items-center gap-3 flex-wrap relative"
       style={{
         background:
-          "radial-gradient(120% 100% at 50% 0%, rgba(99,102,241,0.10), rgba(139,92,246,0.04) 50%, transparent 80%)," +
+          "linear-gradient(90deg, rgba(99,102,241,0.08), rgba(139,92,246,0.04))," +
           " var(--app-surface-2)",
         border: `1px solid ${D.border}`,
       }}
     >
-      {/* Close — top-right. Persists across navigation via localStorage. */}
+      <div
+        className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
+        style={{
+          background: `linear-gradient(135deg, ${D.indigo}, ${D.violet})`,
+          boxShadow: "0 4px 12px rgba(99,102,241,0.35)",
+        }}
+      >
+        <CalendarDays className="w-4 h-4 text-white" />
+      </div>
+      <div className="flex-1 min-w-[180px]">
+        <div className="text-[13px] font-semibold" style={{ color: D.text }}>
+          Prepoj kalendár
+        </div>
+        <div className="text-[11px]" style={{ color: D.muted }}>
+          Nezávisle od e-mailu · TLS šifrované
+        </div>
+      </div>
+      <div className="flex items-center gap-1.5 flex-wrap">
+        <a
+          href="/api/integrations/google/start"
+          className="text-[11px] font-semibold px-2.5 py-1.5 rounded-lg inline-flex items-center gap-1.5 transition-colors"
+          style={{ ...ChipBase, color: "#ea4335" }}
+          onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#ea4335"; }}
+          onMouseLeave={(e) => { e.currentTarget.style.borderColor = D.border; }}
+        >
+          <GmailLogo />
+          <span>Google</span>
+        </a>
+        <a
+          href="/api/integrations/microsoft/start"
+          className="text-[11px] font-semibold px-2.5 py-1.5 rounded-lg inline-flex items-center gap-1.5 transition-colors"
+          style={{ ...ChipBase, color: "#0F78D4" }}
+          onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#0F78D4"; }}
+          onMouseLeave={(e) => { e.currentTarget.style.borderColor = D.border; }}
+        >
+          <OutlookLogo />
+          <span>Outlook</span>
+        </a>
+        <button
+          type="button"
+          onClick={() => setAppleOpen(true)}
+          className="text-[11px] font-semibold px-2.5 py-1.5 rounded-lg inline-flex items-center gap-1.5 transition-colors"
+          style={{ ...ChipBase, color: "#94a3b8" }}
+          onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#94a3b8"; }}
+          onMouseLeave={(e) => { e.currentTarget.style.borderColor = D.border; }}
+        >
+          <ICloudLogo />
+          <span>iCloud</span>
+        </button>
+      </div>
       <button
         onClick={dismiss}
         aria-label="Zavrieť"
         title="Zavrieť"
-        className="absolute top-3 right-3 p-1.5 rounded-lg transition-colors"
+        className="p-1.5 rounded-lg transition-colors flex-shrink-0"
         style={{ color: D.mutedDark }}
         onMouseEnter={(e) => {
           (e.currentTarget as HTMLButtonElement).style.color = D.text;
@@ -204,54 +199,6 @@ export default function CalendarConnectBanner() {
       >
         <X className="w-4 h-4" />
       </button>
-
-      <div className="text-center mb-5">
-        <div
-          className="inline-flex items-center justify-center w-14 h-14 rounded-2xl mb-3"
-          style={{
-            background: `linear-gradient(135deg, ${D.indigo}, ${D.violet})`,
-            boxShadow: "0 8px 24px rgba(99,102,241,0.35)",
-          }}
-        >
-          <CalendarDays className="w-6 h-6 text-white" />
-        </div>
-        <h2 className="text-lg font-bold mb-1" style={{ color: D.text }}>
-          Prepoj svoj kalendár
-        </h2>
-        <p className="text-[13px] max-w-md mx-auto" style={{ color: D.muted }}>
-          Vyber si nezávisle od emailu — môžeš mať Apple kalendár a Gmail e-mail.
-          Tokeny šifrujeme, kedykoľvek odpojíš v Nastaveniach.
-        </p>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-2xl mx-auto">
-        <ProviderTile
-          href="/api/integrations/google/start"
-          Logo={GmailLogo}
-          name="Google"
-          desc="Workspace · Gmail"
-          accent="#ea4335"
-        />
-        <ProviderTile
-          href="/api/integrations/microsoft/start"
-          Logo={OutlookLogo}
-          name="Outlook"
-          desc="Microsoft 365"
-          accent="#0F78D4"
-        />
-        <ProviderTile
-          onClick={() => setAppleOpen(true)}
-          Logo={ICloudLogo}
-          name="iCloud"
-          desc="Apple ID · CalDAV"
-          accent="#94a3b8"
-        />
-      </div>
-
-      <div className="flex items-center justify-center gap-2 mt-5 text-[11px]" style={{ color: D.mutedDark }}>
-        <span className="w-1 h-1 rounded-full" style={{ background: "#10b981" }} />
-        Šifrované cez TLS · žiadne dáta neopúšťajú EU
-      </div>
 
       {appleOpen && <AppleConnectModal onClose={() => setAppleOpen(false)} />}
     </div>
